@@ -1,0 +1,60 @@
+{
+	"Universal Core Protocol": {
+		"prefix": "must-core",
+		"body": [
+			"",
+			"---",
+			"🚨 **CRITICAL EXECUTION PROTOCOL (MUST FOLLOW):**",
+			"1. **Context Check:** İşleme başlamadan önce `docs/active_context.md` ve `docs/tech_stack.md` dosyalarını oku. Mevcut mimariye %100 uyumlu ol.",
+			"2. **Strict TypeScript:** `any` kullanımı KESİNLİKLE yasaktır. Gerekirse yeni Interface/Type tanımla ve bunu `types/` klasörüne ekle.",
+			"3. **No Placeholders:** Kodun içinde asla 'TODO', 'Buraya mantık gelecek' gibi eksik kısımlar bırakma. Üretilen kod çalıştırılabilir ve bitmiş olmalı.",
+			"4. **Error Handling:** Olası hata durumlarını (try-catch, API failures) öngör ve kullanıcıya sessizce hata vermek yerine anlamlı geri bildirim mekanizmasını entegre et.",
+			"5. **Memory Update:** İşlem bittikten sonra, eğer önemli bir değişiklik yaptıysan `docs/active_context.md` dosyasını güncellemeni bekliyorum.",
+			"---"
+		],
+		"description": "Genel kodlama kuralları ve hafıza kontrolü"
+	},
+	"UI/UX Protocol": {
+		"prefix": "must-ui",
+		"body": [
+			"",
+			"---",
+			"🎨 **UI/UX & MOBILE-FIRST PROTOCOL:**",
+			"1. **Mobil Uyumluluk (HIG):** Tasarladığın her bileşen, iOS Safari'de kusursuz görünmeli. Dokunma hedefleri (Touch Targets) min 44px olmalı.",
+			"2. **Tailwind Only:** Sadece Tailwind CSS class'larını kullan. Karmaşık animasyonlar için `framer-motion` kullan, inline style yasak.",
+			"3. **Responsive Check:** Kodunu yazarken şu breakpointleri kontrol et: `sm` (Mobil), `md` (Tablet), `lg` (Desktop). Mobilde taşma (overflow) olmadığından emin ol.",
+			"4. **Accessibilty (A11y):** Tüm interaktif elemanlarda `aria-label` ve klavye navigasyonu (tab-index) desteği olduğundan emin ol.",
+			"5. **Dark Mode:** Projemiz varsayılan olarak Dark Mode'dur (#0a0a0a). Renk paletini buna göre seç.",
+			"---"
+		],
+		"description": "Frontend, Tasarım ve Mobil uyumluluk kuralları"
+	},
+	"WebGL Protocol": {
+		"prefix": "must-3d",
+		"body": [
+			"",
+			"---",
+			"🧊 **WEBGL PERFORMANCE PROTOCOL:**",
+			"1. **Memory Leak Prevention:** Oluşturulan her Geometry ve Material için `dispose()` mekanizmasının çalıştığından emin ol.",
+			"2. **R3F Best Practices:** Animasyon döngüleri için React state yerine `useFrame` ve `useRef` kullan. Re-render'ları minimize et.",
+			"3. **Mobile Optimization:** `dpr` (Device Pixel Ratio) değerini mobilde [1, 1.5] arasına sabitle. Gölgeleri mobilde kapatacak kontrol ekle.",
+			"4. **Component Isolation:** 3D sahneleri `Canvas` içinde izole et ve HTML arayüzü ile karıştırma.",
+			"---"
+		],
+		"description": "Three.js ve React Three Fiber performans kuralları"
+	},
+	"Data Protocol": {
+		"prefix": "must-data",
+		"body": [
+			"",
+			"---",
+			"🛡️ **DATA INTEGRITY & SECURITY PROTOCOL:**",
+			"1. **Source of Truth:** Veri şeması için `docs/database_schema.md` dosyasını referans al. Kendi kafandan sütun uydurma.",
+			"2. **Type Safety:** Supabase'den gelen veriyi frontend'de kullanmadan önce Zod veya TypeScript ile tip dönüşümünü (Type Casting) güvenli yap.",
+			"3. **Secure Fetching:** Tüm veritabanı işlemlerini Server Component veya Server Action içinde yap. Client-side'da hassas veri ifşa etme.",
+			"4. **JSONB Handling:** `logs` tablosundaki JSON verisini işlerken null check yapmayı unutma.",
+			"---"
+		],
+		"description": "Backend, Supabase ve Veri güvenliği kuralları"
+	}
+}
