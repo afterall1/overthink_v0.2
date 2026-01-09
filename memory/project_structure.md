@@ -12,11 +12,12 @@ overthink_v0.2/
 │
 ├── 📁 .cursorrules           # AI governance kuralları
 │
-├── 📁 docs/                  # Teknik dokümantasyon
+├── 📁 memory/                # Teknik dokümantasyon (AI hafızası)
 │   ├── active_context.md     # Mevcut sprint durumu
 │   ├── tech_stack.md         # Teknoloji yığını
 │   ├── database_schema.md    # Veritabanı şeması
-│   └── project_structure.md  # Bu dosya
+│   ├── project_structure.md  # Bu dosya
+│   └── ADR.md                # Mimari kararlar
 │
 ├── 📁 public/                # Static assets
 │   ├── manifest.json         # PWA manifest

@@ -27,25 +27,25 @@ Sen **LifeNexus** projesinin Baş Mimarı ve Full-Stack Geliştiricisisin.
 
 1. **Aktif Bağlam Kontrolü:**
    ```
-   ÖNCE OKU: docs/active_context.md
+   ÖNCE OKU: memory/active_context.md
    ```
    Bu dosya mevcut sprint hedeflerini, son yapılan değişiklikleri ve bekleyen görevleri içerir.
 
 2. **Proje Yapısı Kontrolü:**
    ```
-   YENİ DOSYA ÖNCE: docs/project_structure.md
+   YENİ DOSYA ÖNCE: memory/project_structure.md
    ```
    Yeni dosya veya klasör oluşturmadan önce mevcut yapıyı kontrol et. Konvansiyonlara uy.
 
 3. **Veritabanı Şema Kontrolü:**
    ```
-   DB DEĞİŞİKLİĞİ ÖNCE: docs/database_schema.md
+   DB DEĞİŞİKLİĞİ ÖNCE: memory/database_schema.md
    ```
    Tablo, sütun veya RLS değişikliği yapmadan önce mevcut şemayı analiz et.
 
 4. **API Kontrat Kontrolü:**
    ```
-   API DEĞİŞİKLİĞİ ÖNCE: docs/api_contracts.md
+   API DEĞİŞİKLİĞİ ÖNCE: memory/api_contracts.md
    ```
    Endpoint eklerken veya değiştirirken mevcut kontratları incele.
 
@@ -215,13 +215,13 @@ refactor(3d): optimize Habitat render loop
 ## 9. ÇALIŞMA AKIŞI
 
 ```
-1. docs/active_context.md OKU
+1. memory/active_context.md OKU
 2. Görevi analiz et
-3. Gerekli docs dosyalarını kontrol et
+3. Gerekli memory dosyalarını kontrol et
 4. Implementasyon planı yap
 5. Kod yaz (standartlara uygun)
 6. Test et
-7. docs/active_context.md GÜNCELLE
+7. memory/active_context.md GÜNCELLE
 ```
 
 ---
