@@ -244,37 +244,48 @@ export default function LoggerModal({ onSubmit }: LoggerModalProps) {
     return (
         <>
             {/* FAB Button */}
+            {/* FAB Button - Ethereal */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 
-                   flex items-center justify-center shadow-2xl hover:scale-110 transition-transform duration-300
+                className="group fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 
+                   flex items-center justify-center shadow-2xl hover:scale-110 transition-all duration-300
                    border border-purple-400/30"
-                style={{ boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
+                style={{ boxShadow: '0 0 40px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' }}
             >
-                <Plus className="w-8 h-8 text-white" />
+                <Plus className="w-8 h-8 text-white transition-transform duration-300 group-hover:rotate-90" />
+                {/* Outer glow ring */}
+                <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
 
             {/* Modal */}
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    {/* Backdrop */}
+                    {/* Backdrop - Ethereal */}
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/70 backdrop-blur-md"
                         onClick={() => { setIsOpen(false); setSelectedCategory(null) }}
                     />
 
-                    {/* Modal Content */}
-                    <div className="relative w-full max-w-lg bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 
-                          shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        {/* Glow effect */}
+                    {/* Modal Content - Ethereal Glass */}
+                    <div
+                        className="relative w-full max-w-lg ethereal-glass overflow-hidden animate-in"
+                        style={{
+                            boxShadow: currentCategoryData
+                                ? `0 8px 32px rgba(0,0,0,0.4), 0 0 60px ${currentCategoryData.color}25`
+                                : '0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(139, 92, 246, 0.15)'
+                        }}
+                    >
+                        {/* Category Aura Glow */}
                         <div
-                            className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
+                            className="absolute inset-0 opacity-40 pointer-events-none rounded-3xl transition-all duration-500"
                             style={{
                                 background: currentCategoryData
-                                    ? `radial-gradient(circle at 50% 0%, ${currentCategoryData.color}40, transparent 70%)`
-                                    : 'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.2), transparent 70%)'
+                                    ? `radial-gradient(ellipse at 50% -20%, ${currentCategoryData.color}50, transparent 60%)`
+                                    : 'radial-gradient(ellipse at 50% -20%, rgba(139, 92, 246, 0.3), transparent 60%)'
                             }}
                         />
+                        {/* Inner top highlight */}
+                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
                         {/* Header */}
                         <div className="relative flex items-center justify-between p-4 border-b border-white/10">
@@ -298,14 +309,20 @@ export default function LoggerModal({ onSubmit }: LoggerModalProps) {
                                         <button
                                             key={cat.slug}
                                             onClick={() => handleCategorySelect(cat.slug)}
-                                            className="p-4 rounded-xl border border-white/10 hover:border-white/30 
-                                 bg-white/5 hover:bg-white/10 transition-all duration-200 group"
+                                            className="group relative p-4 rounded-2xl border border-white/5 
+                                                       bg-white/[0.02] hover:bg-white/[0.06] transition-all duration-300
+                                                       hover:border-white/10 hover:-translate-y-0.5"
                                         >
+                                            {/* Hover glow */}
+                                            <div
+                                                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                                style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 24px ${cat.color}20` }}
+                                            />
                                             <cat.icon
-                                                className="w-8 h-8 mx-auto mb-2 transition-colors"
+                                                className="w-8 h-8 mx-auto mb-2 transition-all duration-300 group-hover:scale-110"
                                                 style={{ color: cat.color }}
                                             />
-                                            <p className="text-sm text-gray-300 group-hover:text-white">{cat.name}</p>
+                                            <p className="relative text-sm text-gray-400 group-hover:text-white transition-colors">{cat.name}</p>
                                         </button>
                                     ))}
                                 </div>

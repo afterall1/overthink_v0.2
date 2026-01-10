@@ -63,44 +63,51 @@ export default function LogDrawer({ logs, onDeleteLog }: LogDrawerProps) {
     return (
         <>
             {/* Toggle Button */}
+            {/* Toggle Button - Ethereal */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed top-24 left-4 z-40 p-3 rounded-xl bg-black/60 backdrop-blur-xl 
-                   border border-white/10 hover:border-white/20 transition-all duration-300
+                className="group fixed top-24 left-4 z-40 p-3 rounded-xl bg-black/50 backdrop-blur-xl 
+                   border border-white/5 hover:border-white/15 transition-all duration-300
                    hover:scale-105"
-                style={{ boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)' }}
+                style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)' }}
             >
-                <Menu className="w-5 h-5 text-gray-400" />
+                <Menu className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                {/* Hover glow */}
+                <span className="absolute inset-0 rounded-xl bg-purple-500/0 group-hover:bg-purple-500/10 transition-colors duration-300" />
             </button>
 
-            {/* Drawer Backdrop */}
+            {/* Drawer Backdrop - Ethereal */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
-            {/* Drawer Panel */}
+            {/* Drawer Panel - Frosted Glass */}
             <div
                 className={`fixed top-0 left-0 h-full w-80 z-50 transform transition-transform duration-300 ease-out
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
-                <div className="h-full bg-black/90 backdrop-blur-xl border-r border-white/10 flex flex-col">
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent pointer-events-none" />
+                <div className="h-full bg-black/60 backdrop-blur-3xl border-r border-white/5 flex flex-col">
+                    {/* Gradient overlay for 3D scene visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent pointer-events-none" />
+                    {/* Subtle purple accent glow */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 via-transparent to-transparent pointer-events-none" />
+                    {/* Inner top highlight */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
 
-                    {/* Header */}
-                    <div className="relative flex items-center justify-between p-4 border-b border-white/10">
+                    {/* Header - Minimalist */}
+                    <div className="relative flex items-center justify-between p-4 border-b border-white/5">
                         <div>
-                            <h2 className="text-lg font-semibold text-white">Günün Logları</h2>
-                            <p className="text-xs text-gray-500">{logs.length} kayıt</p>
+                            <h2 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Gunun Loglari</h2>
+                            <p className="text-[11px] text-gray-600 mt-0.5">{logs.length} kayit</p>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="p-2 rounded-full text-gray-500 hover:bg-white/10 hover:text-white transition-all duration-300 hover:rotate-90"
                         >
-                            <X className="w-5 h-5 text-gray-400" />
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
 
@@ -129,21 +136,27 @@ export default function LogDrawer({ logs, onDeleteLog }: LogDrawerProps) {
                                         <span className="text-xs text-gray-600">({categoryLogs.length})</span>
                                     </div>
 
-                                    {/* Log entries */}
+                                    {/* Log entries - Micro-interaction cards */}
                                     <div className="space-y-2">
                                         {categoryLogs.map(log => (
                                             <div
                                                 key={log.id}
-                                                className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 
-                                   transition-all duration-200 group"
+                                                className="group relative p-3 rounded-xl bg-white/[0.02] border border-white/[0.03] 
+                                                           hover:bg-white/[0.05] hover:border-white/[0.08] 
+                                                           transition-all duration-300 hover:translate-x-1"
                                             >
+                                                {/* Category accent line */}
+                                                <div
+                                                    className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                                    style={{ backgroundColor: CATEGORY_COLORS[log.category] }}
+                                                />
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-white truncate">
+                                                        <p className="text-sm text-gray-300 group-hover:text-white truncate transition-colors">
                                                             {getLogSummary(log.category, log.data)}
                                                         </p>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="text-[11px] text-gray-600 group-hover:text-gray-500 transition-colors">
                                                                 {formatTime(log.timestamp)}
                                                             </span>
                                                             <span className="text-xs">
@@ -155,7 +168,7 @@ export default function LogDrawer({ logs, onDeleteLog }: LogDrawerProps) {
                                                         <button
                                                             onClick={() => onDeleteLog(log.id)}
                                                             className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 
-                                         transition-all duration-200"
+                                                                       transition-all duration-200"
                                                         >
                                                             <Trash2 className="w-4 h-4 text-red-400" />
                                                         </button>

@@ -41,8 +41,8 @@ const eventSchema = z.object({
     category_id: z.string().optional(),
     scheduled_date: z.string().min(1, 'Tarih seçin'),
     scheduled_time: z.string().min(1, 'Saat seçin'),
-    duration_min: z.coerce.number().min(5, 'En az 5 dk').max(480, 'En fazla 8 saat'),
-    reminder_min: z.coerce.number(),
+    duration_min: z.number().min(5, 'En az 5 dk').max(480, 'En fazla 8 saat'),
+    reminder_min: z.number(),
     recurrence_rule: z.string().optional(),
 })
 
@@ -125,28 +125,50 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
         }
     }
 
+    // Get selected category data for dynamic glow
+    const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory)
+
     if (!isOpen) return null
 
     return (
         <>
-            {/* Backdrop */}
+            {/* Backdrop - Ethereal */}
             <div
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            {/* Modal */}
-            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-black/90 p-6 backdrop-blur-xl">
+            {/* Modal - Ethereal Glass */}
+            <div
+                className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 ethereal-glass p-6 animate-in"
+                style={{
+                    boxShadow: selectedCategoryData
+                        ? `0 8px 32px rgba(0,0,0,0.4), 0 0 60px ${selectedCategoryData.color}25`
+                        : '0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(59, 130, 246, 0.15)'
+                }}
+            >
+                {/* Category Aura Glow */}
+                <div
+                    className="absolute inset-0 opacity-40 pointer-events-none rounded-3xl transition-all duration-500"
+                    style={{
+                        background: selectedCategoryData
+                            ? `radial-gradient(ellipse at 50% -20%, ${selectedCategoryData.color}50, transparent 60%)`
+                            : 'radial-gradient(ellipse at 50% -20%, rgba(59, 130, 246, 0.3), transparent 60%)'
+                    }}
+                />
+                {/* Inner top highlight */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-t-3xl" />
+
                 {/* Header */}
-                <div className="mb-6 flex items-center justify-between">
+                <div className="relative mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-blue-400" />
-                        <h2 className="text-lg font-semibold text-white">Yeni Plan</h2>
+                        <h2 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300">Yeni Plan</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                        className="rounded-full p-2 text-gray-400 transition-all duration-300 hover:bg-white/10 hover:text-white hover:rotate-90"
                         aria-label="Kapat"
                     >
                         <X className="h-5 w-5" />
@@ -195,7 +217,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                             id="title"
                             type="text"
                             placeholder="Ne planlıyorsun?"
-                            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-colors focus:border-blue-500 focus:outline-none"
+                            className="ethereal-input"
                         />
                         {errors.title && (
                             <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
@@ -212,7 +234,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                             id="description"
                             rows={2}
                             placeholder="Detaylar..."
-                            className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-colors focus:border-blue-500 focus:outline-none"
+                            className="ethereal-input resize-none"
                         />
                     </div>
 
@@ -228,7 +250,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 id="scheduled_date"
                                 type="date"
                                 min={today}
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white transition-colors focus:border-blue-500 focus:outline-none"
+                                className="ethereal-input"
                             />
                             {errors.scheduled_date && (
                                 <p className="mt-1 text-xs text-red-400">{errors.scheduled_date.message}</p>
@@ -243,7 +265,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 {...register('scheduled_time')}
                                 id="scheduled_time"
                                 type="time"
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white transition-colors focus:border-blue-500 focus:outline-none"
+                                className="ethereal-input"
                             />
                             {errors.scheduled_time && (
                                 <p className="mt-1 text-xs text-red-400">{errors.scheduled_time.message}</p>
@@ -258,12 +280,12 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 Süre (dk)
                             </label>
                             <input
-                                {...register('duration_min')}
+                                {...register('duration_min', { valueAsNumber: true })}
                                 id="duration_min"
                                 type="number"
                                 min={5}
                                 max={480}
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white transition-colors focus:border-blue-500 focus:outline-none"
+                                className="ethereal-input"
                             />
                         </div>
                         <div>
@@ -272,9 +294,9 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 Hatırlatma
                             </label>
                             <select
-                                {...register('reminder_min')}
+                                {...register('reminder_min', { valueAsNumber: true })}
                                 id="reminder_min"
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white transition-colors focus:border-blue-500 focus:outline-none"
+                                className="ethereal-input"
                             >
                                 {REMINDER_OPTIONS.map((opt) => (
                                     <option key={opt.value} value={opt.value} className="bg-gray-900">
@@ -294,7 +316,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                         <select
                             {...register('recurrence_rule')}
                             id="recurrence_rule"
-                            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-white transition-colors focus:border-blue-500 focus:outline-none"
+                            className="ethereal-input"
                         >
                             {RECURRENCE_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value} className="bg-gray-900">
@@ -304,11 +326,19 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                         </select>
                     </div>
 
-                    {/* Submit Button */}
+                    {/* Submit Button - Ethereal */}
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 py-3 font-semibold text-white transition-all hover:from-blue-600 hover:to-purple-600 disabled:opacity-50"
+                        className="ethereal-button mt-6 w-full py-3 font-semibold disabled:opacity-50"
+                        style={{
+                            background: selectedCategoryData
+                                ? `linear-gradient(135deg, ${selectedCategoryData.color}cc, ${selectedCategoryData.color}80)`
+                                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(168, 85, 247, 0.8))',
+                            boxShadow: selectedCategoryData
+                                ? `0 4px 20px ${selectedCategoryData.color}40`
+                                : '0 4px 20px rgba(59, 130, 246, 0.3)'
+                        }}
                     >
                         {isSubmitting ? 'Kaydediliyor...' : 'Plan Oluştur'}
                     </button>

@@ -89,30 +89,37 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
 
     return (
         <>
-            {/* Backdrop */}
+            {/* Backdrop - Ethereal */}
             <div
-                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            {/* Panel */}
-            <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-black/80 backdrop-blur-xl sm:w-96">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 p-4">
+            {/* Panel - Frosted Glass */}
+            <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-black/60 backdrop-blur-3xl border-l border-white/5 sm:w-96">
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-transparent to-transparent pointer-events-none" />
+                {/* Blue accent glow */}
+                <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent pointer-events-none" />
+                {/* Inner highlight */}
+                <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-white/10 via-transparent to-white/5" />
+
+                {/* Header - Minimalist */}
+                <div className="relative flex items-center justify-between border-b border-white/5 p-4">
                     <div className="flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-blue-400" />
-                        <h2 className="text-lg font-semibold text-white">Planlananlar</h2>
+                        <h2 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Planlananlar</h2>
                     </div>
                     <div className="flex items-center gap-2">
                         {/* Notification toggle */}
                         <button
                             onClick={handleEnableNotifications}
-                            className={`rounded-lg p-2 transition-colors ${notificationEnabled
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                            className={`rounded-xl p-2 transition-all duration-300 ${notificationEnabled
+                                ? 'bg-green-500/15 text-green-400 shadow-lg shadow-green-500/10'
+                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'
                                 }`}
-                            aria-label={notificationEnabled ? 'Bildirimler açık' : 'Bildirimleri aç'}
+                            aria-label={notificationEnabled ? 'Bildirimler acik' : 'Bildirimleri ac'}
                         >
                             {notificationEnabled ? (
                                 <Bell className="h-4 w-4" />
@@ -122,7 +129,7 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                         </button>
                         <button
                             onClick={onClose}
-                            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                            className="rounded-full p-2 text-gray-500 transition-all duration-300 hover:bg-white/10 hover:text-white hover:rotate-90"
                             aria-label="Kapat"
                         >
                             <X className="h-5 w-5" />
@@ -130,39 +137,39 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                     </div>
                 </div>
 
-                {/* View Mode Toggle */}
-                <div className="flex gap-2 border-b border-white/10 p-4">
+                {/* View Mode Toggle - Glass buttons */}
+                <div className="relative flex gap-2 border-b border-white/5 p-4">
                     <button
                         onClick={() => setViewMode('today')}
-                        className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${viewMode === 'today'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                        className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ${viewMode === 'today'
+                            ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
+                            : 'bg-white/[0.03] text-gray-500 hover:bg-white/[0.06] hover:text-gray-300'
                             }`}
                     >
-                        Bugün
+                        Bugun
                     </button>
                     <button
                         onClick={() => setViewMode('week')}
-                        className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${viewMode === 'week'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                        className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ${viewMode === 'week'
+                            ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
+                            : 'bg-white/[0.03] text-gray-500 hover:bg-white/[0.06] hover:text-gray-300'
                             }`}
                     >
-                        7 Gün
+                        7 Gun
                     </button>
                 </div>
 
                 {/* Date Navigator (for week view) */}
                 {viewMode === 'week' && (
-                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+                    <div className="relative flex items-center justify-between border-b border-white/5 px-4 py-3">
                         <button
                             onClick={() => navigateDate('prev')}
-                            className="rounded-lg p-1 text-gray-400 hover:bg-white/10"
-                            aria-label="Önceki gün"
+                            className="group rounded-xl p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-all duration-300"
+                            aria-label="Onceki gun"
                         >
-                            <ChevronLeft className="h-5 w-5" />
+                            <ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
                         </button>
-                        <span className="text-sm text-gray-300">
+                        <span className="text-sm text-gray-400 font-medium">
                             {selectedDate.toLocaleDateString('tr-TR', {
                                 weekday: 'long',
                                 day: 'numeric',
@@ -171,10 +178,10 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                         </span>
                         <button
                             onClick={() => navigateDate('next')}
-                            className="rounded-lg p-1 text-gray-400 hover:bg-white/10"
-                            aria-label="Sonraki gün"
+                            className="group rounded-xl p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-all duration-300"
+                            aria-label="Sonraki gun"
                         >
-                            <ChevronRight className="h-5 w-5" />
+                            <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
                         </button>
                     </div>
                 )}
@@ -229,13 +236,13 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                     )}
                 </div>
 
-                {/* Stats Footer */}
-                <div className="border-t border-white/10 p-4">
+                {/* Stats Footer - Refined */}
+                <div className="relative border-t border-white/5 p-4">
                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">
-                            Toplam: {filteredEvents.length} etkinlik
+                        <span className="text-gray-500">
+                            Toplam: <span className="text-gray-300">{filteredEvents.length}</span> etkinlik
                         </span>
-                        <span className="text-green-400">
+                        <span className="text-green-400/80">
                             Tamamlanan: {filteredEvents.filter((e) => e.status === 'completed').length}
                         </span>
                     </div>

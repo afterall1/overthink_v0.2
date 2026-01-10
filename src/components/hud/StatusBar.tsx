@@ -20,77 +20,115 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
     ] as const
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-            <div className="max-w-4xl mx-auto">
-                {/* Main status bar */}
-                <div className="relative bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl">
-                    {/* Neon glow effect */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/10 via-transparent to-cyan-500/10 pointer-events-none" />
+        <div className="fixed top-0 left-0 right-0 z-50 px-6 py-3">
+            <div className="max-w-3xl mx-auto">
+                {/* Floating control panel - Ultra thin */}
+                <div className="relative bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/[0.05] px-5 py-3">
+                    {/* Inner top highlight */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent rounded-t-2xl" />
+                    {/* Subtle side gradients */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/[0.03] via-transparent to-cyan-500/[0.03] pointer-events-none" />
 
-                    <div className="relative flex items-center justify-between">
-                        {/* Logo & Title */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">LN</span>
+                    <div className="relative flex items-center justify-between gap-6">
+                        {/* Logo & Title - Compact */}
+                        <div className="flex items-center gap-2.5">
+                            <div className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                <span className="text-white text-[10px] font-bold">LN</span>
+                                {/* Logo glow */}
+                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 blur-lg opacity-40" />
                             </div>
                             <div>
-                                <h1 className="text-sm font-semibold text-white">LifeNexus</h1>
-                                <p className="text-xs text-gray-500">Günlük İlerleme</p>
+                                <h1 className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">LifeNexus</h1>
+                                <p className="text-[10px] text-gray-600">Gunluk Ilerleme</p>
                             </div>
                         </div>
 
-                        {/* Category indicators */}
-                        <div className="flex items-center gap-1">
-                            {categories.map(cat => (
-                                <div
-                                    key={cat.key}
-                                    className={`
-                    w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold
-                    transition-all duration-300 border
-                    ${dailyStatus[cat.key as keyof DailyStatus]
-                                            ? 'border-transparent shadow-lg'
-                                            : 'border-white/10 bg-gray-900/50'
-                                        }
-                  `}
-                                    style={{
-                                        backgroundColor: dailyStatus[cat.key as keyof DailyStatus] ? cat.color + '30' : undefined,
-                                        color: dailyStatus[cat.key as keyof DailyStatus] ? cat.color : '#4b5563',
-                                        boxShadow: dailyStatus[cat.key as keyof DailyStatus] ? `0 0 20px ${cat.color}40` : undefined,
-                                    }}
-                                >
-                                    {cat.label}
-                                </div>
-                            ))}
+                        {/* Category indicators - Minimal dots */}
+                        <div className="flex items-center gap-1.5">
+                            {categories.map(cat => {
+                                const isComplete = dailyStatus[cat.key as keyof DailyStatus]
+                                return (
+                                    <div
+                                        key={cat.key}
+                                        className={`
+                                            relative w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold
+                                            transition-all duration-500
+                                            ${isComplete ? 'scale-105' : 'opacity-40'}
+                                        `}
+                                        style={{
+                                            backgroundColor: isComplete ? cat.color + '20' : 'rgba(255,255,255,0.02)',
+                                            color: isComplete ? cat.color : '#4b5563',
+                                            boxShadow: isComplete ? `0 0 20px ${cat.color}30, inset 0 1px 0 rgba(255,255,255,0.1)` : undefined,
+                                        }}
+                                    >
+                                        {cat.label}
+                                        {/* Completion pulse */}
+                                        {isComplete && (
+                                            <span
+                                                className="absolute inset-0 rounded-lg animate-pulse-ring"
+                                                style={{ boxShadow: `0 0 0 0 ${cat.color}40` }}
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
 
-                        {/* Progress section */}
-                        <div className="flex items-center gap-4">
-                            {/* Progress bar */}
-                            <div className="w-32">
-                                <div className="h-2 bg-gray-800 rounded-full overflow-hidden border border-white/5">
+                        {/* Progress section - Laser aesthetic */}
+                        <div className="flex items-center gap-3">
+                            {/* Laser progress bar */}
+                            <div className="w-28 relative">
+                                {/* Track */}
+                                <div className="h-1 bg-gray-800/50 rounded-full overflow-hidden">
+                                    {/* Laser fill */}
                                     <div
-                                        className="h-full rounded-full transition-all duration-500 ease-out"
+                                        className="h-full rounded-full transition-all duration-700 ease-out relative"
                                         style={{
                                             width: `${progress}%`,
                                             background: progress === 100
-                                                ? 'linear-gradient(90deg, #22c55e, #10b981)'
-                                                : 'linear-gradient(90deg, #8b5cf6, #06b6d4)',
-                                            boxShadow: progress > 0 ? '0 0 10px rgba(139, 92, 246, 0.5)' : undefined,
+                                                ? 'linear-gradient(90deg, #22c55e, #10b981, #22c55e)'
+                                                : 'linear-gradient(90deg, #8b5cf6, #06b6d4, #8b5cf6)',
+                                            backgroundSize: '200% 100%',
                                         }}
-                                    />
+                                    >
+                                        {/* Laser glow */}
+                                        <div
+                                            className="absolute inset-0 blur-sm"
+                                            style={{
+                                                background: progress === 100
+                                                    ? 'linear-gradient(90deg, #22c55e, #10b981)'
+                                                    : 'linear-gradient(90deg, #8b5cf6, #06b6d4)',
+                                            }}
+                                        />
+                                        {/* Leading edge glow */}
+                                        {progress > 0 && (
+                                            <div
+                                                className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                                style={{
+                                                    background: progress === 100 ? '#22c55e' : '#06b6d4',
+                                                    boxShadow: progress === 100
+                                                        ? '0 0 10px #22c55e, 0 0 20px #22c55e50'
+                                                        : '0 0 10px #06b6d4, 0 0 20px #06b6d450',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Percentage */}
-                            <div className="text-right min-w-[60px]">
+                            {/* Percentage - Neon text */}
+                            <div className="text-right min-w-[45px]">
                                 <span
-                                    className="text-2xl font-bold tabular-nums"
+                                    className="text-lg font-bold tabular-nums"
                                     style={{
                                         background: progress === 100
                                             ? 'linear-gradient(90deg, #22c55e, #10b981)'
                                             : 'linear-gradient(90deg, #8b5cf6, #06b6d4)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
+                                        textShadow: progress === 100
+                                            ? '0 0 30px rgba(34, 197, 94, 0.5)'
+                                            : '0 0 30px rgba(139, 92, 246, 0.3)',
                                     }}
                                 >
                                     {Math.round(progress)}%
