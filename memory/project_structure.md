@@ -27,13 +27,13 @@ overthink_v0.2/
 │       └── icon-512.png
 │
 ├── 📁 supabase/              # Supabase konfigürasyonu
-│   └── schema.sql            # Veritabanı şeması SQL
+│   └── schema.sql            # Veritabanı şeması SQL (events dahil)
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
 │   ├── 📁 app/               # Next.js App Router
 │   │   ├── layout.tsx        # Root layout (PWA meta)
-│   │   ├── page.tsx          # Home page (3D Habitat)
+│   │   ├── page.tsx          # Home page (3D + Calendar flow)
 │   │   ├── globals.css       # Global stiller
 │   │   │
 │   │   └── 📁 analytics/     # Analytics route
@@ -47,11 +47,15 @@ overthink_v0.2/
 │   │   │   └── index.ts
 │   │   │
 │   │   ├── 📁 hud/           # [MOLECULES] HUD overlay
-│   │   │   ├── StatusBar.tsx     # Üst progress bar
-│   │   │   ├── LoggerModal.tsx   # FAB + form modal
-│   │   │   ├── LogDrawer.tsx     # Sol log paneli
-│   │   │   ├── form-schemas.ts   # Zod şemaları
-│   │   │   └── index.ts          # Barrel export
+│   │   │   ├── StatusBar.tsx      # Üst progress bar
+│   │   │   ├── LoggerModal.tsx    # FAB + log form modal
+│   │   │   ├── LogDrawer.tsx      # Sol log paneli
+│   │   │   ├── CalendarPicker.tsx # 📅 Global takvim picker (YENİ)
+│   │   │   ├── EventModal.tsx     # 📅 Yeni plan formu (YENİ)
+│   │   │   ├── EventTimeline.tsx  # 📅 Timeline panel (YENİ)
+│   │   │   ├── EventCard.tsx      # 📅 Event kartı (YENİ)
+│   │   │   ├── form-schemas.ts    # Zod şemaları
+│   │   │   └── index.ts           # Barrel export
 │   │   │
 │   │   ├── 📁 3d/            # [ORGANISMS] WebGL bileşenleri
 │   │   │   ├── Scene.tsx         # Canvas + lighting
@@ -66,19 +70,20 @@ overthink_v0.2/
 │   │       └── index.ts
 │   │
 │   ├── 📁 types/             # TypeScript definitions
-│   │   └── database.types.ts # Supabase tablo tipleri
+│   │   └── database.types.ts # Supabase tablo tipleri (Event dahil)
 │   │
 │   ├── 📁 utils/             # Yardımcı fonksiyonlar
 │   │   └── 📁 supabase/      # Supabase clients
 │   │       ├── client.ts     # Browser client
 │   │       ├── server.ts     # Server client
-│   │       └── middleware.ts # Auth helper
+│   │       └── middleware.ts # Auth helper (demo mode destekli)
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   └── useIsMobile.ts    # (Scene.tsx içinde şu an)
 │   │
-│   ├── 📁 lib/               # Business logic
-│   │   └── (boş)
+│   ├── 📁 lib/               # Business logic (YENİ)
+│   │   ├── mockEvents.ts     # 📅 Demo event data
+│   │   └── notifications.ts  # 📅 Web Push API utilities
 │   │
 │   └── middleware.ts         # Next.js middleware (auth)
 │
@@ -104,7 +109,7 @@ src/app/[route-name]/page.tsx
 | Tip | Konum | Örnek |
 |-----|-------|-------|
 | Temel UI (Button, Input) | `components/ui/` | `Button.tsx` |
-| HUD/Overlay | `components/hud/` | `Sidebar.tsx` |
+| HUD/Overlay | `components/hud/` | `EventModal.tsx` |
 | 3D/WebGL | `components/3d/` | `Particle.tsx` |
 | Chart/Grafik | `components/analytics/` | `HeatMap.tsx` |
 | Page-specific | `app/[route]/components/` | Local bileşen |
@@ -117,9 +122,9 @@ src/hooks/use[HookName].ts
 
 ### Yeni Utility Ekleme
 ```
-src/utils/[utilName].ts
+src/lib/[utilName].ts
 ```
-Örnek: `src/utils/formatCurrency.ts`
+Örnek: `src/lib/notifications.ts`
 
 ### Yeni Type Ekleme
 ```
@@ -133,9 +138,9 @@ src/types/[domain].types.ts
 
 | Tip | Format | Örnek |
 |-----|--------|-------|
-| React Component | PascalCase.tsx | `StatusBar.tsx` |
+| React Component | PascalCase.tsx | `EventModal.tsx` |
 | Custom Hook | camelCase.ts (use prefix) | `useIsMobile.ts` |
-| Utility Function | camelCase.ts | `formatDate.ts` |
+| Utility Function | camelCase.ts | `notifications.ts` |
 | Type Definition | kebab.types.ts | `database.types.ts` |
 | Schema/Validation | kebab-schemas.ts | `form-schemas.ts` |
 | Index Export | index.ts | `index.ts` |
@@ -153,8 +158,9 @@ src/types/[domain].types.ts
 
 // Kullanım
 import { Button } from '@/components/ui'
-import { DailyStatus } from '@/components/3d/types'
+import { EventModal, CalendarPicker } from '@/components/hud'
 import { createClient } from '@/utils/supabase/client'
+import { getMockEvents } from '@/lib/mockEvents'
 ```
 
 ---
@@ -168,11 +174,15 @@ Her klasör için `index.ts` oluştur:
 export { default as StatusBar } from './StatusBar'
 export { default as LoggerModal } from './LoggerModal'
 export { default as LogDrawer } from './LogDrawer'
+export { default as CalendarPicker } from './CalendarPicker'
+export { default as EventModal } from './EventModal'
+export { default as EventTimeline } from './EventTimeline'
+export { default as EventCard } from './EventCard'
 ```
 
 Import şekli:
 ```typescript
-import { StatusBar, LoggerModal, LogDrawer } from '@/components/hud'
+import { StatusBar, EventModal, CalendarPicker } from '@/components/hud'
 ```
 
 ---
@@ -189,4 +199,4 @@ import { StatusBar, LoggerModal, LogDrawer } from '@/components/hud'
 ---
 
 **Son Güncelleme:** 2026-01-10
-**Versiyon:** 1.0.0
+**Versiyon:** 1.1.0 (Event Scheduler eklendi)

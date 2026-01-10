@@ -188,6 +188,85 @@ export type Database = {
                     }
                 ]
             }
+            events: {
+                Row: {
+                    id: string
+                    user_id: string
+                    category_id: string | null
+                    title: string
+                    description: string | null
+                    data: Json
+                    scheduled_at: string
+                    duration_min: number
+                    reminder_min: number
+                    is_recurring: boolean
+                    recurrence_rule: string | null
+                    status: 'pending' | 'notified' | 'completed' | 'skipped'
+                    completed_at: string | null
+                    linked_log_id: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    category_id?: string | null
+                    title: string
+                    description?: string | null
+                    data?: Json
+                    scheduled_at: string
+                    duration_min?: number
+                    reminder_min?: number
+                    is_recurring?: boolean
+                    recurrence_rule?: string | null
+                    status?: 'pending' | 'notified' | 'completed' | 'skipped'
+                    completed_at?: string | null
+                    linked_log_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    category_id?: string | null
+                    title?: string
+                    description?: string | null
+                    data?: Json
+                    scheduled_at?: string
+                    duration_min?: number
+                    reminder_min?: number
+                    is_recurring?: boolean
+                    recurrence_rule?: string | null
+                    status?: 'pending' | 'notified' | 'completed' | 'skipped'
+                    completed_at?: string | null
+                    linked_log_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "events_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "events_category_id_fkey"
+                        columns: ["category_id"]
+                        isOneToOne: false
+                        referencedRelation: "categories"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "events_linked_log_id_fkey"
+                        columns: ["linked_log_id"]
+                        isOneToOne: false
+                        referencedRelation: "logs"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never
@@ -225,6 +304,12 @@ export type UserUpdate = Database['public']['Tables']['users']['Update']
 export type CategoryUpdate = Database['public']['Tables']['categories']['Update']
 export type LogUpdate = Database['public']['Tables']['logs']['Update']
 export type GoalUpdate = Database['public']['Tables']['goals']['Update']
+
+// Event types
+export type Event = Database['public']['Tables']['events']['Row']
+export type EventInsert = Database['public']['Tables']['events']['Insert']
+export type EventUpdate = Database['public']['Tables']['events']['Update']
+export type EventStatus = Event['status']
 
 // =====================================================
 // Category-specific Log Data Types

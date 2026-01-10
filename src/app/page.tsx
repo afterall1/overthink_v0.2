@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { Calendar } from 'lucide-react'
 import { DailyStatus } from '@/components/3d/types'
 import { CategorySlug } from '@/types/database.types'
-import { StatusBar, LoggerModal, LogDrawer } from '@/components/hud'
+import { StatusBar, LoggerModal, LogDrawer, EventTimeline, EventModal, CalendarPicker } from '@/components/hud'
 
 // Dynamic import to avoid SSR issues with Three.js
 const Scene = dynamic(() => import('@/components/3d/Scene'), {
@@ -41,6 +42,12 @@ export default function Home() {
   const [dailyStatus, setDailyStatus] = useState<DailyStatus>(INITIAL_STATUS)
   const [selectedSector, setSelectedSector] = useState<CategorySlug | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
+
+  // Event/Calendar state
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   const handleSectorClick = (slug: CategorySlug) => {
     setSelectedSector(prev => prev === slug ? null : slug)
@@ -87,6 +94,25 @@ export default function Home() {
     })
   }, [])
 
+  // Calendar'dan tarih seçilince → EventModal aç
+  const handleDateSelect = useCallback((date: Date) => {
+    setSelectedDate(date)
+    setIsCalendarOpen(false)
+    setIsEventModalOpen(true)
+  }, [])
+
+  // Event oluşturulduğunda → Timeline aç
+  const handleEventCreated = useCallback(() => {
+    setIsEventModalOpen(false)
+    setSelectedDate(null)
+    setIsTimelineOpen(true)
+  }, [])
+
+  // Calendar FAB tıklandığında → Calendar aç
+  const handleCalendarFabClick = () => {
+    setIsCalendarOpen(true)
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       {/* 3D Scene (background) */}
@@ -96,6 +122,46 @@ export default function Home() {
       <StatusBar dailyStatus={dailyStatus} />
       <LogDrawer logs={logs} onDeleteLog={handleDeleteLog} />
       <LoggerModal onSubmit={handleLogSubmit} />
+
+      {/* Calendar Picker - Önce tarih seç */}
+      <CalendarPicker
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        onDateSelect={handleDateSelect}
+        initialDate={selectedDate ?? undefined}
+      />
+
+      {/* Event Modal - Tarih seçildikten sonra */}
+      <EventModal
+        isOpen={isEventModalOpen}
+        onClose={() => {
+          setIsEventModalOpen(false)
+          setSelectedDate(null)
+        }}
+        onEventCreated={handleEventCreated}
+        initialDate={selectedDate ?? undefined}
+      />
+
+      {/* Event Timeline - Planlananları görüntüle */}
+      <EventTimeline isOpen={isTimelineOpen} onClose={() => setIsTimelineOpen(false)} />
+
+      {/* Calendar FAB - Plan oluştur butonu */}
+      <button
+        onClick={handleCalendarFabClick}
+        className="fixed bottom-6 right-24 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-110 hover:shadow-blue-500/50 active:scale-95"
+        aria-label="Yeni plan oluştur"
+      >
+        <Calendar className="h-6 w-6 text-white" />
+      </button>
+
+      {/* Timeline FAB - Planlananları gör */}
+      <button
+        onClick={() => setIsTimelineOpen(true)}
+        className="fixed bottom-6 right-6 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-gray-400 backdrop-blur-sm transition-all hover:bg-white/20 hover:text-white"
+        aria-label="Planlananları görüntüle"
+      >
+        <span className="text-xs">📋</span>
+      </button>
 
       {/* Selected Sector Info */}
       {selectedSector && (
@@ -110,7 +176,7 @@ export default function Home() {
       )}
 
       {/* Instructions */}
-      <div className="fixed bottom-6 right-24 text-right z-30">
+      <div className="fixed bottom-6 right-44 text-right z-20">
         <p className="text-gray-600 text-xs">Drag to rotate</p>
         <p className="text-gray-600 text-xs">Click sector to focus</p>
       </div>

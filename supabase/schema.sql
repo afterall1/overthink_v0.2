@@ -199,4 +199,67 @@ CREATE TRIGGER on_auth_user_created
 -- Sport: {"activity": "weight_training", "duration_min": 60, "calories_burned": 400, "exercises": [{"name": "bench press", "sets": 4, "reps": 10}]}
 -- Dev:   {"project": "LifeNexus", "task": "API geliştirme", "duration_min": 120, "commits": 5, "language": "TypeScript"}
 -- Etsy:  {"order_id": "12345", "product": "El yapımı kolye", "revenue": 45.99, "cost": 15, "profit": 30.99}
--- Gaming:{"game": "Elden Ring", "duration_min": 90, "achievement": "Boss defeated", "platform": "PC"}
+-- Gaming:{\"game\": \"Elden Ring\", \"duration_min\": 90, \"achievement\": \"Boss defeated\", \"platform\": \"PC\"}
+
+-- =====================================================
+-- 5. EVENTS TABLE (Gelecek planları ve bildirimler)
+-- =====================================================
+CREATE TABLE public.events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    
+    -- Event details
+    title TEXT NOT NULL,
+    description TEXT,
+    data JSONB NOT NULL DEFAULT '{}',
+    
+    -- Scheduling
+    scheduled_at TIMESTAMPTZ NOT NULL,
+    duration_min INTEGER DEFAULT 30,
+    reminder_min INTEGER DEFAULT 15,
+    
+    -- Recurrence
+    is_recurring BOOLEAN DEFAULT FALSE,
+    recurrence_rule TEXT,
+    
+    -- Status tracking
+    status TEXT CHECK (status IN ('pending', 'notified', 'completed', 'skipped')) DEFAULT 'pending',
+    completed_at TIMESTAMPTZ,
+    linked_log_id UUID REFERENCES public.logs(id) ON DELETE SET NULL,
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Events için indexler
+CREATE INDEX events_user_id_idx ON public.events(user_id);
+CREATE INDEX events_scheduled_at_idx ON public.events(scheduled_at);
+CREATE INDEX events_status_idx ON public.events(status);
+CREATE INDEX events_category_id_idx ON public.events(category_id);
+
+-- Events için RLS
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own events"
+    ON public.events FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own events"
+    ON public.events FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own events"
+    ON public.events FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own events"
+    ON public.events FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Events için updated_at trigger
+CREATE TRIGGER update_events_updated_at
+    BEFORE UPDATE ON public.events
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
