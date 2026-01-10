@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { List, Calendar as CalendarIcon } from "lucide-react";
 import StatusBar from "@/components/hud/StatusBar";
 import LogDrawer from "@/components/hud/LogDrawer";
 import EventTimeline from "@/components/hud/EventTimeline";
@@ -43,6 +44,8 @@ export default function Home() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [logs, setLogs] = useState<any[]>(MOCK_LOGS);
+  const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+  const [isLogDrawerOpen, setIsLogDrawerOpen] = useState(true);
 
   const handleLogSubmit = (category: CategorySlug, data: Record<string, unknown>, sentiment: number) => {
     const newLog = {
@@ -85,6 +88,28 @@ export default function Home() {
             <h1 className="text-6xl font-light tracking-widest uppercase">LifeNexus</h1>
             <p className="mt-2 text-xl tracking-wide">Focus Mode Active</p>
           </div>
+
+          {/* Floating UI Toggles - Visible when drawers are closed */}
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto z-20">
+            {!isLogDrawerOpen && (
+              <button
+                onClick={() => setIsLogDrawerOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/80 backdrop-blur-md border border-white/50 shadow-lg text-slate-600 hover:text-indigo-600 hover:scale-105 transition-all"
+              >
+                <List className="w-5 h-5" />
+                <span className="font-medium">Günlük</span>
+              </button>
+            )}
+            {!isTimelineOpen && (
+              <button
+                onClick={() => setIsTimelineOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/80 backdrop-blur-md border border-white/50 shadow-lg text-slate-600 hover:text-indigo-600 hover:scale-105 transition-all"
+              >
+                <CalendarIcon className="w-5 h-5" />
+                <span className="font-medium">Planlananlar</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Alt Kontroller (Mobil için Takvim vb.) */}
@@ -102,14 +127,14 @@ export default function Home() {
         <LogDrawer
           key="log-drawer"
           logs={logs}
-          isOpen={true} // Test için açık, normalde state ile kontrol edilir
+          isOpen={isLogDrawerOpen}
           onOpenLogger={() => setIsLoggerOpen(true)}
         />
 
         <EventTimeline
           key="event-timeline"
-          isOpen={true}
-          onClose={() => { }} // Always open for now
+          isOpen={isTimelineOpen}
+          onClose={() => setIsTimelineOpen(false)}
           onOpenEventModal={() => setIsEventModalOpen(true)}
         />
 
