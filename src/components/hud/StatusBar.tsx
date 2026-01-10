@@ -1,6 +1,13 @@
 'use client'
 
-import { DailyStatus } from '@/components/3d/types'
+interface DailyStatus {
+    trade: boolean
+    food: boolean
+    sport: boolean
+    dev: boolean
+    etsy: boolean
+    gaming: boolean
+}
 
 interface StatusBarProps {
     dailyStatus: DailyStatus
@@ -22,24 +29,20 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
     return (
         <div className="fixed top-0 left-0 right-0 z-50 px-6 py-3">
             <div className="max-w-3xl mx-auto">
-                {/* Floating control panel - Ultra thin */}
-                <div className="relative bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/[0.05] px-5 py-3">
+                {/* Floating control panel - Ultra thin Daylight Prism */}
+                <div className="relative bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-lg shadow-blue-900/5 px-5 py-3">
                     {/* Inner top highlight */}
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent rounded-t-2xl" />
-                    {/* Subtle side gradients */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/[0.03] via-transparent to-cyan-500/[0.03] pointer-events-none" />
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent rounded-t-2xl" />
 
                     <div className="relative flex items-center justify-between gap-6">
                         {/* Logo & Title - Compact */}
                         <div className="flex items-center gap-2.5">
-                            <div className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <div className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
                                 <span className="text-white text-[10px] font-bold">LN</span>
-                                {/* Logo glow */}
-                                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 blur-lg opacity-40" />
                             </div>
                             <div>
-                                <h1 className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">LifeNexus</h1>
-                                <p className="text-[10px] text-gray-600">Gunluk Ilerleme</p>
+                                <h1 className="text-xs font-bold text-slate-800 tracking-tight">LifeNexus</h1>
+                                <p className="text-[10px] text-slate-500 font-medium">Günlük İlerleme</p>
                             </div>
                         </div>
 
@@ -53,12 +56,13 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
                                         className={`
                                             relative w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold
                                             transition-all duration-500
-                                            ${isComplete ? 'scale-105' : 'opacity-40'}
+                                            ${isComplete ? 'scale-105' : 'opacity-40 grayscale'}
                                         `}
                                         style={{
-                                            backgroundColor: isComplete ? cat.color + '20' : 'rgba(255,255,255,0.02)',
-                                            color: isComplete ? cat.color : '#4b5563',
-                                            boxShadow: isComplete ? `0 0 20px ${cat.color}30, inset 0 1px 0 rgba(255,255,255,0.1)` : undefined,
+                                            backgroundColor: isComplete ? cat.color + '15' : 'rgba(0,0,0,0.03)',
+                                            color: isComplete ? cat.color : '#64748b',
+                                            boxShadow: isComplete ? `0 2px 8px ${cat.color}20` : undefined,
+                                            border: isComplete ? `1px solid ${cat.color}30` : '1px solid rgba(0,0,0,0.05)'
                                         }}
                                     >
                                         {cat.label}
@@ -74,41 +78,30 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
                             })}
                         </div>
 
-                        {/* Progress section - Laser aesthetic */}
+                        {/* Progress section - Solarpunk aesthetic */}
                         <div className="flex items-center gap-3">
-                            {/* Laser progress bar */}
+                            {/* Organic progress bar */}
                             <div className="w-28 relative">
                                 {/* Track */}
-                                <div className="h-1 bg-gray-800/50 rounded-full overflow-hidden">
-                                    {/* Laser fill */}
+                                <div className="h-1.5 bg-slate-200/80 rounded-full overflow-hidden shadow-inner">
+                                    {/* Fill */}
                                     <div
                                         className="h-full rounded-full transition-all duration-700 ease-out relative"
                                         style={{
                                             width: `${progress}%`,
                                             background: progress === 100
-                                                ? 'linear-gradient(90deg, #22c55e, #10b981, #22c55e)'
-                                                : 'linear-gradient(90deg, #8b5cf6, #06b6d4, #8b5cf6)',
-                                            backgroundSize: '200% 100%',
+                                                ? 'linear-gradient(90deg, #22c55e, #10b981)'
+                                                : 'linear-gradient(90deg, #6366f1, #3b82f6)',
                                         }}
                                     >
-                                        {/* Laser glow */}
-                                        <div
-                                            className="absolute inset-0 blur-sm"
-                                            style={{
-                                                background: progress === 100
-                                                    ? 'linear-gradient(90deg, #22c55e, #10b981)'
-                                                    : 'linear-gradient(90deg, #8b5cf6, #06b6d4)',
-                                            }}
-                                        />
                                         {/* Leading edge glow */}
                                         {progress > 0 && (
                                             <div
-                                                className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                                className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md"
                                                 style={{
-                                                    background: progress === 100 ? '#22c55e' : '#06b6d4',
                                                     boxShadow: progress === 100
-                                                        ? '0 0 10px #22c55e, 0 0 20px #22c55e50'
-                                                        : '0 0 10px #06b6d4, 0 0 20px #06b6d450',
+                                                        ? '0 0 8px #22c55e'
+                                                        : '0 0 8px #6366f1',
                                                 }}
                                             />
                                         )}
@@ -116,19 +109,12 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
                                 </div>
                             </div>
 
-                            {/* Percentage - Neon text */}
+                            {/* Percentage */}
                             <div className="text-right min-w-[45px]">
                                 <span
                                     className="text-lg font-bold tabular-nums"
                                     style={{
-                                        background: progress === 100
-                                            ? 'linear-gradient(90deg, #22c55e, #10b981)'
-                                            : 'linear-gradient(90deg, #8b5cf6, #06b6d4)',
-                                        WebkitBackgroundClip: 'text',
-                                        WebkitTextFillColor: 'transparent',
-                                        textShadow: progress === 100
-                                            ? '0 0 30px rgba(34, 197, 94, 0.5)'
-                                            : '0 0 30px rgba(139, 92, 246, 0.3)',
+                                        color: progress === 100 ? '#10b981' : '#6366f1',
                                     }}
                                 >
                                     {Math.round(progress)}%

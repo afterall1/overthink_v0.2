@@ -1,185 +1,137 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import dynamic from 'next/dynamic'
-import { Calendar } from 'lucide-react'
-import { DailyStatus } from '@/components/3d/types'
+import { useState } from "react";
+import StatusBar from "@/components/hud/StatusBar";
+import LogDrawer from "@/components/hud/LogDrawer";
+import EventTimeline from "@/components/hud/EventTimeline";
+import LoggerModal from "@/components/hud/LoggerModal";
+import EventModal from "@/components/hud/EventModal";
+import CalendarPicker from "@/components/hud/CalendarPicker";
+import { AnimatePresence } from "framer-motion";
 import { CategorySlug } from '@/types/database.types'
-import { StatusBar, LoggerModal, LogDrawer, EventTimeline, EventModal, CalendarPicker } from '@/components/hud'
 
-// Dynamic import to avoid SSR issues with Three.js
-const Scene = dynamic(() => import('@/components/3d/Scene'), {
-  ssr: false,
-  loading: () => (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#0a0a0a]">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-400 text-sm">Loading Habitat...</p>
-      </div>
-    </div>
-  ),
-})
-
-interface LogEntry {
-  id: string
-  category: CategorySlug
-  data: Record<string, unknown>
-  sentiment: number
-  timestamp: Date
-}
-
-// Mock daily status data
-const INITIAL_STATUS: DailyStatus = {
+// Mock Data for StatusBar
+const MOCK_DAILY_STATUS = {
   trade: false,
-  food: false,
+  food: true,
   sport: false,
-  dev: false,
+  dev: true,
   etsy: false,
   gaming: false,
 }
 
-export default function Home() {
-  const [dailyStatus, setDailyStatus] = useState<DailyStatus>(INITIAL_STATUS)
-  const [selectedSector, setSelectedSector] = useState<CategorySlug | null>(null)
-  const [logs, setLogs] = useState<LogEntry[]>([])
-
-  // Event/Calendar state
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-
-  const handleSectorClick = (slug: CategorySlug) => {
-    setSelectedSector(prev => prev === slug ? null : slug)
+// Mock logs for LogDrawer
+const MOCK_LOGS = [
+  {
+    id: '1',
+    category: 'food' as CategorySlug,
+    data: { meal_type: 'lunch', calories: 650 },
+    sentiment: 7,
+    timestamp: new Date(new Date().setHours(12, 30))
+  },
+  {
+    id: '2',
+    category: 'dev' as CategorySlug,
+    data: { project: 'LifeNexus', task: 'UI Refactor' },
+    sentiment: 9,
+    timestamp: new Date(new Date().setHours(14, 0))
   }
+]
 
-  const handleLogSubmit = useCallback((category: CategorySlug, data: Record<string, unknown>, sentiment: number) => {
-    const newLog: LogEntry = {
+export default function Home() {
+  const [isLoggerOpen, setIsLoggerOpen] = useState(false);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [logs, setLogs] = useState<any[]>(MOCK_LOGS);
+
+  const handleLogSubmit = (category: CategorySlug, data: Record<string, unknown>, sentiment: number) => {
+    const newLog = {
       id: crypto.randomUUID(),
       category,
       data,
       sentiment,
-      timestamp: new Date(),
+      timestamp: new Date()
     }
-
-    setLogs(prev => [newLog, ...prev])
-
-    // Mark category as completed
-    setDailyStatus(prev => ({
-      ...prev,
-      [category]: true
-    }))
-
-    // TODO: Save to Supabase
-    console.log('New log:', newLog)
-  }, [])
-
-  const handleDeleteLog = useCallback((id: string) => {
-    setLogs(prev => {
-      const logToDelete = prev.find(l => l.id === id)
-      const newLogs = prev.filter(l => l.id !== id)
-
-      // Check if there are any remaining logs for that category
-      if (logToDelete) {
-        const hasRemainingLogs = newLogs.some(l => l.category === logToDelete.category)
-        if (!hasRemainingLogs) {
-          setDailyStatus(s => ({
-            ...s,
-            [logToDelete.category]: false
-          }))
-        }
-      }
-
-      return newLogs
-    })
-  }, [])
-
-  // Calendar'dan tarih seçilince → EventModal aç
-  const handleDateSelect = useCallback((date: Date) => {
-    setSelectedDate(date)
-    setIsCalendarOpen(false)
-    setIsEventModalOpen(true)
-  }, [])
-
-  // Event oluşturulduğunda → Timeline aç
-  const handleEventCreated = useCallback(() => {
-    setIsEventModalOpen(false)
-    setSelectedDate(null)
-    setIsTimelineOpen(true)
-  }, [])
-
-  // Calendar FAB tıklandığında → Calendar aç
-  const handleCalendarFabClick = () => {
-    setIsCalendarOpen(true)
+    setLogs([newLog, ...logs])
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
-      {/* 3D Scene (background) */}
-      <Scene dailyStatus={dailyStatus} onSectorClick={handleSectorClick} />
+    <main className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 text-slate-800">
 
-      {/* HUD Overlay */}
-      <StatusBar dailyStatus={dailyStatus} />
-      <LogDrawer logs={logs} onDeleteLog={handleDeleteLog} />
-      <LoggerModal onSubmit={handleLogSubmit} />
+      {/* 3D SCENE KALDIRILDI. 
+        Yerine yukarıdaki 'bg-gradient...' sınıfları ile modern, aydınlık bir zemin sağlandı.
+      */}
 
-      {/* Calendar Picker - Önce tarih seç */}
-      <CalendarPicker
-        isOpen={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-        onDateSelect={handleDateSelect}
-        initialDate={selectedDate ?? undefined}
-      />
+      {/* HEADS-UP DISPLAY (HUD) LAYER */}
+      <div className="relative z-10 w-full h-full flex flex-col p-4 md:p-6 pointer-events-none">
 
-      {/* Event Modal - Tarih seçildikten sonra */}
-      <EventModal
-        isOpen={isEventModalOpen}
-        onClose={() => {
-          setIsEventModalOpen(false)
-          setSelectedDate(null)
-        }}
-        onEventCreated={handleEventCreated}
-        initialDate={selectedDate ?? undefined}
-      />
-
-      {/* Event Timeline - Planlananları görüntüle */}
-      <EventTimeline isOpen={isTimelineOpen} onClose={() => setIsTimelineOpen(false)} />
-
-      {/* Calendar FAB - Plan oluştur butonu */}
-      <button
-        onClick={handleCalendarFabClick}
-        className="fixed bottom-6 right-24 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-110 hover:shadow-blue-500/50 active:scale-95"
-        aria-label="Yeni plan oluştur"
-      >
-        <Calendar className="h-6 w-6 text-white" />
-      </button>
-
-      {/* Timeline FAB - Planlananları gör */}
-      <button
-        onClick={() => setIsTimelineOpen(true)}
-        className="fixed bottom-6 right-6 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-gray-400 backdrop-blur-sm transition-all hover:bg-white/20 hover:text-white"
-        aria-label="Planlananları görüntüle"
-      >
-        <span className="text-xs">📋</span>
-      </button>
-
-      {/* Selected Sector Info */}
-      {selectedSector && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30">
-          <div className="bg-black/70 backdrop-blur-xl rounded-xl px-6 py-3 border border-white/10">
-            <p className="text-white font-medium capitalize">{selectedSector}</p>
-            <p className="text-gray-400 text-sm">
-              Status: {dailyStatus[selectedSector] ? '✓ Completed' : '○ Pending'}
-            </p>
+        {/* Üst Bar (Status & Date) */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pointer-events-auto">
+          {/* Mock Daily Status passed explicitly */}
+          <StatusBar dailyStatus={MOCK_DAILY_STATUS} />
+          {/* Takvim Bileşeni artık sağ üstte daha erişilebilir durabilir */}
+          <div className="hidden md:block">
+            <CalendarPicker
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+            />
           </div>
         </div>
-      )}
 
-      {/* Instructions */}
-      <div className="fixed bottom-6 right-44 text-right z-20">
-        <p className="text-gray-600 text-xs">Drag to rotate</p>
-        <p className="text-gray-600 text-xs">Click sector to focus</p>
+        {/* Orta Alan (Boşluk veya İleride Eklenecek Widgetlar) */}
+        <div className="flex-1 flex items-center justify-center pointer-events-none">
+          {/* Buraya şimdilik hoş bir "Empty State" veya günün özeti gelebilir */}
+          <div className="opacity-10 text-center select-none">
+            <h1 className="text-6xl font-light tracking-widest uppercase">LifeNexus</h1>
+            <p className="mt-2 text-xl tracking-wide">Focus Mode Active</p>
+          </div>
+        </div>
+
+        {/* Alt Kontroller (Mobil için Takvim vb.) */}
+        <div className="md:hidden mt-auto pointer-events-auto">
+          <CalendarPicker
+            selectedDate={selectedDate}
+            onSelect={setSelectedDate}
+          />
+        </div>
       </div>
+
+      {/* MODALS & PANELS (Etkileşim Katmanı) */}
+      <AnimatePresence>
+        {/* Yan Paneller (Drawers) */}
+        <LogDrawer
+          key="log-drawer"
+          logs={logs}
+          isOpen={true} // Test için açık, normalde state ile kontrol edilir
+          onOpenLogger={() => setIsLoggerOpen(true)}
+        />
+
+        <EventTimeline
+          key="event-timeline"
+          isOpen={true}
+          onClose={() => { }} // Always open for now
+          onOpenEventModal={() => setIsEventModalOpen(true)}
+        />
+
+        {/* Pop-up Modallar */}
+        {isLoggerOpen && (
+          <LoggerModal
+            key="logger-modal"
+            isOpen={isLoggerOpen}
+            onClose={() => setIsLoggerOpen(false)}
+            onSubmit={handleLogSubmit}
+          />
+        )}
+
+        {isEventModalOpen && (
+          <EventModal
+            key="event-modal"
+            isOpen={isEventModalOpen}
+            onClose={() => setIsEventModalOpen(false)}
+            selectedDate={selectedDate}
+          />
+        )}
+      </AnimatePresence>
     </main>
-  )
+  );
 }

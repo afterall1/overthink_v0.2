@@ -35,12 +35,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className="dark">
+    <html lang="tr">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-[#0a0a0a] text-white`}>
+      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 text-slate-900`}>
         {children}
       </body>
     </html>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, Calendar, ChevronLeft, ChevronRight, Bell, BellOff } from 'lucide-react'
+import { X, Calendar, ChevronLeft, ChevronRight, Bell, BellOff, Plus } from 'lucide-react'
 import type { Event, EventStatus } from '@/types/database.types'
 import { getMockEvents, updateMockEventStatus } from '@/lib/mockEvents'
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
@@ -10,14 +10,19 @@ import EventCard from './EventCard'
 interface EventTimelineProps {
     isOpen: boolean
     onClose: () => void
+    onOpenEventModal: () => void
 }
 
 type ViewMode = 'today' | 'week'
 
-export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
+export default function EventTimeline({ isOpen, onClose, onOpenEventModal }: EventTimelineProps) {
     const [events, setEvents] = useState<Event[]>([])
     const [viewMode, setViewMode] = useState<ViewMode>('today')
     const [notificationEnabled, setNotificationEnabled] = useState(false)
+
+    // ... (rest of logic same)
+
+
     const [selectedDate, setSelectedDate] = useState(new Date())
 
     // Load events
@@ -91,33 +96,40 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
         <>
             {/* Backdrop - Ethereal */}
             <div
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
+                className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-sm"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            {/* Panel - Frosted Glass */}
-            <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-black/60 backdrop-blur-3xl border-l border-white/5 sm:w-96">
+            {/* Panel - Frosted Glass Solarpunk */}
+            <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white/80 backdrop-blur-3xl border-l border-white/60 shadow-2xl shadow-blue-900/5 sm:w-96">
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-transparent to-transparent pointer-events-none" />
-                {/* Blue accent glow */}
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent pointer-events-none" />
-                {/* Inner highlight */}
-                <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-white/10 via-transparent to-white/5" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white via-white/80 to-blue-50/30 pointer-events-none" />
 
                 {/* Header - Minimalist */}
-                <div className="relative flex items-center justify-between border-b border-white/5 p-4">
-                    <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-blue-400" />
-                        <h2 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Planlananlar</h2>
+                <div className="relative flex items-center justify-between border-b border-indigo-50 p-6 z-10">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                            <Calendar className="h-5 w-5" />
+                        </div>
+                        <h2 className="text-lg font-bold text-slate-800">Planlananlar</h2>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* New Event Button */}
+                        <button
+                            onClick={onOpenEventModal}
+                            className="p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                            title="Yeni Etkinlik"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+
                         {/* Notification toggle */}
                         <button
                             onClick={handleEnableNotifications}
-                            className={`rounded-xl p-2 transition-all duration-300 ${notificationEnabled
-                                ? 'bg-green-500/15 text-green-400 shadow-lg shadow-green-500/10'
-                                : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'
+                            className={`rounded-xl p-2.5 transition-all duration-300 ${notificationEnabled
+                                ? 'bg-emerald-50 text-emerald-600 shadow-sm'
+                                : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                                 }`}
                             aria-label={notificationEnabled ? 'Bildirimler acik' : 'Bildirimleri ac'}
                         >
@@ -129,7 +141,7 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                         </button>
                         <button
                             onClick={onClose}
-                            className="rounded-full p-2 text-gray-500 transition-all duration-300 hover:bg-white/10 hover:text-white hover:rotate-90"
+                            className="rounded-full p-2.5 text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-slate-600 hover:rotate-90"
                             aria-label="Kapat"
                         >
                             <X className="h-5 w-5" />
@@ -138,38 +150,38 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                 </div>
 
                 {/* View Mode Toggle - Glass buttons */}
-                <div className="relative flex gap-2 border-b border-white/5 p-4">
+                <div className="relative flex gap-3 border-b border-indigo-50 p-4 z-10">
                     <button
                         onClick={() => setViewMode('today')}
-                        className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ${viewMode === 'today'
-                            ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
-                            : 'bg-white/[0.03] text-gray-500 hover:bg-white/[0.06] hover:text-gray-300'
+                        className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${viewMode === 'today'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-100'
                             }`}
                     >
-                        Bugun
+                        Bugün
                     </button>
                     <button
                         onClick={() => setViewMode('week')}
-                        className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all duration-300 ${viewMode === 'week'
-                            ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
-                            : 'bg-white/[0.03] text-gray-500 hover:bg-white/[0.06] hover:text-gray-300'
+                        className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all duration-300 ${viewMode === 'week'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-100'
                             }`}
                     >
-                        7 Gun
+                        7 Gün
                     </button>
                 </div>
 
                 {/* Date Navigator (for week view) */}
                 {viewMode === 'week' && (
-                    <div className="relative flex items-center justify-between border-b border-white/5 px-4 py-3">
+                    <div className="relative flex items-center justify-between border-b border-indigo-50 px-4 py-3 z-10 bg-slate-50/50">
                         <button
                             onClick={() => navigateDate('prev')}
-                            className="group rounded-xl p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-all duration-300"
+                            className="group rounded-xl p-2 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-sm transition-all duration-300"
                             aria-label="Onceki gun"
                         >
                             <ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
                         </button>
-                        <span className="text-sm text-gray-400 font-medium">
+                        <span className="text-sm text-slate-700 font-semibold bg-white px-3 py-1 rounded-lg border border-indigo-50 shadow-sm">
                             {selectedDate.toLocaleDateString('tr-TR', {
                                 weekday: 'long',
                                 day: 'numeric',
@@ -178,7 +190,7 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                         </span>
                         <button
                             onClick={() => navigateDate('next')}
-                            className="group rounded-xl p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-all duration-300"
+                            className="group rounded-xl p-2 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-sm transition-all duration-300"
                             aria-label="Sonraki gun"
                         >
                             <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
@@ -187,17 +199,19 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                 )}
 
                 {/* Events List */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 z-10 custom-scrollbar">
                     {sortedDates.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Calendar className="mb-4 h-12 w-12 text-gray-600" />
-                            <p className="text-gray-400">
+                        <div className="flex flex-col items-center justify-center py-12 text-center h-full">
+                            <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-300">
+                                <Calendar className="h-8 w-8" />
+                            </div>
+                            <p className="text-slate-500 font-medium">
                                 {viewMode === 'today'
                                     ? 'Bugün için planlanmış etkinlik yok'
                                     : 'Bu hafta için planlanmış etkinlik yok'}
                             </p>
-                            <p className="mt-2 text-sm text-gray-500">
-                                + butonuna tıklayarak yeni plan ekle
+                            <p className="mt-2 text-sm text-slate-400">
+                                Harika bir gün geçirmek için plan yapmaya başla ✨
                             </p>
                         </div>
                     ) : (
@@ -205,7 +219,7 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                             <div key={dateKey} className="mb-6">
                                 {/* Date Header */}
                                 {viewMode === 'week' && (
-                                    <h3 className="mb-3 text-sm font-medium text-gray-400">
+                                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400 pl-1">
                                         {new Date(dateKey).toLocaleDateString('tr-TR', {
                                             weekday: 'long',
                                             day: 'numeric',
@@ -237,12 +251,12 @@ export default function EventTimeline({ isOpen, onClose }: EventTimelineProps) {
                 </div>
 
                 {/* Stats Footer - Refined */}
-                <div className="relative border-t border-white/5 p-4">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">
-                            Toplam: <span className="text-gray-300">{filteredEvents.length}</span> etkinlik
+                <div className="relative border-t border-indigo-50 p-4 z-10 bg-white/50 backdrop-blur-md">
+                    <div className="flex justify-between text-sm font-medium">
+                        <span className="text-slate-500">
+                            Toplam: <span className="text-slate-800 font-semibold">{filteredEvents.length}</span> etkinlik
                         </span>
-                        <span className="text-green-400/80">
+                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                             Tamamlanan: {filteredEvents.filter((e) => e.status === 'completed').length}
                         </span>
                     </div>

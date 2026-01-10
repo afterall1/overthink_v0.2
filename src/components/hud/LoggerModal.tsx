@@ -14,10 +14,6 @@ import {
     DevFormData, EtsyFormData, GamingFormData
 } from './form-schemas'
 
-interface LoggerModalProps {
-    onSubmit: (category: CategorySlug, data: Record<string, unknown>, sentiment: number) => void
-}
-
 const CATEGORIES = [
     { slug: 'trade' as const, name: 'Trade', icon: TrendingUp, color: '#F59E0B' },
     { slug: 'food' as const, name: 'Food', icon: Utensils, color: '#10B981' },
@@ -27,19 +23,22 @@ const CATEGORIES = [
     { slug: 'gaming' as const, name: 'Gaming', icon: Gamepad2, color: '#EF4444' },
 ]
 
+const inputClasses = "w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
+const labelClasses = "text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block"
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TradeForm({ register, errors }: { register: any, errors: any }) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Pair</label>
-                    <input {...register('pair')} placeholder="BTC/USDT" className="hud-input" />
-                    {errors.pair && <span className="text-red-400 text-xs">{errors.pair.message}</span>}
+                    <label className={labelClasses}>Pair</label>
+                    <input {...register('pair')} placeholder="BTC/USDT" className={inputClasses} />
+                    {errors.pair && <span className="text-red-500 text-xs font-medium mt-1">{errors.pair.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Side</label>
-                    <select {...register('side')} className="hud-input">
+                    <label className={labelClasses}>Side</label>
+                    <select {...register('side')} className={inputClasses}>
                         <option value="long">Long</option>
                         <option value="short">Short</option>
                     </select>
@@ -47,13 +46,13 @@ function TradeForm({ register, errors }: { register: any, errors: any }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Entry</label>
-                    <input {...register('entry', { valueAsNumber: true })} type="number" step="0.01" className="hud-input" />
+                    <label className={labelClasses}>Entry</label>
+                    <input {...register('entry', { valueAsNumber: true })} type="number" step="0.01" className={inputClasses} />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">PnL ($)</label>
-                    <input {...register('pnl', { valueAsNumber: true })} type="number" step="0.01" className="hud-input" />
-                    {errors.pnl && <span className="text-red-400 text-xs">{errors.pnl.message}</span>}
+                    <label className={labelClasses}>PnL ($)</label>
+                    <input {...register('pnl', { valueAsNumber: true })} type="number" step="0.01" className={inputClasses} />
+                    {errors.pnl && <span className="text-red-500 text-xs font-medium mt-1">{errors.pnl.message}</span>}
                 </div>
             </div>
         </div>
@@ -65,8 +64,8 @@ function FoodForm({ register, errors }: { register: any, errors: any }) {
     return (
         <div className="space-y-4">
             <div>
-                <label className="text-xs text-gray-400 mb-1 block">Öğün</label>
-                <select {...register('meal_type')} className="hud-input">
+                <label className={labelClasses}>Öğün</label>
+                <select {...register('meal_type')} className={inputClasses}>
                     <option value="breakfast">Kahvaltı</option>
                     <option value="lunch">Öğle</option>
                     <option value="dinner">Akşam</option>
@@ -75,18 +74,18 @@ function FoodForm({ register, errors }: { register: any, errors: any }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Kalori</label>
-                    <input {...register('calories', { valueAsNumber: true })} type="number" className="hud-input" />
-                    {errors.calories && <span className="text-red-400 text-xs">{errors.calories.message}</span>}
+                    <label className={labelClasses}>Kalori</label>
+                    <input {...register('calories', { valueAsNumber: true })} type="number" className={inputClasses} />
+                    {errors.calories && <span className="text-red-500 text-xs font-medium mt-1">{errors.calories.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Protein (g)</label>
-                    <input {...register('protein', { valueAsNumber: true })} type="number" className="hud-input" />
+                    <label className={labelClasses}>Protein (g)</label>
+                    <input {...register('protein', { valueAsNumber: true })} type="number" className={inputClasses} />
                 </div>
             </div>
             <div>
-                <label className="text-xs text-gray-400 mb-1 block">Yemekler</label>
-                <input {...register('foods')} placeholder="Tavuk, pilav..." className="hud-input" />
+                <label className={labelClasses}>Yemekler</label>
+                <input {...register('foods')} placeholder="Tavuk, pilav..." className={inputClasses} />
             </div>
         </div>
     )
@@ -97,19 +96,19 @@ function SportForm({ register, errors }: { register: any, errors: any }) {
     return (
         <div className="space-y-4">
             <div>
-                <label className="text-xs text-gray-400 mb-1 block">Aktivite</label>
-                <input {...register('activity')} placeholder="Koşu, Ağırlık..." className="hud-input" />
-                {errors.activity && <span className="text-red-400 text-xs">{errors.activity.message}</span>}
+                <label className={labelClasses}>Aktivite</label>
+                <input {...register('activity')} placeholder="Koşu, Ağırlık..." className={inputClasses} />
+                {errors.activity && <span className="text-red-500 text-xs font-medium mt-1">{errors.activity.message}</span>}
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Süre (dk)</label>
-                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className="hud-input" />
-                    {errors.duration_min && <span className="text-red-400 text-xs">{errors.duration_min.message}</span>}
+                    <label className={labelClasses}>Süre (dk)</label>
+                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className={inputClasses} />
+                    {errors.duration_min && <span className="text-red-500 text-xs font-medium mt-1">{errors.duration_min.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Yakılan Kalori</label>
-                    <input {...register('calories_burned', { valueAsNumber: true })} type="number" className="hud-input" />
+                    <label className={labelClasses}>Yakılan Kalori</label>
+                    <input {...register('calories_burned', { valueAsNumber: true })} type="number" className={inputClasses} />
                 </div>
             </div>
         </div>
@@ -122,28 +121,28 @@ function DevForm({ register, errors }: { register: any, errors: any }) {
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Proje</label>
-                    <input {...register('project')} placeholder="LifeNexus" className="hud-input" />
-                    {errors.project && <span className="text-red-400 text-xs">{errors.project.message}</span>}
+                    <label className={labelClasses}>Proje</label>
+                    <input {...register('project')} placeholder="LifeNexus" className={inputClasses} />
+                    {errors.project && <span className="text-red-500 text-xs font-medium mt-1">{errors.project.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Dil</label>
-                    <input {...register('language')} placeholder="TypeScript" className="hud-input" />
+                    <label className={labelClasses}>Dil</label>
+                    <input {...register('language')} placeholder="TypeScript" className={inputClasses} />
                 </div>
             </div>
             <div>
-                <label className="text-xs text-gray-400 mb-1 block">Task</label>
-                <input {...register('task')} placeholder="API geliştirme" className="hud-input" />
-                {errors.task && <span className="text-red-400 text-xs">{errors.task.message}</span>}
+                <label className={labelClasses}>Task</label>
+                <input {...register('task')} placeholder="API geliştirme" className={inputClasses} />
+                {errors.task && <span className="text-red-500 text-xs font-medium mt-1">{errors.task.message}</span>}
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Süre (dk)</label>
-                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className="hud-input" />
+                    <label className={labelClasses}>Süre (dk)</label>
+                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className={inputClasses} />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Commit Sayısı</label>
-                    <input {...register('commits', { valueAsNumber: true })} type="number" className="hud-input" />
+                    <label className={labelClasses}>Commit Sayısı</label>
+                    <input {...register('commits', { valueAsNumber: true })} type="number" className={inputClasses} />
                 </div>
             </div>
         </div>
@@ -155,22 +154,22 @@ function EtsyForm({ register, errors }: { register: any, errors: any }) {
     return (
         <div className="space-y-4">
             <div>
-                <label className="text-xs text-gray-400 mb-1 block">Ürün</label>
-                <input {...register('product')} placeholder="El yapımı kolye" className="hud-input" />
-                {errors.product && <span className="text-red-400 text-xs">{errors.product.message}</span>}
+                <label className={labelClasses}>Ürün</label>
+                <input {...register('product')} placeholder="El yapımı kolye" className={inputClasses} />
+                {errors.product && <span className="text-red-500 text-xs font-medium mt-1">{errors.product.message}</span>}
             </div>
             <div className="grid grid-cols-3 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Gelir ($)</label>
-                    <input {...register('revenue', { valueAsNumber: true })} type="number" step="0.01" className="hud-input" />
+                    <label className={labelClasses}>Gelir ($)</label>
+                    <input {...register('revenue', { valueAsNumber: true })} type="number" step="0.01" className={inputClasses} />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Maliyet ($)</label>
-                    <input {...register('cost', { valueAsNumber: true })} type="number" step="0.01" className="hud-input" />
+                    <label className={labelClasses}>Maliyet ($)</label>
+                    <input {...register('cost', { valueAsNumber: true })} type="number" step="0.01" className={inputClasses} />
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Kar ($)</label>
-                    <input {...register('profit', { valueAsNumber: true })} type="number" step="0.01" className="hud-input" />
+                    <label className={labelClasses}>Kar ($)</label>
+                    <input {...register('profit', { valueAsNumber: true })} type="number" step="0.01" className={inputClasses} />
                 </div>
             </div>
         </div>
@@ -183,13 +182,13 @@ function GamingForm({ register, errors }: { register: any, errors: any }) {
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Oyun</label>
-                    <input {...register('game')} placeholder="Elden Ring" className="hud-input" />
-                    {errors.game && <span className="text-red-400 text-xs">{errors.game.message}</span>}
+                    <label className={labelClasses}>Oyun</label>
+                    <input {...register('game')} placeholder="Elden Ring" className={inputClasses} />
+                    {errors.game && <span className="text-red-500 text-xs font-medium mt-1">{errors.game.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Platform</label>
-                    <select {...register('platform')} className="hud-input">
+                    <label className={labelClasses}>Platform</label>
+                    <select {...register('platform')} className={inputClasses}>
                         <option value="">Seçiniz</option>
                         <option value="PC">PC</option>
                         <option value="PS5">PS5</option>
@@ -201,21 +200,26 @@ function GamingForm({ register, errors }: { register: any, errors: any }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Süre (dk)</label>
-                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className="hud-input" />
-                    {errors.duration_min && <span className="text-red-400 text-xs">{errors.duration_min.message}</span>}
+                    <label className={labelClasses}>Süre (dk)</label>
+                    <input {...register('duration_min', { valueAsNumber: true })} type="number" className={inputClasses} />
+                    {errors.duration_min && <span className="text-red-500 text-xs font-medium mt-1">{errors.duration_min.message}</span>}
                 </div>
                 <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Başarı</label>
-                    <input {...register('achievement')} placeholder="Boss yenildi" className="hud-input" />
+                    <label className={labelClasses}>Başarı</label>
+                    <input {...register('achievement')} placeholder="Boss yenildi" className={inputClasses} />
                 </div>
             </div>
         </div>
     )
 }
 
-export default function LoggerModal({ onSubmit }: LoggerModalProps) {
-    const [isOpen, setIsOpen] = useState(false)
+interface LoggerModalProps {
+    isOpen: boolean
+    onClose: () => void
+    onSubmit: (category: CategorySlug, data: Record<string, unknown>, sentiment: number) => void
+}
+
+export default function LoggerModal({ isOpen, onClose, onSubmit }: LoggerModalProps) {
     const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
     const [sentiment, setSentiment] = useState(5)
 
@@ -233,7 +237,7 @@ export default function LoggerModal({ onSubmit }: LoggerModalProps) {
     const onFormSubmit = (data: Record<string, unknown>) => {
         if (!selectedCategory) return
         onSubmit(selectedCategory, data, sentiment)
-        setIsOpen(false)
+        onClose()
         setSelectedCategory(null)
         reset()
         setSentiment(5)
@@ -241,150 +245,135 @@ export default function LoggerModal({ onSubmit }: LoggerModalProps) {
 
     const currentCategoryData = CATEGORIES.find(c => c.slug === selectedCategory)
 
+    if (!isOpen) return null
+
     return (
-        <>
-            {/* FAB Button */}
-            {/* FAB Button - Ethereal */}
-            <button
-                onClick={() => setIsOpen(true)}
-                className="group fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 
-                   flex items-center justify-center shadow-2xl hover:scale-110 transition-all duration-300
-                   border border-purple-400/30"
-                style={{ boxShadow: '0 0 40px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' }}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop - Ethereal Light */}
+            <div
+                className="absolute inset-0 bg-slate-900/10 backdrop-blur-md"
+                onClick={() => { onClose(); setSelectedCategory(null) }}
+            />
+
+            {/* Modal Content - Ethereal Glass */}
+            <div
+                className="relative w-full max-w-lg bg-white/90 backdrop-blur-2xl overflow-hidden animate-in fade-in zoom-in duration-300 rounded-3xl border border-white/60"
+                style={{
+                    boxShadow: currentCategoryData
+                        ? `0 20px 50px -10px ${currentCategoryData.color}30, 0 0 30px ${currentCategoryData.color}10`
+                        : '0 20px 50px -10px rgba(99, 102, 241, 0.2), 0 0 30px rgba(99, 102, 241, 0.05)'
+                }}
             >
-                <Plus className="w-8 h-8 text-white transition-transform duration-300 group-hover:rotate-90" />
-                {/* Outer glow ring */}
-                <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-xl scale-150 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </button>
+                {/* Category Aura Glow */}
+                <div
+                    className="absolute inset-0 opacity-20 pointer-events-none transition-all duration-500"
+                    style={{
+                        background: currentCategoryData
+                            ? `radial-gradient(circle at 50% 0%, ${currentCategoryData.color}80, transparent 70%)`
+                            : 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.4), transparent 70%)'
+                    }}
+                />
 
-            {/* Modal */}
-            {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    {/* Backdrop - Ethereal */}
-                    <div
-                        className="absolute inset-0 bg-black/70 backdrop-blur-md"
-                        onClick={() => { setIsOpen(false); setSelectedCategory(null) }}
-                    />
-
-                    {/* Modal Content - Ethereal Glass */}
-                    <div
-                        className="relative w-full max-w-lg ethereal-glass overflow-hidden animate-in"
-                        style={{
-                            boxShadow: currentCategoryData
-                                ? `0 8px 32px rgba(0,0,0,0.4), 0 0 60px ${currentCategoryData.color}25`
-                                : '0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(139, 92, 246, 0.15)'
-                        }}
+                {/* Header */}
+                <div className="relative flex items-center justify-between p-6 border-b border-slate-100">
+                    <h2 className="text-xl font-bold text-slate-800">
+                        {selectedCategory ? `${currentCategoryData?.name} Log` : 'Yeni Log Ekle'}
+                    </h2>
+                    <button
+                        onClick={() => { onClose(); setSelectedCategory(null) }}
+                        className="p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                     >
-                        {/* Category Aura Glow */}
-                        <div
-                            className="absolute inset-0 opacity-40 pointer-events-none rounded-3xl transition-all duration-500"
-                            style={{
-                                background: currentCategoryData
-                                    ? `radial-gradient(ellipse at 50% -20%, ${currentCategoryData.color}50, transparent 60%)`
-                                    : 'radial-gradient(ellipse at 50% -20%, rgba(139, 92, 246, 0.3), transparent 60%)'
-                            }}
-                        />
-                        {/* Inner top highlight */}
-                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-                        {/* Header */}
-                        <div className="relative flex items-center justify-between p-4 border-b border-white/10">
-                            <h2 className="text-lg font-semibold text-white">
-                                {selectedCategory ? `${currentCategoryData?.name} Log` : 'Yeni Log Ekle'}
-                            </h2>
-                            <button
-                                onClick={() => { setIsOpen(false); setSelectedCategory(null) }}
-                                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                            >
-                                <X className="w-5 h-5 text-gray-400" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="relative p-4">
-                            {!selectedCategory ? (
-                                // Category Selection
-                                <div className="grid grid-cols-3 gap-3">
-                                    {CATEGORIES.map(cat => (
-                                        <button
-                                            key={cat.slug}
-                                            onClick={() => handleCategorySelect(cat.slug)}
-                                            className="group relative p-4 rounded-2xl border border-white/5 
-                                                       bg-white/[0.02] hover:bg-white/[0.06] transition-all duration-300
-                                                       hover:border-white/10 hover:-translate-y-0.5"
-                                        >
-                                            {/* Hover glow */}
-                                            <div
-                                                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                                                style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 24px ${cat.color}20` }}
-                                            />
-                                            <cat.icon
-                                                className="w-8 h-8 mx-auto mb-2 transition-all duration-300 group-hover:scale-110"
-                                                style={{ color: cat.color }}
-                                            />
-                                            <p className="relative text-sm text-gray-400 group-hover:text-white transition-colors">{cat.name}</p>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                // Dynamic Form
-                                <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-                                    {/* Back button */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedCategory(null)}
-                                        className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
-                                    >
-                                        ← Geri
-                                    </button>
-
-                                    {/* Category-specific form */}
-                                    {selectedCategory === 'trade' && <TradeForm register={register} errors={errors} />}
-                                    {selectedCategory === 'food' && <FoodForm register={register} errors={errors} />}
-                                    {selectedCategory === 'sport' && <SportForm register={register} errors={errors} />}
-                                    {selectedCategory === 'dev' && <DevForm register={register} errors={errors} />}
-                                    {selectedCategory === 'etsy' && <EtsyForm register={register} errors={errors} />}
-                                    {selectedCategory === 'gaming' && <GamingForm register={register} errors={errors} />}
-
-                                    {/* Sentiment */}
-                                    <div>
-                                        <label className="text-xs text-gray-400 mb-2 block flex items-center gap-2">
-                                            <Smile className="w-4 h-4" />
-                                            Nasıl hissediyorsun? ({sentiment}/10)
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="10"
-                                            value={sentiment}
-                                            onChange={(e) => setSentiment(Number(e.target.value))}
-                                            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                                        />
-                                        <div className="flex justify-between text-xs text-gray-600 mt-1">
-                                            <span>😔</span>
-                                            <span>😐</span>
-                                            <span>😊</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Submit */}
-                                    <button
-                                        type="submit"
-                                        className="w-full py-3 rounded-xl font-medium text-white transition-all duration-300
-                               hover:scale-[1.02] active:scale-[0.98]"
-                                        style={{
-                                            background: `linear-gradient(135deg, ${currentCategoryData?.color}, ${currentCategoryData?.color}cc)`,
-                                            boxShadow: `0 4px 20px ${currentCategoryData?.color}40`
-                                        }}
-                                    >
-                                        Kaydet
-                                    </button>
-                                </form>
-                            )}
-                        </div>
-                    </div>
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
-            )}
-        </>
+
+                {/* Content */}
+                <div className="relative p-6">
+                    {!selectedCategory ? (
+                        // Category Selection
+                        <div className="grid grid-cols-3 gap-4">
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat.slug}
+                                    onClick={() => handleCategorySelect(cat.slug)}
+                                    className="group relative p-4 rounded-2xl border border-slate-100 
+                                               bg-white shadow-sm hover:shadow-md transition-all duration-300
+                                               hover:border-indigo-100 hover:-translate-y-1"
+                                >
+                                    <div
+                                        className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                                        style={{ backgroundColor: `${cat.color}15` }}
+                                    >
+                                        <cat.icon
+                                            className="w-6 h-6"
+                                            style={{ color: cat.color }}
+                                        />
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">{cat.name}</p>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        // Dynamic Form
+                        <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+                            {/* Back button */}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCategory(null)}
+                                className="text-sm font-medium text-indigo-500 hover:text-indigo-600 flex items-center gap-1 -mt-2"
+                            >
+                                ← Geri
+                            </button>
+
+                            {/* Category-specific form */}
+                            <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                                {selectedCategory === 'trade' && <TradeForm register={register} errors={errors} />}
+                                {selectedCategory === 'food' && <FoodForm register={register} errors={errors} />}
+                                {selectedCategory === 'sport' && <SportForm register={register} errors={errors} />}
+                                {selectedCategory === 'dev' && <DevForm register={register} errors={errors} />}
+                                {selectedCategory === 'etsy' && <EtsyForm register={register} errors={errors} />}
+                                {selectedCategory === 'gaming' && <GamingForm register={register} errors={errors} />}
+                            </div>
+
+                            {/* Sentiment */}
+                            <div>
+                                <label className={labelClasses + " flex items-center gap-2"}>
+                                    <Smile className="w-4 h-4 text-amber-500" />
+                                    Nasıl hissediyorsun? ({sentiment}/10)
+                                </label>
+                                <div className="px-2">
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        value={sentiment}
+                                        onChange={(e) => setSentiment(Number(e.target.value))}
+                                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                    />
+                                    <div className="flex justify-between text-xs font-medium text-slate-400 mt-2">
+                                        <span>😔 Kötü</span>
+                                        <span>😐 Nötr</span>
+                                        <span>😊 Harika</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                className="w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300
+                        hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                                style={{
+                                    background: `linear-gradient(135deg, ${currentCategoryData?.color}, ${currentCategoryData?.color}dd)`,
+                                    boxShadow: `0 8px 20px -4px ${currentCategoryData?.color}50`
+                                }}
+                            >
+                                Log Kaydet
+                            </button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </div>
     )
 }

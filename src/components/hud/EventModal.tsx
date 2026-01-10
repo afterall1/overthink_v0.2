@@ -52,10 +52,10 @@ interface EventModalProps {
     isOpen: boolean
     onClose: () => void
     onEventCreated?: (event: EventInsert) => void
-    initialDate?: Date // CalendarPicker'dan gelen tarih
+    selectedDate?: Date
 }
 
-export default function EventModal({ isOpen, onClose, onEventCreated, initialDate }: EventModalProps) {
+export default function EventModal({ isOpen, onClose, onEventCreated, selectedDate }: EventModalProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -76,13 +76,13 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
         },
     })
 
-    // initialDate değiştiğinde formu güncelle
+    // selectedDate değiştiğinde formu güncelle
     useEffect(() => {
-        if (initialDate && isOpen) {
-            const dateStr = initialDate.toISOString().split('T')[0]
+        if (selectedDate && isOpen) {
+            const dateStr = selectedDate.toISOString().split('T')[0]
             setValue('scheduled_date', dateStr)
         }
-    }, [initialDate, isOpen, setValue])
+    }, [selectedDate, isOpen, setValue])
 
     // Minimum tarih: bugün
     const today = new Date().toISOString().split('T')[0]
@@ -134,41 +134,41 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
         <>
             {/* Backdrop - Ethereal */}
             <div
-                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md"
+                className="fixed inset-0 z-50 bg-slate-900/10 backdrop-blur-md"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
             {/* Modal - Ethereal Glass */}
             <div
-                className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 ethereal-glass p-6 animate-in"
+                className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-2xl p-6 animate-in rounded-3xl border border-white/60 shadow-xl shadow-blue-900/10"
                 style={{
                     boxShadow: selectedCategoryData
-                        ? `0 8px 32px rgba(0,0,0,0.4), 0 0 60px ${selectedCategoryData.color}25`
-                        : '0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(59, 130, 246, 0.15)'
+                        ? `0 10px 40px -10px ${selectedCategoryData.color}30, 0 0 20px ${selectedCategoryData.color}10, inset 0 1px 0 rgba(255,255,255,0.8)`
+                        : '0 10px 40px -10px rgba(59, 130, 246, 0.15), 0 0 20px rgba(59, 130, 246, 0.05), inset 0 1px 0 rgba(255,255,255,0.8)'
                 }}
             >
                 {/* Category Aura Glow */}
                 <div
-                    className="absolute inset-0 opacity-40 pointer-events-none rounded-3xl transition-all duration-500"
+                    className="absolute inset-0 opacity-20 pointer-events-none rounded-3xl transition-all duration-500"
                     style={{
                         background: selectedCategoryData
-                            ? `radial-gradient(ellipse at 50% -20%, ${selectedCategoryData.color}50, transparent 60%)`
-                            : 'radial-gradient(ellipse at 50% -20%, rgba(59, 130, 246, 0.3), transparent 60%)'
+                            ? `radial-gradient(ellipse at 50% -20%, ${selectedCategoryData.color}80, transparent 70%)`
+                            : 'radial-gradient(ellipse at 50% -20%, rgba(59, 130, 246, 0.4), transparent 70%)'
                     }}
                 />
-                {/* Inner top highlight */}
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-t-3xl" />
 
                 {/* Header */}
                 <div className="relative mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-blue-400" />
-                        <h2 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300">Yeni Plan</h2>
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-indigo-100/50 shadow-sm">
+                            <Calendar className="h-5 w-5 text-indigo-500" />
+                        </div>
+                        <h2 className="text-xl font-bold tracking-tight text-slate-800">Yeni Plan</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-full p-2 text-gray-400 transition-all duration-300 hover:bg-white/10 hover:text-white hover:rotate-90"
+                        className="rounded-full p-2 text-slate-400 transition-all duration-300 hover:bg-slate-100 hover:text-slate-600 hover:rotate-90"
                         aria-label="Kapat"
                     >
                         <X className="h-5 w-5" />
@@ -178,7 +178,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     {/* Category Selection */}
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-400">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">
                             Kategori (opsiyonel)
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -191,13 +191,14 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                             selectedCategory === cat.id ? null : cat.id
                                         )
                                     }
-                                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-all ${selectedCategory === cat.id
-                                        ? 'ring-2 ring-white/50'
-                                        : 'opacity-60 hover:opacity-100'
+                                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${selectedCategory === cat.id
+                                        ? 'ring-2 ring-indigo-500/20 shadow-sm transform scale-105'
+                                        : 'opacity-70 hover:opacity-100 hover:bg-slate-50'
                                         }`}
                                     style={{
-                                        backgroundColor: `${cat.color}20`,
-                                        color: cat.color,
+                                        backgroundColor: selectedCategory === cat.id ? `${cat.color}15` : 'transparent',
+                                        color: selectedCategory === cat.id ? cat.color : '#64748b',
+                                        border: selectedCategory === cat.id ? `1px solid ${cat.color}30` : '1px solid rgba(0,0,0,0.05)'
                                     }}
                                 >
                                     <span>{cat.emoji}</span>
@@ -209,7 +210,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
 
                     {/* Title */}
                     <div>
-                        <label htmlFor="title" className="mb-2 block text-sm font-medium text-gray-400">
+                        <label htmlFor="title" className="mb-2 block text-sm font-semibold text-slate-700">
                             Başlık *
                         </label>
                         <input
@@ -217,16 +218,16 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                             id="title"
                             type="text"
                             placeholder="Ne planlıyorsun?"
-                            className="ethereal-input"
+                            className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
                         />
                         {errors.title && (
-                            <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
+                            <p className="mt-1 text-sm text-red-500 font-medium">{errors.title.message}</p>
                         )}
                     </div>
 
                     {/* Description */}
                     <div>
-                        <label htmlFor="description" className="mb-2 block text-sm font-medium text-gray-400">
+                        <label htmlFor="description" className="mb-2 block text-sm font-semibold text-slate-700">
                             Açıklama
                         </label>
                         <textarea
@@ -234,15 +235,15 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                             id="description"
                             rows={2}
                             placeholder="Detaylar..."
-                            className="ethereal-input resize-none"
+                            className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm resize-none"
                         />
                     </div>
 
                     {/* Date & Time */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label htmlFor="scheduled_date" className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-400">
-                                <Calendar className="h-4 w-4" />
+                            <label htmlFor="scheduled_date" className="mb-2 flex items-center gap-1 text-sm font-semibold text-slate-700">
+                                <Calendar className="h-4 w-4 text-indigo-500" />
                                 Tarih *
                             </label>
                             <input
@@ -250,25 +251,25 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 id="scheduled_date"
                                 type="date"
                                 min={today}
-                                className="ethereal-input"
+                                className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
                             />
                             {errors.scheduled_date && (
-                                <p className="mt-1 text-xs text-red-400">{errors.scheduled_date.message}</p>
+                                <p className="mt-1 text-xs text-red-500 font-medium">{errors.scheduled_date.message}</p>
                             )}
                         </div>
                         <div>
-                            <label htmlFor="scheduled_time" className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-400">
-                                <Clock className="h-4 w-4" />
+                            <label htmlFor="scheduled_time" className="mb-2 flex items-center gap-1 text-sm font-semibold text-slate-700">
+                                <Clock className="h-4 w-4 text-indigo-500" />
                                 Saat *
                             </label>
                             <input
                                 {...register('scheduled_time')}
                                 id="scheduled_time"
                                 type="time"
-                                className="ethereal-input"
+                                className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
                             />
                             {errors.scheduled_time && (
-                                <p className="mt-1 text-xs text-red-400">{errors.scheduled_time.message}</p>
+                                <p className="mt-1 text-xs text-red-500 font-medium">{errors.scheduled_time.message}</p>
                             )}
                         </div>
                     </div>
@@ -276,7 +277,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                     {/* Duration & Reminder */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label htmlFor="duration_min" className="mb-2 block text-sm font-medium text-gray-400">
+                            <label htmlFor="duration_min" className="mb-2 block text-sm font-semibold text-slate-700">
                                 Süre (dk)
                             </label>
                             <input
@@ -285,41 +286,43 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                                 type="number"
                                 min={5}
                                 max={480}
-                                className="ethereal-input"
+                                className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
                             />
                         </div>
                         <div>
-                            <label htmlFor="reminder_min" className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-400">
-                                <Bell className="h-4 w-4" />
+                            <label htmlFor="reminder_min" className="mb-2 flex items-center gap-1 text-sm font-semibold text-slate-700">
+                                <Bell className="h-4 w-4 text-indigo-500" />
                                 Hatırlatma
                             </label>
-                            <select
-                                {...register('reminder_min', { valueAsNumber: true })}
-                                id="reminder_min"
-                                className="ethereal-input"
-                            >
-                                {REMINDER_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value} className="bg-gray-900">
-                                        {opt.label}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    {...register('reminder_min', { valueAsNumber: true })}
+                                    id="reminder_min"
+                                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
+                                >
+                                    {REMINDER_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value} className="bg-white">
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     {/* Recurrence */}
                     <div>
-                        <label htmlFor="recurrence_rule" className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-400">
-                            <RefreshCw className="h-4 w-4" />
+                        <label htmlFor="recurrence_rule" className="mb-2 flex items-center gap-1 text-sm font-semibold text-slate-700">
+                            <RefreshCw className="h-4 w-4 text-indigo-500" />
                             Tekrarlama
                         </label>
                         <select
                             {...register('recurrence_rule')}
                             id="recurrence_rule"
-                            className="ethereal-input"
+                            className="w-full appearance-none rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
                         >
                             {RECURRENCE_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value} className="bg-gray-900">
+                                <option key={opt.value} value={opt.value} className="bg-white">
                                     {opt.label}
                                 </option>
                             ))}
@@ -330,14 +333,14 @@ export default function EventModal({ isOpen, onClose, onEventCreated, initialDat
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="ethereal-button mt-6 w-full py-3 font-semibold disabled:opacity-50"
+                        className="mt-6 w-full rounded-xl py-3.5 font-bold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                         style={{
                             background: selectedCategoryData
-                                ? `linear-gradient(135deg, ${selectedCategoryData.color}cc, ${selectedCategoryData.color}80)`
-                                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(168, 85, 247, 0.8))',
+                                ? `linear-gradient(135deg, ${selectedCategoryData.color}, ${selectedCategoryData.color}dd)`
+                                : 'linear-gradient(135deg, #6366f1, #3b82f6)',
                             boxShadow: selectedCategoryData
-                                ? `0 4px 20px ${selectedCategoryData.color}40`
-                                : '0 4px 20px rgba(59, 130, 246, 0.3)'
+                                ? `0 8px 25px -5px ${selectedCategoryData.color}50`
+                                : '0 8px 25px -5px rgba(99, 102, 241, 0.4)'
                         }}
                     >
                         {isSubmitting ? 'Kaydediliyor...' : 'Plan Oluştur'}
