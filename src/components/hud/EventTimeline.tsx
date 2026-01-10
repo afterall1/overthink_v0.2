@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { X, Calendar, ChevronLeft, ChevronRight, Bell, BellOff, Plus } from 'lucide-react'
-import type { Event, EventStatus } from '@/types/database.types'
+import type { EventWithCategory, EventStatus } from '@/types/database.types'
 import { getMockEvents, updateMockEventStatus } from '@/lib/mockEvents'
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
 import EventCard from './EventCard'
@@ -16,7 +16,7 @@ interface EventTimelineProps {
 type ViewMode = 'today' | 'week'
 
 export default function EventTimeline({ isOpen, onClose, onOpenEventModal }: EventTimelineProps) {
-    const [events, setEvents] = useState<Event[]>([])
+    const [events, setEvents] = useState<EventWithCategory[]>([])
     const [viewMode, setViewMode] = useState<ViewMode>('today')
     const [notificationEnabled, setNotificationEnabled] = useState(false)
 
@@ -76,7 +76,7 @@ export default function EventTimeline({ isOpen, onClose, onOpenEventModal }: Eve
         }
         acc[dateKey].push(event)
         return acc
-    }, {} as Record<string, Event[]>)
+    }, {} as Record<string, EventWithCategory[]>)
 
     // Tarihe göre sırala
     const sortedDates = Object.keys(groupedEvents).sort(

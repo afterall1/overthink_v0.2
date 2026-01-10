@@ -5,18 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X, Calendar, Clock, Bell, RefreshCw } from 'lucide-react'
-import type { EventInsert } from '@/types/database.types'
-import { addMockEvent } from '@/lib/mockEvents'
-
-// Kategori listesi
-const CATEGORIES = [
-    { id: 'cat-trade-001', name: 'Trade', emoji: '📈', color: '#F59E0B' },
-    { id: 'cat-food-002', name: 'Food', emoji: '🍽️', color: '#10B981' },
-    { id: 'cat-sport-003', name: 'Sport', emoji: '🏃', color: '#3B82F6' },
-    { id: 'cat-dev-004', name: 'Dev', emoji: '💻', color: '#8B5CF6' },
-    { id: 'cat-etsy-005', name: 'Etsy', emoji: '🛍️', color: '#EC4899' },
-    { id: 'cat-gaming-006', name: 'Gaming', emoji: '🎮', color: '#EF4444' },
-]
+import type { EventInsert, Category } from '@/types/database.types'
+import { getCategories } from '@/actions/categories'
 
 // Hatırlatma seçenekleri
 const REMINDER_OPTIONS = [
@@ -33,6 +23,16 @@ const RECURRENCE_OPTIONS = [
     { value: 'weekly', label: 'Her hafta' },
     { value: 'monthly', label: 'Her ay' },
 ]
+
+// Kategori slug'a göre emoji haritası (fallback)
+const CATEGORY_EMOJIS: Record<string, string> = {
+    'trade': '📈',
+    'food': '🍽️',
+    'sport': '🏃',
+    'dev': '💻',
+    'etsy': '🛍️',
+    'gaming': '🎮',
+}
 
 // Form validation schema
 const eventSchema = z.object({
@@ -51,13 +51,14 @@ type EventFormData = z.infer<typeof eventSchema>
 interface EventModalProps {
     isOpen: boolean
     onClose: () => void
-    onEventCreated?: (event: EventInsert) => void
+    onEventCreated?: (event: EventInsert) => void | Promise<void>
     selectedDate?: Date
 }
 
 export default function EventModal({ isOpen, onClose, onEventCreated, selectedDate }: EventModalProps) {
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [categories, setCategories] = useState<Category[]>([])
 
     const {
         register,
@@ -75,6 +76,15 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
             recurrence_rule: '',
         },
     })
+
+    // Kategorileri Supabase'den yükle
+    useEffect(() => {
+        async function fetchCategories() {
+            const cats = await getCategories()
+            setCategories(cats)
+        }
+        fetchCategories()
+    }, [])
 
     // selectedDate değiştiğinde formu güncelle
     useEffect(() => {
@@ -95,8 +105,8 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
             const scheduledAt = new Date(`${data.scheduled_date}T${data.scheduled_time}`)
 
             const newEvent: Omit<EventInsert, 'id' | 'created_at' | 'updated_at'> = {
-                user_id: 'user-demo-001', // Mock user
-                category_id: selectedCategory || null,
+                user_id: '00000000-0000-0000-0000-000000000000', // Dev placeholder (RLS bypass handles this)
+                category_id: selectedCategoryId, // Gerçek UUID kullan
                 title: data.title,
                 description: data.description || null,
                 data: {},
@@ -110,13 +120,13 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
                 linked_log_id: null,
             }
 
-            // Mock'a ekle
-            const created = addMockEvent(newEvent as Parameters<typeof addMockEvent>[0])
-            onEventCreated?.(created)
+            // Mock'a ekle yerine parent fonksiyona iletiyoruz
+            const eventPayload = newEvent as EventInsert
+            await onEventCreated?.(eventPayload)
 
             // Reset form
             reset()
-            setSelectedCategory(null)
+            setSelectedCategoryId(null)
             onClose()
         } catch (error) {
             console.error('Event creation failed:', error)
@@ -126,7 +136,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
     }
 
     // Get selected category data for dynamic glow
-    const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory)
+    const selectedCategoryData = categories.find(c => c.id === selectedCategoryId)
 
     if (!isOpen) return null
 
@@ -144,7 +154,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
                 className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-2xl p-6 animate-in rounded-3xl border border-white/60 shadow-xl shadow-blue-900/10"
                 style={{
                     boxShadow: selectedCategoryData
-                        ? `0 10px 40px -10px ${selectedCategoryData.color}30, 0 0 20px ${selectedCategoryData.color}10, inset 0 1px 0 rgba(255,255,255,0.8)`
+                        ? `0 10px 40px -10px ${selectedCategoryData.color_code}30, 0 0 20px ${selectedCategoryData.color_code}10, inset 0 1px 0 rgba(255,255,255,0.8)`
                         : '0 10px 40px -10px rgba(59, 130, 246, 0.15), 0 0 20px rgba(59, 130, 246, 0.05), inset 0 1px 0 rgba(255,255,255,0.8)'
                 }}
             >
@@ -153,7 +163,7 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
                     className="absolute inset-0 opacity-20 pointer-events-none rounded-3xl transition-all duration-500"
                     style={{
                         background: selectedCategoryData
-                            ? `radial-gradient(ellipse at 50% -20%, ${selectedCategoryData.color}80, transparent 70%)`
+                            ? `radial-gradient(ellipse at 50% -20%, ${selectedCategoryData.color_code}80, transparent 70%)`
                             : 'radial-gradient(ellipse at 50% -20%, rgba(59, 130, 246, 0.4), transparent 70%)'
                     }}
                 />
@@ -182,26 +192,26 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
                             Kategori (opsiyonel)
                         </label>
                         <div className="flex flex-wrap gap-2">
-                            {CATEGORIES.map((cat) => (
+                            {categories.map((cat) => (
                                 <button
                                     key={cat.id}
                                     type="button"
                                     onClick={() =>
-                                        setSelectedCategory(
-                                            selectedCategory === cat.id ? null : cat.id
+                                        setSelectedCategoryId(
+                                            selectedCategoryId === cat.id ? null : cat.id
                                         )
                                     }
-                                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${selectedCategory === cat.id
+                                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${selectedCategoryId === cat.id
                                         ? 'ring-2 ring-indigo-500/20 shadow-sm transform scale-105'
                                         : 'opacity-70 hover:opacity-100 hover:bg-slate-50'
                                         }`}
                                     style={{
-                                        backgroundColor: selectedCategory === cat.id ? `${cat.color}15` : 'transparent',
-                                        color: selectedCategory === cat.id ? cat.color : '#64748b',
-                                        border: selectedCategory === cat.id ? `1px solid ${cat.color}30` : '1px solid rgba(0,0,0,0.05)'
+                                        backgroundColor: selectedCategoryId === cat.id ? `${cat.color_code}15` : 'transparent',
+                                        color: selectedCategoryId === cat.id ? cat.color_code : '#64748b',
+                                        border: selectedCategoryId === cat.id ? `1px solid ${cat.color_code}30` : '1px solid rgba(0,0,0,0.05)'
                                     }}
                                 >
-                                    <span>{cat.emoji}</span>
+                                    <span>{CATEGORY_EMOJIS[cat.slug] || '📌'}</span>
                                     <span>{cat.name}</span>
                                 </button>
                             ))}
@@ -336,10 +346,10 @@ export default function EventModal({ isOpen, onClose, onEventCreated, selectedDa
                         className="mt-6 w-full rounded-xl py-3.5 font-bold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                         style={{
                             background: selectedCategoryData
-                                ? `linear-gradient(135deg, ${selectedCategoryData.color}, ${selectedCategoryData.color}dd)`
+                                ? `linear-gradient(135deg, ${selectedCategoryData.color_code}, ${selectedCategoryData.color_code}dd)`
                                 : 'linear-gradient(135deg, #6366f1, #3b82f6)',
                             boxShadow: selectedCategoryData
-                                ? `0 8px 25px -5px ${selectedCategoryData.color}50`
+                                ? `0 8px 25px -5px ${selectedCategoryData.color_code}50`
                                 : '0 8px 25px -5px rgba(99, 102, 241, 0.4)'
                         }}
                     >

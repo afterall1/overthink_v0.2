@@ -263,3 +263,79 @@ CREATE TRIGGER update_events_updated_at
     BEFORE UPDATE ON public.events
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- =====================================================
+-- 6. AI_CONVERSATIONS TABLE (AI Council sohbet geçmişi)
+-- =====================================================
+CREATE TABLE public.ai_conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    council_member TEXT NOT NULL CHECK (council_member IN ('task_advisor', 'life_coach')),
+    messages JSONB NOT NULL DEFAULT '[]',
+    context_data JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- AI Conversations için indexler
+CREATE INDEX ai_conversations_user_id_idx ON public.ai_conversations(user_id);
+CREATE INDEX ai_conversations_council_member_idx ON public.ai_conversations(council_member);
+CREATE INDEX ai_conversations_created_at_idx ON public.ai_conversations(created_at DESC);
+
+-- AI Conversations için RLS
+ALTER TABLE public.ai_conversations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own conversations"
+    ON public.ai_conversations FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own conversations"
+    ON public.ai_conversations FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own conversations"
+    ON public.ai_conversations FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own conversations"
+    ON public.ai_conversations FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- AI Conversations için updated_at trigger
+CREATE TRIGGER update_ai_conversations_updated_at
+    BEFORE UPDATE ON public.ai_conversations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 7. AI_INSIGHTS TABLE (Oluşturulan içgörüler cache)
+-- =====================================================
+CREATE TABLE public.ai_insights (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    insight_type TEXT NOT NULL CHECK (insight_type IN ('daily', 'weekly', 'task_specific')),
+    content TEXT NOT NULL,
+    metadata JSONB,
+    valid_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- AI Insights için indexler
+CREATE INDEX ai_insights_user_id_idx ON public.ai_insights(user_id);
+CREATE INDEX ai_insights_insight_type_idx ON public.ai_insights(insight_type);
+CREATE INDEX ai_insights_valid_until_idx ON public.ai_insights(valid_until);
+CREATE INDEX ai_insights_created_at_idx ON public.ai_insights(created_at DESC);
+
+-- AI Insights için RLS
+ALTER TABLE public.ai_insights ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own insights"
+    ON public.ai_insights FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own insights"
+    ON public.ai_insights FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own insights"
+    ON public.ai_insights FOR DELETE
+    USING (auth.uid() = user_id);
+

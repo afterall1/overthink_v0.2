@@ -9,13 +9,10 @@
 ## Current Phase
 
 ```
-## Current Phase
-
-```
 ╔════════════════════════════════════════════════════╗
-║  PHASE 4.8: UI Polishing & Fixes ✓ COMPLETED       ║
+║  PHASE 5.5: AI Council UI             ✅ 100%       ║
 ╠════════════════════════════════════════════════════╣
-║  CURRENT: Phase 5 - Supabase Integration           ║
+║  AI Council UI tamamlandı!                         ║
 ╚════════════════════════════════════════════════════╝
 ```
 
@@ -29,61 +26,78 @@
 | Phase 4.6: Ethereal Chronos UI | ✅ Tamamlandı | 100% |
 | Phase 4.7: 2D Daylight Prism | ✅ Tamamlandı | 100% |
 | Phase 4.8: UI Polishing & Fixes | ✅ Tamamlandı | 100% |
-| Phase 5: Supabase Integration | ⏳ Bekliyor | 0% |
+| Phase 4.9: Shadcn UI Integration | ✅ Tamamlandı | 100% |
+| Phase 5: Supabase Integration | ✅ Tamamlandı | 100% |
+| Phase 5.5: AI Council | ✅ Tamamlandı | 100% |
 | Phase 6: Authentication | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-10 (Fixes - 19:15-19:25)
+## Session Summary: 2026-01-11 (AI Council UI - 00:11-00:25)
 
-### Bugün Tamamlananlar ✅
+### 1. AI Council Backend ✅ (Önceki Oturum)
+- OpenAI SDK entegrasyonu
+- Database tabloları (ai_conversations, ai_insights)
+- Server actions (getTaskAdvice, getDailyInsights, getWeeklyInsights)
+- Konsey prompt sistemi
 
-#### 1. Server & Environment Fixes
-- **Port Conflict**: `npm run dev` locked on 3010/3011. Cleared `.next` cache and successfully started on **3013**.
-- **Context Reload**: Verified all source of truth files (`.cursorrules`, `active_context.md`, `tech_stack.md`).
+### 2. AI Council UI Components ✅
+- **`CouncilFAB.tsx`** - Floating Action Button (sağ alt köşe)
+- **`CouncilPanel.tsx`** - Slide-up panel (Framer Motion)
+- **`CouncilHeader.tsx`** - 10 konsey üyesi avatar carousel
+- **`CouncilChat.tsx`** - Markdown destekli mesaj arayüzü
+- **`CouncilInput.tsx`** - Mesaj gönderme input'u
+- **`CouncilMemberAvatar.tsx`** - Tekil avatar + tooltip
 
-#### 2. EventTimeline & HUD Interaction Fix
-- **Problem**: "X" (Close) button on `EventTimeline` was non-functional due to hardcoded `isOpen={true}` state.
-- **Solution**: Implemented generic state management (`isTimelineOpen`, `isLogDrawerOpen`) in `page.tsx`.
-- **New Feature**: Added floating "Show UI" buttons to reopen drawers when closed, ensuring users aren't left with an empty screen.
+### 3. Quick Actions ✅
+- 📊 Günlük Özet butonu
+- 📅 Haftalık Rapor butonu
+- 🎯 Görev Tavsiyes butonu (aktif event varsa)
+
+### 4. CSS Güncellemeleri ✅
+- `.council-fab` - Gradient glow + pulse animasyonu
+- `.council-avatar` - Active state + glow
+- `.scrollbar-hide` - Carousel için
 
 ---
 
-## Güncellenen Dosyalar (Bu Oturum)
+## Dosya Değişiklikleri Özeti (Bu Oturum)
 
 ```
 src/
+├── components/
+│   └── hud/
+│       └── AICouncil/                  # [YENİ KLASÖR]
+│           ├── index.ts                # Barrel export
+│           ├── CouncilFAB.tsx          # FAB butonu
+│           ├── CouncilPanel.tsx        # Ana panel
+│           ├── CouncilHeader.tsx       # Başlık + avatarlar
+│           ├── CouncilChat.tsx         # Chat arayüzü
+│           ├── CouncilInput.tsx        # Input field
+│           └── CouncilMemberAvatar.tsx # Avatar component
 ├── app/
-│   └── page.tsx                 # Added state management & Reopen buttons
+│   ├── page.tsx                        # [GÜNCELLENDİ] Council entegrasyonu
+│   └── globals.css                     # [GÜNCELLENDİ] Council CSS
+└── lib/
+    └── ai/prompts/
+        └── council.ts                  # [YENİ] Konsey sistem prompt'u
 ```
 
 ---
 
-## Next Steps (Sırada Ne Var?)
+## Bekleyen İşler
 
-### Acil - Phase 5: Supabase Integration
-1. [ ] `.env.local` Supabase credentials'ı doğrula
-2. [ ] `LoggerModal`'ı gerçek Supabase `logs` tablosuna bağla
-3. [ ] `EventModal`'ı gerçek Supabase `events` tablosuna bağla
-4. [ ] `LogDrawer` ve `EventTimeline`'ı gerçek verilere bağla (SELECT)
-5. [ ] Mock fake dataları temizle
+### Kullanıcı Tarafından Yapılacaklar:
+1. [ ] `.env.local` → `OPENAI_API_KEY` eklenmeli
+2. [ ] Supabase'de AI tablolarını oluştur (schema.sql)
 
-### Sonraki - Phase 6: Authentication
-6. [ ] Login/Register sayfaları
-7. [ ] Supabase Auth entegrasyonu
+### Phase 6: Authentication
+1. [ ] `/login` ve `/register` sayfaları
+2. [ ] Supabase Auth entegrasyonu
+3. [ ] RLS politikaları güncelleme
 
 ---
 
-## Known Issues
-
-| ID | Seviye | Açıklama | Workaround |
-|----|--------|----------|------------|
-| #1 | 🟡 | Middleware deprecation warning | Next.js 16'da proxy'ye geçiş gerekli |
-| #2 | 🟢 | Recharts SSR width warning | Client-side'da OK |
-| #3 | 🟢 | Port conflict on restart | Clear `.next` or change port |
-
----
-
-**Son Güncelleme:** 2026-01-10 19:25 UTC+3  
-**Güncelleyen:** AI Assistant  
-**Önemli Değişiklik:** EventTimeline Close Fix & State Management Added
+**Son Güncelleme:** 2026-01-11 00:25 UTC+3
+**Güncelleyen:** AI Assistant
+**Durum:** Phase 5.5 AI Council tamamlandı! Backend + Frontend hazır.

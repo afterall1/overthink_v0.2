@@ -106,6 +106,10 @@ src/utils/supabase/
 | Teknoloji | Versiyon | Kullanım Amacı |
 |-----------|----------|----------------|
 | **lucide-react** | ^0.5.x | Icon library |
+| **shadcn/ui** | - | UI Components (Radix UI based) |
+| **clsx** | - | Conditional classes |
+| **tailwind-merge** | - | CSS merging utility |
+| **cva** | - | Varianted components |
 
 ---
 

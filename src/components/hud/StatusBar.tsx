@@ -11,9 +11,10 @@ interface DailyStatus {
 
 interface StatusBarProps {
     dailyStatus: DailyStatus
+    className?: string
 }
 
-export default function StatusBar({ dailyStatus }: StatusBarProps) {
+export default function StatusBar({ dailyStatus, className = "" }: StatusBarProps) {
     const completedCount = Object.values(dailyStatus).filter(Boolean).length
     const progress = (completedCount / 6) * 100
 
@@ -27,8 +28,8 @@ export default function StatusBar({ dailyStatus }: StatusBarProps) {
     ] as const
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-50 px-6 py-3">
-            <div className="max-w-3xl mx-auto">
+        <div className={`w-full z-50 py-2 ${className}`}>
+            <div className="mx-auto">
                 {/* Floating control panel - Ultra thin Daylight Prism */}
                 <div className="relative bg-white/70 backdrop-blur-2xl rounded-2xl border border-white/40 shadow-lg shadow-blue-900/5 px-5 py-3">
                     {/* Inner top highlight */}

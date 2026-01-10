@@ -41,10 +41,12 @@ overthink_v0.2/
 │   │
 │   ├── 📁 components/        # React bileşenleri
 │   │   │
-│   │   ├── 📁 ui/            # [ATOMS] Temel UI bileşenleri
-│   │   │   ├── Button.tsx    # (henüz oluşturulmadı)
-│   │   │   ├── Input.tsx
-│   │   │   └── index.ts
+│   │   ├── 📁 ui/            # [ATOMS] Shadcn & Temel UI
+│   │   │   ├── button.tsx    # Shadcn Button
+│   │   │   ├── card.tsx      # Shadcn Card
+│   │   │   ├── badge.tsx     # Shadcn Badge
+│   │   │   ├── separator.tsx # Shadcn Separator
+│   │   │   └── index.ts      # (Opsiyonel)
 │   │   │
 │   │   ├── 📁 hud/           # [MOLECULES] HUD overlay
 │   │   │   ├── StatusBar.tsx      # Üst progress bar
@@ -78,12 +80,18 @@ overthink_v0.2/
 │   │       ├── server.ts     # Server client
 │   │       └── middleware.ts # Auth helper (demo mode destekli)
 │   │
+│   ├── 📁 actions/           # Server Actions (YENİ)
+│   │   ├── events.ts         # CRUD operations for events
+│   │   ├── logs.ts           # CRUD operations for logs
+│   │   └── categories.ts     # Fetch categories from Supabase
+│   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   └── useIsMobile.ts    # (Scene.tsx içinde şu an)
 │   │
-│   ├── 📁 lib/               # Business logic (YENİ)
-│   │   ├── mockEvents.ts     # 📅 Demo event data
-│   │   └── notifications.ts  # 📅 Web Push API utilities
+│   ├── 📁 lib/               # Business logic
+│   │   ├── mockEvents.ts     # 📅 Demo event data (EventWithCategory)
+│   │   ├── notifications.ts  # 📅 Web Push API utilities
+│   │   └── utils.ts          # Shadcn utility functions
 │   │
 │   └── middleware.ts         # Next.js middleware (auth)
 │

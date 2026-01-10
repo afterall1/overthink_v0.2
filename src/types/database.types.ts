@@ -267,6 +267,82 @@ export type Database = {
                     }
                 ]
             }
+            ai_conversations: {
+                Row: {
+                    id: string
+                    user_id: string
+                    council_member: 'task_advisor' | 'life_coach'
+                    messages: Json
+                    context_data: Json | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    council_member: 'task_advisor' | 'life_coach'
+                    messages?: Json
+                    context_data?: Json | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    council_member?: 'task_advisor' | 'life_coach'
+                    messages?: Json
+                    context_data?: Json | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "ai_conversations_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            ai_insights: {
+                Row: {
+                    id: string
+                    user_id: string
+                    insight_type: 'daily' | 'weekly' | 'task_specific'
+                    content: string
+                    metadata: Json | null
+                    valid_until: string | null
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    insight_type: 'daily' | 'weekly' | 'task_specific'
+                    content: string
+                    metadata?: Json | null
+                    valid_until?: string | null
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    insight_type?: 'daily' | 'weekly' | 'task_specific'
+                    content?: string
+                    metadata?: Json | null
+                    valid_until?: string | null
+                    created_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "ai_insights_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never
@@ -310,6 +386,11 @@ export type Event = Database['public']['Tables']['events']['Row']
 export type EventInsert = Database['public']['Tables']['events']['Insert']
 export type EventUpdate = Database['public']['Tables']['events']['Update']
 export type EventStatus = Event['status']
+
+// Event with joined category data
+export type EventWithCategory = Event & {
+    categories: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'> | null
+}
 
 // =====================================================
 // Category-specific Log Data Types

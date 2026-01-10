@@ -3,7 +3,7 @@
 // Supabase bağlanmadan önce demo için kullanılır
 // =====================================================
 
-import type { Event } from '@/types/database.types'
+import type { EventWithCategory } from '@/types/database.types'
 
 // Helper: Gelecek tarih oluştur
 function futureDate(daysFromNow: number, hour: number, minute: number = 0): string {
@@ -13,21 +13,21 @@ function futureDate(daysFromNow: number, hour: number, minute: number = 0): stri
     return date.toISOString()
 }
 
-// Category ID'leri (mock)
-const CATEGORY_IDS = {
-    trade: 'cat-trade-001',
-    food: 'cat-food-002',
-    sport: 'cat-sport-003',
-    dev: 'cat-dev-004',
-    etsy: 'cat-etsy-005',
-    gaming: 'cat-gaming-006',
+// Category data (mock - slug + color for categories)
+const MOCK_CATEGORIES = {
+    trade: { id: 'cat-trade-001', name: 'Trade', slug: 'trade', color_code: '#F59E0B', icon_slug: 'chart-line' },
+    food: { id: 'cat-food-002', name: 'Food', slug: 'food', color_code: '#10B981', icon_slug: 'utensils' },
+    sport: { id: 'cat-sport-003', name: 'Sport', slug: 'sport', color_code: '#3B82F6', icon_slug: 'dumbbell' },
+    dev: { id: 'cat-dev-004', name: 'Dev', slug: 'dev', color_code: '#8B5CF6', icon_slug: 'code' },
+    etsy: { id: 'cat-etsy-005', name: 'Etsy', slug: 'etsy', color_code: '#EC4899', icon_slug: 'shopping-bag' },
+    gaming: { id: 'cat-gaming-006', name: 'Gaming', slug: 'gaming', color_code: '#EF4444', icon_slug: 'gamepad-2' },
 } as const
 
-export const mockEvents: Event[] = [
+export const mockEvents: EventWithCategory[] = [
     {
         id: 'evt-001',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.sport,
+        category_id: MOCK_CATEGORIES.sport.id,
         title: 'Sabah Koşusu',
         description: '5km parkur koşusu',
         data: { activity: 'running', target_km: 5 },
@@ -41,11 +41,12 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.sport,
     },
     {
         id: 'evt-002',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.dev,
+        category_id: MOCK_CATEGORIES.dev.id,
         title: 'LifeNexus Sprint Review',
         description: 'Phase 5 Supabase entegrasyon kontrolü',
         data: { project: 'LifeNexus', task: 'Sprint Review' },
@@ -59,11 +60,12 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.dev,
     },
     {
         id: 'evt-003',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.trade,
+        category_id: MOCK_CATEGORIES.trade.id,
         title: 'BTC Pozisyon Check',
         description: 'Açık pozisyonları değerlendir',
         data: { pair: 'BTC/USDT' },
@@ -77,11 +79,12 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.trade,
     },
     {
         id: 'evt-004',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.food,
+        category_id: MOCK_CATEGORIES.food.id,
         title: 'Protein Shake',
         description: 'Post-workout shake',
         data: { meal_type: 'snack', calories: 200 },
@@ -95,11 +98,12 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.food,
     },
     {
         id: 'evt-005',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.etsy,
+        category_id: MOCK_CATEGORIES.etsy.id,
         title: 'Yeni Ürün Fotoğraf Çekimi',
         description: 'El yapımı kolyeler için fotoğraf',
         data: { product: 'Handmade Necklace Set' },
@@ -113,11 +117,12 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.etsy,
     },
     {
         id: 'evt-006',
         user_id: 'user-demo-001',
-        category_id: CATEGORY_IDS.gaming,
+        category_id: MOCK_CATEGORIES.gaming.id,
         title: 'Elden Ring Session',
         description: 'DLC bölümünü bitir',
         data: { game: 'Elden Ring', platform: 'PC' },
@@ -131,20 +136,21 @@ export const mockEvents: Event[] = [
         linked_log_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        categories: MOCK_CATEGORIES.gaming,
     },
 ]
 
 // Event'leri güncellemek için helper (mock state)
 let eventsState = [...mockEvents]
 
-export function getMockEvents(): Event[] {
+export function getMockEvents(): EventWithCategory[] {
     return eventsState
 }
 
 export function updateMockEventStatus(
     eventId: string,
-    status: Event['status']
-): Event | null {
+    status: EventWithCategory['status']
+): EventWithCategory | null {
     const index = eventsState.findIndex((e) => e.id === eventId)
     if (index === -1) return null
 
@@ -158,8 +164,8 @@ export function updateMockEventStatus(
     return eventsState[index]
 }
 
-export function addMockEvent(event: Omit<Event, 'id' | 'created_at' | 'updated_at'>): Event {
-    const newEvent: Event = {
+export function addMockEvent(event: Omit<EventWithCategory, 'id' | 'created_at' | 'updated_at'>): EventWithCategory {
+    const newEvent: EventWithCategory = {
         ...event,
         id: `evt-${Date.now()}`,
         created_at: new Date().toISOString(),
