@@ -512,3 +512,94 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GOALS PANEL STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Goals Floating Action Button - Left side (symmetrical to Council FAB) */
+.goals-fab {
+  position: fixed;
+  bottom: 5rem;
+  left: 1rem;
+  z-index: 40;
+  padding: 0.75rem 1.25rem;
+  border-radius: 2rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  box-shadow:
+    0 8px 32px rgba(139, 92, 246, 0.4),
+    0 0 24px rgba(139, 92, 246, 0.2);
+  animation: goals-pulse 3s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goals-fab:hover {
+  box-shadow:
+    0 12px 40px rgba(139, 92, 246, 0.5),
+    0 0 32px rgba(139, 92, 246, 0.3);
+}
+
+@keyframes goals-pulse {
+
+  0%,
+  100% {
+    box-shadow:
+      0 8px 32px rgba(139, 92, 246, 0.4),
+      0 0 24px rgba(139, 92, 246, 0.2);
+  }
+
+  50% {
+    box-shadow:
+      0 8px 48px rgba(139, 92, 246, 0.5),
+      0 0 40px rgba(139, 92, 246, 0.3);
+  }
+}
+
+/* Progress Ring Animation */
+@keyframes progress-fill {
+  from {
+    stroke-dashoffset: var(--circumference);
+  }
+
+  to {
+    stroke-dashoffset: var(--offset);
+  }
+}
+
+.goals-progress-ring {
+  animation: progress-fill 1s ease-out forwards;
+}
+
+/* Milestone Item Styles */
+.goals-milestone-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.goals-milestone-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.05), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.goals-milestone-item:hover::before {
+  transform: translateX(100%);
+}
+
+/* Goal Card Hover Effect */
+.goals-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goals-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.1);
+}

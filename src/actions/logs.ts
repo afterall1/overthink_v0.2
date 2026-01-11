@@ -1,26 +1,30 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { getAuthenticatedClient, ensureDemoUserExists } from '@/lib/auth'
 import { LogInsert, Log, CategorySlug, Json } from '@/types/database.types'
 import { revalidatePath } from 'next/cache'
 
-// Category ID mapping (these should match your Supabase categories table)
-const CATEGORY_SLUGS_TO_IDS: Record<CategorySlug, string> = {
-    trade: '11111111-1111-1111-1111-111111111111',
-    food: '22222222-2222-2222-2222-222222222222',
-    sport: '33333333-3333-3333-3333-333333333333',
-    dev: '44444444-4444-4444-4444-444444444444',
-    etsy: '55555555-5555-5555-5555-555555555555',
-    gaming: '66666666-6666-6666-6666-666666666666',
+// Flag to track if demo user check has been done this session
+let demoUserChecked = false
+
+/**
+ * Initialize demo user if needed (called once per session)
+ */
+async function initDemoUser(): Promise<void> {
+    if (demoUserChecked) return
+
+    await ensureDemoUserExists()
+    demoUserChecked = true
 }
 
 /**
  * Fetch logs by date range
  */
 export async function getLogsByDateRange(startDate: string, endDate: string): Promise<Log[]> {
-    const supabase = await createClient()
+    await initDemoUser()
+    const { client, user } = await getAuthenticatedClient()
 
-    const { data, error } = await supabase
+    const { data, error } = await client
         .from('logs')
         .select(`
             *,
@@ -28,6 +32,7 @@ export async function getLogsByDateRange(startDate: string, endDate: string): Pr
                 slug
             )
         `)
+        .eq('user_id', user.id)
         .gte('logged_at', startDate)
         .lte('logged_at', endDate)
         .order('logged_at', { ascending: false })
@@ -48,10 +53,11 @@ export async function createLog(
     data: Record<string, unknown>,
     sentiment: number
 ): Promise<Log | null> {
-    const supabase = await createClient()
+    await initDemoUser()
+    const { client, user } = await getAuthenticatedClient()
 
     // First, get the category ID from slug
-    const { data: category, error: categoryError } = await supabase
+    const { data: category, error: categoryError } = await client
         .from('categories')
         .select('id')
         .eq('slug', categorySlug)
@@ -59,26 +65,19 @@ export async function createLog(
 
     if (categoryError || !category) {
         console.error('Error finding category:', categoryError)
-        // Fallback to hardcoded ID if category lookup fails
-        const fallbackId = CATEGORY_SLUGS_TO_IDS[categorySlug]
-        if (!fallbackId) {
-            throw new Error(`Unknown category: ${categorySlug}`)
-        }
+        throw new Error(`Unknown category: ${categorySlug}`)
     }
 
-    const categoryId = category?.id || CATEGORY_SLUGS_TO_IDS[categorySlug]
-
     // Create the log entry
-    // Note: user_id is required by RLS, but we're using dev bypass for now
     const logInsert: LogInsert = {
-        user_id: '00000000-0000-0000-0000-000000000000', // Dev placeholder (RLS bypass handles this)
-        category_id: categoryId,
+        user_id: user.id,
+        category_id: category.id,
         data: data as Json,
         sentiment: sentiment,
         logged_at: new Date().toISOString(),
     }
 
-    const { data: newLog, error } = await supabase
+    const { data: newLog, error } = await client
         .from('logs')
         .insert(logInsert)
         .select()
@@ -97,9 +96,10 @@ export async function createLog(
  * Delete a log entry
  */
 export async function deleteLog(id: string): Promise<void> {
-    const supabase = await createClient()
+    await initDemoUser()
+    const { client } = await getAuthenticatedClient()
 
-    const { error } = await supabase
+    const { error } = await client
         .from('logs')
         .delete()
         .eq('id', id)
@@ -116,9 +116,10 @@ export async function deleteLog(id: string): Promise<void> {
  * Get category slug from category_id (helper for UI)
  */
 export async function getCategorySlugById(categoryId: string): Promise<CategorySlug | null> {
-    const supabase = await createClient()
+    await initDemoUser()
+    const { client } = await getAuthenticatedClient()
 
-    const { data, error } = await supabase
+    const { data, error } = await client
         .from('categories')
         .select('slug')
         .eq('id', categoryId)

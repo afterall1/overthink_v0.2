@@ -188,6 +188,88 @@ export type Database = {
                     }
                 ]
             }
+            goal_milestones: {
+                Row: {
+                    id: string
+                    goal_id: string
+                    title: string
+                    description: string | null
+                    target_value: number | null
+                    is_completed: boolean
+                    completed_at: string | null
+                    sort_order: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    goal_id: string
+                    title: string
+                    description?: string | null
+                    target_value?: number | null
+                    is_completed?: boolean
+                    completed_at?: string | null
+                    sort_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    goal_id?: string
+                    title?: string
+                    description?: string | null
+                    target_value?: number | null
+                    is_completed?: boolean
+                    completed_at?: string | null
+                    sort_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "goal_milestones_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            goal_entries: {
+                Row: {
+                    id: string
+                    goal_id: string
+                    value: number
+                    notes: string | null
+                    logged_at: string
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    goal_id: string
+                    value: number
+                    notes?: string | null
+                    logged_at?: string
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    goal_id?: string
+                    value?: number
+                    notes?: string | null
+                    logged_at?: string
+                    created_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "goal_entries_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
             events: {
                 Row: {
                     id: string
@@ -391,6 +473,25 @@ export type EventStatus = Event['status']
 export type EventWithCategory = Event & {
     categories: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'> | null
 }
+
+// Goal Milestone types
+export type GoalMilestone = Database['public']['Tables']['goal_milestones']['Row']
+export type GoalMilestoneInsert = Database['public']['Tables']['goal_milestones']['Insert']
+export type GoalMilestoneUpdate = Database['public']['Tables']['goal_milestones']['Update']
+
+// Goal Entry types
+export type GoalEntry = Database['public']['Tables']['goal_entries']['Row']
+export type GoalEntryInsert = Database['public']['Tables']['goal_entries']['Insert']
+
+// Goal with all related data
+export type GoalWithDetails = Goal & {
+    categories: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'> | null
+    goal_milestones: GoalMilestone[]
+    goal_entries: GoalEntry[]
+}
+
+// Goal period type
+export type GoalPeriod = Goal['period']
 
 // =====================================================
 // Category-specific Log Data Types

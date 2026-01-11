@@ -202,7 +202,110 @@ CREATE TRIGGER on_auth_user_created
 -- Gaming:{\"game\": \"Elden Ring\", \"duration_min\": 90, \"achievement\": \"Boss defeated\", \"platform\": \"PC\"}
 
 -- =====================================================
--- 5. EVENTS TABLE (Gelecek planları ve bildirimler)
+-- 5. GOAL_MILESTONES TABLE (Alt hedefler/checkpoint'ler)
+-- =====================================================
+CREATE TABLE public.goal_milestones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    goal_id UUID NOT NULL REFERENCES public.goals(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    target_value NUMERIC,
+    is_completed BOOLEAN DEFAULT FALSE,
+    completed_at TIMESTAMPTZ,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Goal Milestones için indexler
+CREATE INDEX goal_milestones_goal_id_idx ON public.goal_milestones(goal_id);
+CREATE INDEX goal_milestones_sort_order_idx ON public.goal_milestones(sort_order);
+
+-- Goal Milestones için RLS
+ALTER TABLE public.goal_milestones ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own milestones"
+    ON public.goal_milestones FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_milestones.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can insert own milestones"
+    ON public.goal_milestones FOR INSERT
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_milestones.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can update own milestones"
+    ON public.goal_milestones FOR UPDATE
+    USING (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_milestones.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can delete own milestones"
+    ON public.goal_milestones FOR DELETE
+    USING (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_milestones.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+-- Goal Milestones için updated_at trigger
+CREATE TRIGGER update_goal_milestones_updated_at
+    BEFORE UPDATE ON public.goal_milestones
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 6. GOAL_ENTRIES TABLE (İlerleme kayıtları)
+-- =====================================================
+CREATE TABLE public.goal_entries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    goal_id UUID NOT NULL REFERENCES public.goals(id) ON DELETE CASCADE,
+    value NUMERIC NOT NULL,
+    notes TEXT,
+    logged_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Goal Entries için indexler
+CREATE INDEX goal_entries_goal_id_idx ON public.goal_entries(goal_id);
+CREATE INDEX goal_entries_logged_at_idx ON public.goal_entries(logged_at DESC);
+
+-- Goal Entries için RLS
+ALTER TABLE public.goal_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own entries"
+    ON public.goal_entries FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_entries.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can insert own entries"
+    ON public.goal_entries FOR INSERT
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_entries.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+CREATE POLICY "Users can delete own entries"
+    ON public.goal_entries FOR DELETE
+    USING (EXISTS (
+        SELECT 1 FROM public.goals 
+        WHERE goals.id = goal_entries.goal_id 
+        AND goals.user_id = auth.uid()
+    ));
+
+-- =====================================================
+-- 7. EVENTS TABLE (Gelecek planları ve bildirimler)
 -- =====================================================
 CREATE TABLE public.events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

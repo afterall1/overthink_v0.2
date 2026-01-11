@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database.types'
 
+/**
+ * Create authenticated Supabase client (uses anon key + user session)
+ * Use this for authenticated user operations
+ */
 export async function createClient() {
     const cookieStore = await cookies()
 
@@ -28,3 +33,25 @@ export async function createClient() {
         }
     )
 }
+
+/**
+ * Create admin Supabase client (uses service role key, bypasses RLS)
+ * ⚠️ ONLY use this for server-side operations where RLS bypass is needed
+ * ⚠️ NEVER expose this client to the client-side
+ */
+export function createAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error('Missing Supabase admin credentials. Check SUPABASE_SERVICE_ROLE_KEY in .env.local')
+    }
+
+    return createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    })
+}
+

@@ -13,10 +13,13 @@ import TodayFocus from "@/components/hud/TodayFocus"
 import UpcomingStream from "@/components/hud/UpcomingStream"
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
+import { GoalsFAB, GoalsPanel, GoalModal } from "@/components/hud/Goals"
 import { AnimatePresence } from "framer-motion"
-import { CategorySlug, Event, EventInsert, EventUpdate, EventWithCategory, Log } from '@/types/database.types'
+import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails } from '@/types/database.types'
 import { getEventsByDateRange, createEvent, updateEventStatus, updateEvent, deleteEvent } from "@/actions/events"
 import { getLogsByDateRange, createLog, deleteLog } from "@/actions/logs"
+import { getActiveGoals, createGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
+import { getCategories } from "@/actions/categories"
 import { startOfDay, endOfDay, addDays, isSameDay } from 'date-fns'
 
 const MOCK_DAILY_STATUS = {
@@ -65,6 +68,29 @@ export default function Home() {
   // AI Council state
   const [isCouncilOpen, setIsCouncilOpen] = useState(false)
 
+  // Goals state
+  const [isGoalsOpen, setIsGoalsOpen] = useState(false)
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
+  const [goals, setGoals] = useState<GoalWithDetails[]>([])
+  const [categories, setCategories] = useState<Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]>([])
+  const [isGoalsLoading, setIsGoalsLoading] = useState(false)
+
+  const fetchGoals = useCallback(async () => {
+    setIsGoalsLoading(true)
+    try {
+      const [goalsData, categoriesData] = await Promise.all([
+        getActiveGoals(),
+        getCategories()
+      ])
+      setGoals(goalsData)
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error("Failed to fetch goals", error)
+    } finally {
+      setIsGoalsLoading(false)
+    }
+  }, [])
+
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -88,7 +114,8 @@ export default function Home() {
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+    fetchGoals()
+  }, [fetchData, fetchGoals])
 
   const handleEventCreate = async (eventData: EventInsert) => {
     try {
@@ -280,6 +307,65 @@ export default function Home() {
           onDelete={handleEventDelete}
         />
       </AnimatePresence>
+
+      {/* Goals Panel */}
+      <GoalsFAB onClick={() => setIsGoalsOpen(true)} />
+      <GoalsPanel
+        isOpen={isGoalsOpen}
+        onClose={() => setIsGoalsOpen(false)}
+        goals={goals}
+        categories={categories}
+        onCreateClick={() => setIsGoalModalOpen(true)}
+        onGoalClick={(goal) => console.log('Goal clicked:', goal.id)}
+        onDeleteGoal={async (goalId) => {
+          try {
+            await deleteGoal(goalId)
+            await fetchGoals()
+          } catch (error) {
+            console.error('Failed to delete goal:', error)
+          }
+        }}
+        onToggleMilestone={async (milestoneId) => {
+          try {
+            await toggleMilestone(milestoneId)
+            await fetchGoals()
+          } catch (error) {
+            console.error('Failed to toggle milestone:', error)
+          }
+        }}
+        onLogProgress={async (goalId, value, notes) => {
+          try {
+            await logProgress(goalId, value, notes)
+            await fetchGoals()
+          } catch (error) {
+            console.error('Failed to log progress:', error)
+          }
+        }}
+        isLoading={isGoalsLoading}
+      />
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            await createGoal({
+              title: data.title,
+              description: data.description || null,
+              target_value: data.target_value ?? null,
+              unit: data.unit || null,
+              period: data.period,
+              category_id: data.category_id || null,
+              start_date: data.start_date,
+              end_date: data.end_date || null
+            })
+            await fetchGoals()
+          } catch (error) {
+            console.error('Failed to create goal:', error)
+            throw error
+          }
+        }}
+        categories={categories}
+      />
 
       {/* AI Council */}
       <CouncilFAB onClick={() => setIsCouncilOpen(true)} />

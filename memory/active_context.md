@@ -10,9 +10,9 @@
 
 ```
 ╔════════════════════════════════════════════════════╗
-║  PHASE 5.5: AI Council UI             ✅ 100%       ║
+║  PHASE 5.7: Auth Architecture Refactor  🔄 90%     ║
 ╠════════════════════════════════════════════════════╣
-║  AI Council UI tamamlandı!                         ║
+║  Demo user çalışıyor, goals fetch sorunu debug'da  ║
 ╚════════════════════════════════════════════════════╝
 ```
 
@@ -29,94 +29,138 @@
 | Phase 4.9: Shadcn UI Integration | ✅ Tamamlandı | 100% |
 | Phase 5: Supabase Integration | ✅ Tamamlandı | 100% |
 | Phase 5.5: AI Council | ✅ Tamamlandı | 100% |
+| Phase 5.6: Goals & Progress | ✅ Tamamlandı | 100% |
+| Phase 5.7: Auth Architecture | 🔄 Debug'da | 90% |
 | Phase 6: Authentication | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-11 (AI Council UI & Layout Redesign)
+## Session Summary: 2026-01-11 (Auth Architecture + Goals Debug)
 
+### ✅ Tamamlanan İşler
 
-### 1. AI Council Backend ✅ (Önceki Oturum)
-- OpenAI SDK entegrasyonu
-- Database tabloları (ai_conversations, ai_insights)
-- Server actions (getTaskAdvice, getDailyInsights, getWeeklyInsights)
-- Konsey prompt sistemi
+#### 1. Goals & Progress Tracking Feature
+- **Database:** 2 yeni tablo (`goal_milestones`, `goal_entries`) + RLS
+- **Server Actions:** 15 async fonksiyon (`goals.ts`)
+- **UI Components:** 6 bileşen (`GoalsFAB`, `GoalsPanel`, `GoalCard`, `GoalModal`, `MilestoneList`, `ProgressRing`)
+- **Styling:** Goals CSS eklendi (`globals.css`)
+- **Integration:** `page.tsx`'e entegre edildi
 
-### 2. AI Council UI Components ✅
-- **`CouncilFAB.tsx`** - Floating Action Button (sağ alt köşe)
-- **`CouncilPanel.tsx`** - Slide-up panel (Framer Motion)
-- **`CouncilHeader.tsx`** - 10 konsey üyesi avatar carousel
-- **`CouncilChat.tsx`** - Markdown destekli mesaj arayüzü
-- **`CouncilInput.tsx`** - Mesaj gönderme input'u
-- **`CouncilMemberAvatar.tsx`** - Tekil avatar + tooltip
+#### 2. Centralized Auth Utility (`src/lib/auth.ts`)
+```typescript
+// Yeni merkezi auth sistemi
+export async function getAuthenticatedClient(): Promise<AuthenticatedClient>
+export async function ensureDemoUserExists(): Promise<boolean>
+export async function getCurrentUser(): Promise<AuthUser>
+export async function isDemoMode(): Promise<boolean>
+```
 
-### 3. Quick Actions ✅
-- 📊 Günlük Özet butonu
-- 📅 Haftalık Rapor butonu
-- 🎯 Görev Tavsiyes butonu (aktif event varsa)
+**Çalışma mantığı:**
+- `public.users` tablosunda `demo@lifenexus.local` email'i ile user arar
+- Yoksa `auth.admin.createUser()` ile oluşturur
+- User ID'si tutarlı şekilde döner
+- Admin client RLS bypass için kullanılır
 
-### 4. CSS Güncellemeleri ✅
-- `.council-fab` - Gradient glow + pulse animasyonu
-- `.council-avatar` - Active state + glow
-- `.scrollbar-hide` - Carousel için
+#### 3. Server Actions Refactoring
+| Dosya | Değişiklik |
+|-------|------------|
+| `src/utils/supabase/server.ts` | `createAdminClient()` eklendi |
+| `src/actions/goals.ts` | Centralized auth kullanıyor |
+| `src/actions/events.ts` | Centralized auth + user_id filter |
+| `src/actions/logs.ts` | Hardcoded UUID kaldırıldı |
 
-### 5. UI Redesign (The Council Decision) ✅
-- **Layout Expansion**: `max-w-3xl` -> `max-w-7xl` (Geniş Sahne)
-- **Symmetry**: `8/4 grid` -> `50/50 split` (Balanced Pillars)
-- **Symmetry**: `8/4 grid` -> `50/50 split` (Balanced Pillars)
-- **Visuals**: Today ve Horizon alanları eşitlendi ve genişletildi.
-- **Glassmorphism**: Horizon paneli Today ile aynı opaklık ve blur değerlerine getirildi (`bg-white/40`, `backdrop-blur-xl`).
-
-### 6. Phase Check ✅
-- Authentication öncesi UI cilaları tamamlandı.
-- Artık Phase 6'ya geçmeye hazırız.
+#### 4. Build Verification
+```
+✅ Compiled successfully
+✅ TypeScript check passed
+✅ Static pages generated
+```
 
 ---
 
-## Dosya Değişiklikleri Özeti (Bu Oturum)
+## 🐛 Aktif Bug: Goals Görünmüyor
+
+### Durum
+- Goals oluşturulabiliyor (DB'de 2 kayıt var)
+- Ama panel'de "Henüz hedef yok" gösteriyor
+- User ID tutarlı: `f56e98fe-6c49-4c9f-97ec-36b50...`
+
+### Debug Bilgisi
+`getActiveGoals()` fonksiyonuna debug log eklendi:
+```typescript
+console.log('🎯 getActiveGoals - User ID:', user.id, 'isDemo:', user.isDemo, 'today:', today)
+console.log('🎯 getActiveGoals - Found:', data?.length || 0, 'goals')
+```
+
+### Olası Nedenler
+1. **User ID uyuşmazlığı:** Create ve Fetch farklı user_id kullanıyor olabilir
+2. **Tarih filtresi:** `start_date <= today` kontrolü hedefleri dışarıda bırakıyor olabilir
+3. **RLS issue:** Admin client düzgün çalışmıyor olabilir
+
+### Sonraki Adımlar
+1. Terminal'deki debug loglarını kontrol et
+2. `start_date` değerlerini DB'de kontrol et
+3. Eğer tarih sorunuysa filtreyi gevşet veya `getGoals()` kullan
+
+---
+
+## Dosya Değişiklikleri (Bu Oturum)
 
 ```
 src/
+├── lib/
+│   └── auth.ts                         # [YENİ] Centralized auth utility
+├── utils/
+│   └── supabase/
+│       └── server.ts                   # [GÜNCELLENDİ] createAdminClient eklendi
+├── actions/
+│   ├── goals.ts                        # [YENİ + DEBUG] 15 server action + debug log
+│   ├── events.ts                       # [GÜNCELLENDİ] Centralized auth
+│   └── logs.ts                         # [GÜNCELLENDİ] Centralized auth
 ├── components/
 │   └── hud/
-│       └── AICouncil/                  # [YENİ KLASÖR]
-│           ├── index.ts                # Barrel export
-│           ├── CouncilFAB.tsx          # FAB butonu
-│           ├── CouncilPanel.tsx        # Ana panel
-│           ├── CouncilHeader.tsx       # Başlık + avatarlar
-│           ├── CouncilChat.tsx         # Chat arayüzü
-│           ├── CouncilInput.tsx        # Input field
-│           └── CouncilMemberAvatar.tsx # Avatar component
+│       └── Goals/                      # [YENİ KLASÖR] 6 bileşen
 ├── app/
-│   ├── page.tsx                        # [GÜNCELLENDİ] Council entegrasyonu
-│   └── globals.css                     # [GÜNCELLENDİ] Council CSS
-└── lib/
-    └── ai/prompts/
-    └── ai/prompts/
-        └── council.ts                  # [YENİ] Konsey sistem prompt'u
+│   ├── page.tsx                        # [GÜNCELLENDİ] Goals entegrasyonu
+│   └── globals.css                     # [GÜNCELLENDİ] Goals CSS
+└── types/
+    └── database.types.ts               # [GÜNCELLENDİ] Goal types
+
+supabase/
+└── schema.sql                          # [GÜNCELLENDİ] 2 yeni tablo + RLS
+
+memory/
+└── active_context.md                   # [GÜNCELLENDİ] Bu dosya
 ```
 
-## UI/UX Kararları (Council of 5)
-> **Decision:** "Symmetry is Key."
-> Today ve Horizon alanları artık 50/50 oranında ve ekranın tamamını kullanıyor (`max-w-7xl`).
-> Bu değişiklik, kullanıcının zaman algısını (Bugün vs Gelecek) dengeler.
+---
+
+## Environment Variables
+
+```bash
+# .env.local (GEREKLİ)
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...        # ← Admin client için gerekli
+GOOGLE_GENERATIVE_AI_API_KEY=...     # ← AI Council için
 ```
 
 ---
 
 ## Bekleyen İşler
 
-### Kullanıcı Tarafından Yapılacaklar:
-1. [ ] `.env.local` → `OPENAI_API_KEY` eklenmeli
-2. [ ] Supabase'de AI tablolarını oluştur (schema.sql)
+### Acil (Goals Debug)
+1. [ ] Terminal'de debug loglarını kontrol et
+2. [ ] User ID uyuşmazlığı varsa düzelt
+3. [ ] Tarih filtresi sorunu varsa `getGoals()` kullan
 
 ### Phase 6: Authentication
 1. [ ] `/login` ve `/register` sayfaları
 2. [ ] Supabase Auth entegrasyonu
-3. [ ] RLS politikaları güncelleme
+3. [ ] Demo mode'dan gerçek auth'a geçiş
 
 ---
 
-**Son Güncelleme:** 2026-01-11 22:40 UTC+3
+**Son Güncelleme:** 2026-01-12 02:42 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** UI Redesign & Glassmorphism Polish tamamlandı. Phase 6 (Auth) beklemede.
+**Durum:** Goals feature tamamlandı ama display bug debug ediliyor.
