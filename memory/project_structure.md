@@ -70,6 +70,7 @@ overthink_v0.2/
 │   │   │   ├── 📁 Goals/          # Goals & Progress UI
 │   │   │   │   ├── GoalsFAB.tsx
 │   │   │   │   ├── GoalsPanel.tsx
+│   │   │   │   ├── GoalsStrip.tsx       # 🆕 Ana ekran hedef şeridi
 │   │   │   │   ├── GoalCard.tsx
 │   │   │   │   ├── GoalModal.tsx
 │   │   │   │   ├── MilestoneList.tsx

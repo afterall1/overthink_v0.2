@@ -13,7 +13,7 @@ import TodayFocus from "@/components/hud/TodayFocus"
 import UpcomingStream from "@/components/hud/UpcomingStream"
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
-import { GoalsFAB, GoalsPanel, GoalModal } from "@/components/hud/Goals"
+import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip } from "@/components/hud/Goals"
 import { AnimatePresence } from "framer-motion"
 import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails } from '@/types/database.types'
 import { getEventsByDateRange, createEvent, updateEventStatus, updateEvent, deleteEvent } from "@/actions/events"
@@ -77,15 +77,29 @@ export default function Home() {
 
   const fetchGoals = useCallback(async () => {
     setIsGoalsLoading(true)
+    console.log('[CLIENT DEBUG] fetchGoals started')
     try {
       const [goalsData, categoriesData] = await Promise.all([
         getActiveGoals(),
         getCategories()
       ])
+      console.log('[CLIENT DEBUG] fetchGoals result:', {
+        goalsData,
+        goalsCount: goalsData?.length || 0,
+        firstGoal: goalsData?.[0] || null,
+        categoriesData
+      })
+      console.log('[CLIENT DEBUG] Goals count:', goalsData?.length || 0)
+
+      // If goals are empty but categories work, it's an RLS issue
+      if (goalsData?.length === 0 && categoriesData?.length > 0) {
+        console.warn('[CLIENT DEBUG] ⚠️ POSSIBLE RLS ISSUE: Categories load but goals empty!')
+      }
+
       setGoals(goalsData)
       setCategories(categoriesData)
     } catch (error) {
-      console.error("Failed to fetch goals", error)
+      console.error("[CLIENT DEBUG] Failed to fetch goals", error)
     } finally {
       setIsGoalsLoading(false)
     }
@@ -214,6 +228,19 @@ export default function Home() {
               onSelect={setSelectedDate}
             />
           </div>
+        </div>
+
+        {/* Goals Strip - Motivation Dashboard */}
+        <div className="flex-none py-2">
+          <GoalsStrip
+            goals={goals}
+            onGoalClick={(goal) => {
+              setIsGoalsOpen(true)
+            }}
+            onCreateClick={() => setIsGoalModalOpen(true)}
+            onViewAllClick={() => setIsGoalsOpen(true)}
+            isLoading={isGoalsLoading}
+          />
         </div>
 
         {/* Dual Horizon Grid Stage */}
@@ -347,8 +374,9 @@ export default function Home() {
         isOpen={isGoalModalOpen}
         onClose={() => setIsGoalModalOpen(false)}
         onSubmit={async (data) => {
+          console.log('[CLIENT DEBUG] Goal form submitted with data:', data)
           try {
-            await createGoal({
+            const goalPayload = {
               title: data.title,
               description: data.description || null,
               target_value: data.target_value ?? null,
@@ -357,10 +385,15 @@ export default function Home() {
               category_id: data.category_id || null,
               start_date: data.start_date,
               end_date: data.end_date || null
-            })
+            }
+            console.log('[CLIENT DEBUG] Calling createGoal with:', goalPayload)
+            const result = await createGoal(goalPayload)
+            console.log('[CLIENT DEBUG] createGoal result:', result)
+            console.log('[CLIENT DEBUG] Refreshing goals list...')
             await fetchGoals()
+            console.log('[CLIENT DEBUG] Goals refreshed')
           } catch (error) {
-            console.error('Failed to create goal:', error)
+            console.error('[CLIENT DEBUG] Failed to create goal:', error)
             throw error
           }
         }}

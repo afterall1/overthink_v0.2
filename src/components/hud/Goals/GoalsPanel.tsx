@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, ArrowLeft, Trash2, Target, CheckCircle2, ListTodo, TrendingUp, Calendar } from 'lucide-react'
 import GoalCard from './GoalCard'
@@ -19,7 +19,7 @@ interface GoalsPanelProps {
     onGoalClick: (goal: GoalWithDetails) => void
     onDeleteGoal: (goalId: string) => void
     onToggleMilestone: (milestoneId: string) => void
-    onLogProgress: (goalId: string, value: number, notes?: string) => void
+    onLogProgress: (goalId: string, value: number, notes?: string) => Promise<void>
     isLoading?: boolean
 }
 
@@ -55,6 +55,27 @@ export default function GoalsPanel({
     const [progressValue, setProgressValue] = useState<string>('')
     const [progressNote, setProgressNote] = useState<string>('')
     const [filterPeriod, setFilterPeriod] = useState<GoalPeriod | 'all'>('all')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Sync selectedGoal with updated goals from parent
+    // This ensures UI updates immediately after logProgress
+    useEffect(() => {
+        if (selectedGoal) {
+            const updatedGoal = goals.find(g => g.id === selectedGoal.id)
+            if (updatedGoal) {
+                // Only update if values actually changed to avoid unnecessary re-renders
+                if (
+                    updatedGoal.current_value !== selectedGoal.current_value ||
+                    updatedGoal.is_completed !== selectedGoal.is_completed
+                ) {
+                    setSelectedGoal(updatedGoal)
+                }
+            } else {
+                // Goal was deleted, go back to list
+                setSelectedGoal(null)
+            }
+        }
+    }, [goals, selectedGoal])
 
     const activeGoals = goals.filter(g => !g.is_completed)
     const completedGoals = goals.filter(g => g.is_completed)
@@ -72,14 +93,21 @@ export default function GoalsPanel({
         setProgressNote('')
     }
 
-    const handleProgressSubmit = () => {
-        if (!selectedGoal || !progressValue) return
+    const handleProgressSubmit = async () => {
+        if (!selectedGoal || !progressValue || isSubmitting) return
         const value = parseFloat(progressValue)
-        if (isNaN(value)) return
+        if (isNaN(value) || value <= 0) return
 
-        onLogProgress(selectedGoal.id, value, progressNote || undefined)
-        setProgressValue('')
-        setProgressNote('')
+        setIsSubmitting(true)
+        try {
+            await onLogProgress(selectedGoal.id, value, progressNote || undefined)
+            setProgressValue('')
+            setProgressNote('')
+        } catch (error) {
+            console.error('Failed to log progress:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const progress = selectedGoal ? calculateProgress(selectedGoal) : 0
@@ -225,12 +253,16 @@ export default function GoalsPanel({
                                                 />
                                                 <button
                                                     onClick={handleProgressSubmit}
-                                                    disabled={!progressValue}
+                                                    disabled={!progressValue || isSubmitting}
                                                     className="px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold
                                                              hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed
-                                                             transition-colors"
+                                                             transition-colors min-w-[60px] flex items-center justify-center"
                                                 >
-                                                    Ekle
+                                                    {isSubmitting ? (
+                                                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    ) : (
+                                                        'Ekle'
+                                                    )}
                                                 </button>
                                             </div>
                                             <input
