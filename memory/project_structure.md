@@ -17,6 +17,7 @@ overthink_v0.2/
 │   ├── tech_stack.md         # Teknoloji yığını
 │   ├── database_schema.md    # Veritabanı şeması
 │   ├── project_structure.md  # Bu dosya
+│   ├── auth_architecture.md  # 🔐 Authentication dokümantasyonu
 │   └── ADR.md                # Mimari kararlar
 │
 ├── 📁 public/                # Static assets
@@ -27,14 +28,27 @@ overthink_v0.2/
 │       └── icon-512.png
 │
 ├── 📁 supabase/              # Supabase konfigürasyonu
-│   └── schema.sql            # Veritabanı şeması SQL (events dahil)
+│   └── schema.sql            # Veritabanı şeması SQL
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
 │   ├── 📁 app/               # Next.js App Router
 │   │   ├── layout.tsx        # Root layout (PWA meta)
-│   │   ├── page.tsx          # Home page (3D + Calendar flow)
+│   │   ├── page.tsx          # Home page (Protected)
 │   │   ├── globals.css       # Global stiller
+│   │   │
+│   │   ├── 📁 (auth)/        # 🔐 Auth Route Group (shared layout)
+│   │   │   ├── layout.tsx        # Glassmorphism centered layout
+│   │   │   ├── 📁 login/
+│   │   │   │   └── page.tsx      # Password + Magic Link toggle
+│   │   │   ├── 📁 register/
+│   │   │   │   └── page.tsx      # Password strength indicators
+│   │   │   └── 📁 forgot-password/
+│   │   │       └── page.tsx      # Password reset request
+│   │   │
+│   │   ├── 📁 auth/          # 🔐 Auth API Routes
+│   │   │   └── 📁 callback/
+│   │   │       └── route.ts      # OAuth/Magic Link code exchange
 │   │   │
 │   │   └── 📁 analytics/     # Analytics route
 │   │       └── page.tsx      # Charts page
@@ -49,17 +63,24 @@ overthink_v0.2/
 │   │   │   └── index.ts      # (Opsiyonel)
 │   │   │
 │   │   ├── 📁 hud/           # [MOLECULES] HUD overlay
-│   │   │   ├── 📁 AICouncil/      # [YENİ] AI Assistant UI
+│   │   │   ├── 📁 AICouncil/      # AI Assistant UI
 │   │   │   │   ├── index.ts
 │   │   │   │   ├── CouncilPanel.tsx
 │   │   │   │   └── CouncilFAB.tsx
+│   │   │   ├── 📁 Goals/          # Goals & Progress UI
+│   │   │   │   ├── GoalsFAB.tsx
+│   │   │   │   ├── GoalsPanel.tsx
+│   │   │   │   ├── GoalCard.tsx
+│   │   │   │   ├── GoalModal.tsx
+│   │   │   │   ├── MilestoneList.tsx
+│   │   │   │   └── ProgressRing.tsx
 │   │   │   ├── StatusBar.tsx      # Üst progress bar
 │   │   │   ├── LoggerModal.tsx    # FAB + log form modal
 │   │   │   ├── LogDrawer.tsx      # Sol log paneli
-│   │   │   ├── CalendarPicker.tsx # 📅 Global takvim picker (YENİ)
-│   │   │   ├── EventModal.tsx     # 📅 Yeni plan formu (YENİ)
-│   │   │   ├── EventTimeline.tsx  # 📅 Timeline panel (YENİ)
-│   │   │   ├── EventCard.tsx      # 📅 Event kartı (YENİ)
+│   │   │   ├── CalendarPicker.tsx # Global takvim picker
+│   │   │   ├── EventModal.tsx     # Yeni plan formu
+│   │   │   ├── EventTimeline.tsx  # Timeline panel
+│   │   │   ├── EventCard.tsx      # Event kartı
 │   │   │   ├── form-schemas.ts    # Zod şemaları
 │   │   │   └── index.ts           # Barrel export
 │   │   │
@@ -76,16 +97,17 @@ overthink_v0.2/
 │   │       └── index.ts
 │   │
 │   ├── 📁 types/             # TypeScript definitions
-│   │   └── database.types.ts # Supabase tablo tipleri (Event dahil)
+│   │   └── database.types.ts # Supabase tablo tipleri
 │   │
 │   ├── 📁 utils/             # Yardımcı fonksiyonlar
 │   │   └── 📁 supabase/      # Supabase clients
 │   │       ├── client.ts     # Browser client
-│   │       ├── server.ts     # Server client
-│   │       └── middleware.ts # Auth helper (demo mode destekli)
+│   │       ├── server.ts     # Server client + Admin client
+│   │       └── middleware.ts # 🔐 Protected route kontrolü
 │   │
-│   ├── 📁 actions/           # Server Actions (YENİ)
+│   ├── 📁 actions/           # Server Actions
 │   │   ├── events.ts         # CRUD operations for events
+│   │   ├── goals.ts          # CRUD operations for goals
 │   │   ├── logs.ts           # CRUD operations for logs
 │   │   └── categories.ts     # Fetch categories from Supabase
 │   │
@@ -93,8 +115,9 @@ overthink_v0.2/
 │   │   └── useIsMobile.ts    # (Scene.tsx içinde şu an)
 │   │
 │   ├── 📁 lib/               # Business logic
-│   │   ├── mockEvents.ts     # 📅 Demo event data (EventWithCategory)
-│   │   ├── notifications.ts  # 📅 Web Push API utilities
+│   │   ├── auth.ts           # 🔐 Centralized auth utilities
+│   │   ├── mockEvents.ts     # Demo event data
+│   │   ├── notifications.ts  # Web Push API utilities
 │   │   └── utils.ts          # Shadcn utility functions
 │   │
 │   └── middleware.ts         # Next.js middleware (auth)
@@ -104,6 +127,26 @@ overthink_v0.2/
 ├── tailwind.config.ts
 ├── next.config.ts
 └── .env.local                # Environment variables
+```
+
+---
+
+## Auth Route Yapısı
+
+### Route Group: `(auth)`
+Parantez içindeki klasör adı URL'de görünmez. Shared layout kullanır.
+
+```
+/login            → src/app/(auth)/login/page.tsx
+/register         → src/app/(auth)/register/page.tsx
+/forgot-password  → src/app/(auth)/forgot-password/page.tsx
+```
+
+### Callback Route: `auth/callback`
+OAuth ve Magic Link için code exchange handler.
+
+```
+/auth/callback    → src/app/auth/callback/route.ts
 ```
 
 ---
@@ -158,7 +201,7 @@ src/types/[domain].types.ts
 | Index Export | index.ts | `index.ts` |
 | Page Component | page.tsx | `page.tsx` |
 | Layout | layout.tsx | `layout.tsx` |
-| Route Config | route.ts | `route.ts` |
+| Route Handler | route.ts | `route.ts` |
 
 ---
 
@@ -172,29 +215,7 @@ src/types/[domain].types.ts
 import { Button } from '@/components/ui'
 import { EventModal, CalendarPicker } from '@/components/hud'
 import { createClient } from '@/utils/supabase/client'
-import { getMockEvents } from '@/lib/mockEvents'
-```
-
----
-
-## Barrel Exports
-
-Her klasör için `index.ts` oluştur:
-
-```typescript
-// components/hud/index.ts
-export { default as StatusBar } from './StatusBar'
-export { default as LoggerModal } from './LoggerModal'
-export { default as LogDrawer } from './LogDrawer'
-export { default as CalendarPicker } from './CalendarPicker'
-export { default as EventModal } from './EventModal'
-export { default as EventTimeline } from './EventTimeline'
-export { default as EventCard } from './EventCard'
-```
-
-Import şekli:
-```typescript
-import { StatusBar, EventModal, CalendarPicker } from '@/components/hud'
+import { getCurrentUser, requireAuth } from '@/lib/auth'
 ```
 
 ---
@@ -205,10 +226,11 @@ import { StatusBar, EventModal, CalendarPicker } from '@/components/hud'
 |-------|------|-------------------|
 | `layout.tsx` | PWA meta, fonts | Dikkatli ol |
 | `globals.css` | Tailwind config | @theme syntax |
-| `middleware.ts` | Auth kontrolü | Supabase docs kontrol |
+| `middleware.ts` | Auth kontrolü | Protected routes listesi |
+| `lib/auth.ts` | Auth utilities | Session yönetimi |
 | `database.types.ts` | Supabase types | Şema değişince güncelle |
 
 ---
 
-**Son Güncelleme:** 2026-01-10
-**Versiyon:** 1.1.0 (Event Scheduler eklendi)
+**Son Güncelleme:** 2026-01-12
+**Versiyon:** 1.2.0 (Authentication eklendi)

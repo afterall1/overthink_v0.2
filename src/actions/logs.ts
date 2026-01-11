@@ -1,48 +1,41 @@
 'use server'
 
-import { getAuthenticatedClient, ensureDemoUserExists } from '@/lib/auth'
+import { getAuthenticatedClient, AuthenticationError } from '@/lib/auth'
 import { LogInsert, Log, CategorySlug, Json } from '@/types/database.types'
 import { revalidatePath } from 'next/cache'
-
-// Flag to track if demo user check has been done this session
-let demoUserChecked = false
-
-/**
- * Initialize demo user if needed (called once per session)
- */
-async function initDemoUser(): Promise<void> {
-    if (demoUserChecked) return
-
-    await ensureDemoUserExists()
-    demoUserChecked = true
-}
 
 /**
  * Fetch logs by date range
  */
 export async function getLogsByDateRange(startDate: string, endDate: string): Promise<Log[]> {
-    await initDemoUser()
-    const { client, user } = await getAuthenticatedClient()
+    try {
+        const { client, user } = await getAuthenticatedClient()
 
-    const { data, error } = await client
-        .from('logs')
-        .select(`
-            *,
-            categories (
-                slug
-            )
-        `)
-        .eq('user_id', user.id)
-        .gte('logged_at', startDate)
-        .lte('logged_at', endDate)
-        .order('logged_at', { ascending: false })
+        const { data, error } = await client
+            .from('logs')
+            .select(`
+                *,
+                categories (
+                    slug
+                )
+            `)
+            .eq('user_id', user.id)
+            .gte('logged_at', startDate)
+            .lte('logged_at', endDate)
+            .order('logged_at', { ascending: false })
 
-    if (error) {
-        console.error('Error fetching logs:', error)
-        return []
+        if (error) {
+            console.error('Error fetching logs:', error)
+            return []
+        }
+
+        return data || []
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return []
+        }
+        throw error
     }
-
-    return data || []
 }
 
 /**
@@ -53,7 +46,6 @@ export async function createLog(
     data: Record<string, unknown>,
     sentiment: number
 ): Promise<Log | null> {
-    await initDemoUser()
     const { client, user } = await getAuthenticatedClient()
 
     // First, get the category ID from slug
@@ -96,7 +88,6 @@ export async function createLog(
  * Delete a log entry
  */
 export async function deleteLog(id: string): Promise<void> {
-    await initDemoUser()
     const { client } = await getAuthenticatedClient()
 
     const { error } = await client
@@ -116,19 +107,25 @@ export async function deleteLog(id: string): Promise<void> {
  * Get category slug from category_id (helper for UI)
  */
 export async function getCategorySlugById(categoryId: string): Promise<CategorySlug | null> {
-    await initDemoUser()
-    const { client } = await getAuthenticatedClient()
+    try {
+        const { client } = await getAuthenticatedClient()
 
-    const { data, error } = await client
-        .from('categories')
-        .select('slug')
-        .eq('id', categoryId)
-        .single()
+        const { data, error } = await client
+            .from('categories')
+            .select('slug')
+            .eq('id', categoryId)
+            .single()
 
-    if (error || !data) {
-        console.error('Error fetching category:', error)
-        return null
+        if (error || !data) {
+            console.error('Error fetching category:', error)
+            return null
+        }
+
+        return data.slug as CategorySlug
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return null
+        }
+        throw error
     }
-
-    return data.slug as CategorySlug
 }

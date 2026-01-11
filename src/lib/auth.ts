@@ -2,23 +2,15 @@
  * LifeNexus Centralized Auth Utility
  * 
  * This module provides a unified authentication layer for all server actions.
- * It handles both authenticated users (via Supabase Auth) and demo mode (pre-auth development).
+ * It handles authenticated users via Supabase Auth with proper RLS enforcement.
  * 
  * @module lib/auth
  */
 
-import { createClient, createAdminClient } from '@/utils/supabase/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
-
-// =====================================================
-// CONSTANTS
-// =====================================================
-
-/**
- * Demo user email for identification
- */
-export const DEMO_USER_EMAIL = 'demo@lifenexus.local'
 
 // =====================================================
 // TYPES
@@ -27,7 +19,7 @@ export const DEMO_USER_EMAIL = 'demo@lifenexus.local'
 export interface AuthUser {
     id: string
     email: string | null
-    isDemo: boolean
+    fullName: string | null
 }
 
 export interface AuthenticatedClient {
@@ -40,168 +32,86 @@ export interface AuthenticatedClient {
 // =====================================================
 
 /**
- * Check if the application is running in demo mode (no authenticated user)
+ * Get the current authenticated user
+ * Returns null if not authenticated
  */
-export async function isDemoMode(): Promise<boolean> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    return !user
-}
-
-/**
- * Get or create the demo user and return its ID
- * This checks public.users first (faster), then auth.users if needed
- */
-async function getDemoUserId(): Promise<string> {
-    const adminClient = createAdminClient()
-
-    // First check public.users table (faster than auth.admin.listUsers)
-    const { data: publicUser } = await adminClient
-        .from('users')
-        .select('id')
-        .eq('email', DEMO_USER_EMAIL)
-        .single()
-
-    if (publicUser) {
-        return publicUser.id
-    }
-
-    // User doesn't exist in public.users, need to create via Auth Admin API
-    // First check if exists in auth.users (might be there without public.users entry)
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers()
-    const existingDemoUser = existingUsers?.users?.find(u => u.email === DEMO_USER_EMAIL)
-
-    if (existingDemoUser) {
-        // Auth user exists but public.users entry missing - create it
-        const { error: insertError } = await adminClient
-            .from('users')
-            .insert({
-                id: existingDemoUser.id,
-                email: DEMO_USER_EMAIL,
-                full_name: 'Demo User',
-                avatar_url: null
-            })
-
-        if (insertError && !insertError.message.includes('duplicate')) {
-            console.error('Failed to create public.users entry:', insertError)
-        }
-
-        return existingDemoUser.id
-    }
-
-    // Create new demo user via Auth Admin API
-    const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
-        email: DEMO_USER_EMAIL,
-        password: 'demo-password-not-for-login-1234!',
-        email_confirm: true,
-        user_metadata: {
-            full_name: 'Demo User',
-            is_demo: true
-        }
-    })
-
-    if (authError) {
-        console.error('Failed to create demo user in auth.users:', authError)
-        throw new Error(`Failed to create demo user: ${authError.message}`)
-    }
-
-    if (!authUser?.user?.id) {
-        throw new Error('Demo user created but no ID returned')
-    }
-
-    console.log('✅ Demo user created successfully with ID:', authUser.user.id)
-    return authUser.user.id
-}
-
-/**
- * Get the current authenticated user or demo user
- * 
- * @returns AuthUser object with id, email, and isDemo flag
- */
-export async function getCurrentUser(): Promise<AuthUser> {
+export async function getCurrentUser(): Promise<AuthUser | null> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (user) {
-        return {
-            id: user.id,
-            email: user.email ?? null,
-            isDemo: false
-        }
+    if (!user) {
+        return null
     }
 
-    // Demo mode - get or create demo user
-    const demoUserId = await getDemoUserId()
-    return {
-        id: demoUserId,
-        email: DEMO_USER_EMAIL,
-        isDemo: true
-    }
+    return mapUser(user)
 }
 
 /**
- * Get the appropriate Supabase client and user for database operations.
- * 
- * - If user is authenticated: Returns regular client (RLS applies)
- * - If demo mode: Returns admin client (RLS bypassed) with demo user
+ * Require authentication - redirects to login if not authenticated
+ * Use this at the top of protected pages/actions
+ */
+export async function requireAuth(): Promise<AuthUser> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        redirect('/login')
+    }
+
+    return mapUser(user)
+}
+
+/**
+ * Get the Supabase client and authenticated user for database operations.
+ * Throws an error if not authenticated.
  * 
  * This is the PRIMARY function to use in all server actions.
- * 
- * @returns Object containing Supabase client and current user
  */
 export async function getAuthenticatedClient(): Promise<AuthenticatedClient> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Authenticated user - use regular client (RLS applies)
-    if (user) {
-        return {
-            client: supabase,
-            user: {
-                id: user.id,
-                email: user.email ?? null,
-                isDemo: false
-            }
-        }
+    if (!user) {
+        throw new AuthenticationError('User not authenticated')
     }
-
-    // Demo mode - get or create demo user and use admin client
-    const demoUserId = await getDemoUserId()
 
     return {
-        client: createAdminClient(),
-        user: {
-            id: demoUserId,
-            email: DEMO_USER_EMAIL,
-            isDemo: true
-        }
+        client: supabase,
+        user: mapUser(user)
     }
 }
 
 /**
- * Ensure demo user exists in the database.
- * This is now handled automatically by getDemoUserId().
- * Kept for backwards compatibility.
+ * Sign out the current user
  */
-export async function ensureDemoUserExists(): Promise<boolean> {
-    try {
-        await getDemoUserId()
-        return true
-    } catch (error) {
-        console.error('Error ensuring demo user exists:', error)
-        return false
+export async function signOut(): Promise<void> {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect('/login')
+}
+
+// =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+/**
+ * Map Supabase User to AuthUser
+ */
+function mapUser(user: User): AuthUser {
+    return {
+        id: user.id,
+        email: user.email ?? null,
+        fullName: user.user_metadata?.full_name ?? null
     }
 }
 
 // =====================================================
-// LEGACY COMPATIBILITY (for gradual migration)
+// ERROR CLASSES
 // =====================================================
 
-/**
- * @deprecated Use getAuthenticatedClient() instead
- * Legacy function for backwards compatibility with goals.ts
- */
-export async function getSupabaseClientWithUser() {
-    const { client, user } = await getAuthenticatedClient()
-    return { client, userId: user.id }
+export class AuthenticationError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'AuthenticationError'
+    }
 }
