@@ -49,6 +49,10 @@ overthink_v0.2/
 │   │   │   └── index.ts      # (Opsiyonel)
 │   │   │
 │   │   ├── 📁 hud/           # [MOLECULES] HUD overlay
+│   │   │   ├── 📁 AICouncil/      # [YENİ] AI Assistant UI
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── CouncilPanel.tsx
+│   │   │   │   └── CouncilFAB.tsx
 │   │   │   ├── StatusBar.tsx      # Üst progress bar
 │   │   │   ├── LoggerModal.tsx    # FAB + log form modal
 │   │   │   ├── LogDrawer.tsx      # Sol log paneli

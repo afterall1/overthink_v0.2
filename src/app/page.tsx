@@ -168,7 +168,7 @@ export default function Home() {
     <main className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 text-slate-800 flex flex-col transition-colors duration-500">
 
       {/* Central Playground Container */}
-      <div className="w-full max-w-3xl mx-auto h-full flex flex-col relative z-0">
+      <div className="w-full max-w-7xl mx-auto h-full flex flex-col relative z-0 transition-all duration-500 ease-in-out">
 
         {/* Header Section */}
         <div className="flex-none p-4 pt-6 space-y-4">
@@ -191,11 +191,11 @@ export default function Home() {
 
         {/* Dual Horizon Grid Stage */}
         <div className="flex-1 overflow-hidden relative mx-2 mb-2">
-          <div className="h-full grid grid-cols-1 md:grid-cols-12 gap-6 overflow-y-auto custom-scrollbar p-2">
+          <div className="h-full grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar p-2">
 
-            {/* Left Panel: Today Focus (Mobile: Top, Desktop: Left 7 cols) */}
-            <div className="md:col-span-7 lg:col-span-8 flex flex-col">
-              <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg ring-1 ring-white/50 p-6 min-h-[400px]">
+            {/* Left Panel: Today Focus (50% width) */}
+            <div className="col-span-1 flex flex-col h-full">
+              <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg ring-1 ring-white/50 p-6 h-full min-h-[500px] flex flex-col transition-all duration-300 hover:bg-white/50">
                 <TodayFocus
                   date={selectedDate}
                   events={dayEvents.filter(e => isSameDay(new Date(e.scheduled_at), selectedDate))}
@@ -206,9 +206,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Panel: Upcoming Stream (Mobile: Bottom, Desktop: Right 5 cols) */}
-            <div className="md:col-span-5 lg:col-span-4 flex flex-col">
-              <div className="bg-white/30 backdrop-blur-lg border border-white/20 rounded-3xl p-6 h-full overflow-y-auto custom-scrollbar">
+            {/* Right Panel: Upcoming Stream (50% width) */}
+            <div className="col-span-1 flex flex-col h-full">
+              <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg ring-1 ring-white/50 p-6 h-full overflow-y-auto custom-scrollbar transition-all duration-300 hover:bg-white/50">
                 <UpcomingStream
                   anchorDate={selectedDate}
                   events={dayEvents}
