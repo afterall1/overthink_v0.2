@@ -8,7 +8,8 @@ import {
     Lightbulb, Clock, Zap, Star
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { GoalPeriod, Category, QuestTemplate, CategorySlug } from '@/types/database.types'
+import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
+import { getGoalTemplates, getGoalTemplateCategories } from '@/actions/goals'
 
 // =====================================================
 // Types
@@ -32,6 +33,9 @@ export interface GoalWizardData {
     end_date: string
     best_time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime'
     difficulty_level: 'easy' | 'medium' | 'hard' | 'extreme'
+
+    // Goal Template (optional - if selected, auto-populates other fields)
+    goal_template_id: string | null
 
     // Step 4: How (Milestones)
     milestones: Array<{
@@ -119,6 +123,7 @@ export default function GoalCreationWizard({
         end_date: '',
         best_time_of_day: 'anytime',
         difficulty_level: 'medium',
+        goal_template_id: null,
         milestones: [],
         selected_quest_template_ids: []
     })
@@ -140,6 +145,7 @@ export default function GoalCreationWizard({
                 end_date: '',
                 best_time_of_day: 'anytime',
                 difficulty_level: 'medium',
+                goal_template_id: null,
                 milestones: [],
                 selected_quest_template_ids: []
             })
@@ -490,129 +496,321 @@ function Step1Why({ formData, updateField }: StepProps) {
 }
 
 function Step2What({ formData, updateField, errors, categories }: StepProps) {
-    return (
-        <div className="space-y-5">
-            <div className="text-center mb-4">
-                <h3 className="text-xl font-bold text-slate-800">Hedefini Tanımla</h3>
-                <p className="text-sm text-slate-500 mt-1">Net ve ölçülebilir bir hedef belirle.</p>
-            </div>
+    const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([])
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [useCustom, setUseCustom] = useState(false)
 
-            {/* Title */}
-            <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
-                    <Target className="w-4 h-4" />
-                    Hedef Başlığı *
-                </label>
-                <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="Örn: Haftada 3 gün spor yap"
-                    className="ethereal-input"
-                />
-                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
-            </div>
+    // Goal Template kategorileri
+    const GOAL_TEMPLATE_CATEGORIES = [
+        { slug: 'food', name: 'Beslenme', emoji: '🍎', color: '#10B981' },
+        { slug: 'sport', name: 'Spor', emoji: '🏋️', color: '#3B82F6' },
+        { slug: 'dev', name: 'Geliştirici', emoji: '💻', color: '#8B5CF6' },
+        { slug: 'trade', name: 'Trading', emoji: '📈', color: '#F59E0B' },
+        { slug: 'etsy', name: 'Etsy', emoji: '🎨', color: '#EC4899' },
+        { slug: 'gaming', name: 'Gaming', emoji: '🎮', color: '#06B6D4' }
+    ]
 
-            {/* Description */}
-            <div>
-                <label className="text-sm font-medium text-slate-600 mb-2 block">Açıklama</label>
-                <textarea
-                    value={formData.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    rows={2}
-                    placeholder="Detaylar..."
-                    className="ethereal-input resize-none"
-                />
-            </div>
+    // Fetch goal templates
+    useEffect(() => {
+        async function fetchTemplates() {
+            setIsLoading(true)
+            try {
+                const result = await getGoalTemplates(selectedCategory ?? undefined)
+                if (result.data) {
+                    setGoalTemplates(result.data)
+                }
+            } catch {
+                console.error('Failed to fetch goal templates')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchTemplates()
+    }, [selectedCategory])
 
-            {/* Target Value & Unit */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-sm font-medium text-slate-600 mb-2 block">Hedef Değer</label>
-                    <input
-                        type="number"
-                        value={formData.target_value ?? ''}
-                        onChange={(e) => updateField('target_value', e.target.value ? Number(e.target.value) : undefined)}
-                        min="0"
-                        placeholder="Örn: 3"
-                        className="ethereal-input"
-                    />
+    // Handle template selection
+    const handleTemplateSelect = (template: GoalTemplate) => {
+        updateField('goal_template_id', template.id)
+        updateField('title', template.title)
+        updateField('description', template.description ?? '')
+        updateField('target_value', template.default_target_value ?? undefined)
+        updateField('unit', template.metric_unit)
+        updateField('period', template.default_period)
+        setUseCustom(false)
+    }
+
+    // Switch to custom mode
+    const handleSwitchToCustom = () => {
+        setUseCustom(true)
+        updateField('goal_template_id', null)
+    }
+
+    // If custom mode, show manual inputs
+    if (useCustom) {
+        return (
+            <div className="space-y-5">
+                <div className="text-center mb-4">
+                    <h3 className="text-xl font-bold text-slate-800">Özel Hedef Oluştur</h3>
+                    <p className="text-sm text-slate-500 mt-1">Net ve ölçülebilir bir hedef belirle.</p>
+                    <button
+                        type="button"
+                        onClick={() => setUseCustom(false)}
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline"
+                    >
+                        ← Şablonlara geri dön
+                    </button>
                 </div>
+
+                {/* Title */}
                 <div>
-                    <label className="text-sm font-medium text-slate-600 mb-2 block">Birim</label>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                        <Target className="w-4 h-4" />
+                        Hedef Başlığı *
+                    </label>
                     <input
                         type="text"
-                        value={formData.unit}
-                        onChange={(e) => updateField('unit', e.target.value)}
-                        placeholder="gün, saat, km..."
+                        value={formData.title}
+                        onChange={(e) => updateField('title', e.target.value)}
+                        placeholder="Örn: Haftada 3 gün spor yap"
                         className="ethereal-input"
                     />
+                    {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
                 </div>
-            </div>
 
-            {/* Period */}
-            <div>
-                <label className="text-sm font-medium text-slate-600 mb-2 block">Periyot</label>
-                <div className="grid grid-cols-4 gap-2">
-                    {PERIOD_OPTIONS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateField('period', option.value)}
-                            className={clsx(
-                                'p-3 rounded-xl text-center transition-all',
-                                formData.period === option.value
-                                    ? 'ring-2 shadow-lg'
-                                    : 'bg-slate-50 hover:bg-slate-100'
-                            )}
-                            style={{
-                                backgroundColor: formData.period === option.value ? `${option.color}15` : undefined,
-                                boxShadow: formData.period === option.value
-                                    ? `0 0 0 2px ${option.color}, 0 10px 15px -3px rgba(0,0,0,0.1)`
-                                    : undefined,
-                                color: formData.period === option.value ? option.color : undefined
-                            }}
-                        >
-                            <div className="text-xl mb-1">{option.emoji}</div>
-                            <div className="text-xs font-medium">{option.label}</div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Category */}
-            {categories && categories.length > 0 && (
+                {/* Description */}
                 <div>
-                    <label className="text-sm font-medium text-slate-600 mb-2 block">Kategori</label>
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={() => updateField('category_id', '')}
-                            className={clsx(
-                                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                                !formData.category_id
-                                    ? 'bg-slate-200 text-slate-700 ring-2 ring-slate-400'
-                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            )}
-                        >
-                            Yok
-                        </button>
-                        {categories.map(cat => (
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Açıklama</label>
+                    <textarea
+                        value={formData.description}
+                        onChange={(e) => updateField('description', e.target.value)}
+                        rows={2}
+                        placeholder="Detaylar..."
+                        className="ethereal-input resize-none"
+                    />
+                </div>
+
+                {/* Target Value & Unit */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-medium text-slate-600 mb-2 block">Hedef Değer</label>
+                        <input
+                            type="number"
+                            value={formData.target_value ?? ''}
+                            onChange={(e) => updateField('target_value', e.target.value ? Number(e.target.value) : undefined)}
+                            min="0"
+                            placeholder="Örn: 3"
+                            className="ethereal-input"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-slate-600 mb-2 block">Birim</label>
+                        <input
+                            type="text"
+                            value={formData.unit}
+                            onChange={(e) => updateField('unit', e.target.value)}
+                            placeholder="gün, saat, km..."
+                            className="ethereal-input"
+                        />
+                    </div>
+                </div>
+
+                {/* Period */}
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Periyot</label>
+                    <div className="grid grid-cols-4 gap-2">
+                        {PERIOD_OPTIONS.map((option) => (
                             <button
-                                key={cat.id}
+                                key={option.value}
                                 type="button"
-                                onClick={() => updateField('category_id', cat.id)}
-                                className="px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                                onClick={() => updateField('period', option.value)}
+                                className={clsx(
+                                    'p-3 rounded-xl text-center transition-all',
+                                    formData.period === option.value
+                                        ? 'ring-2 shadow-lg'
+                                        : 'bg-slate-50 hover:bg-slate-100'
+                                )}
                                 style={{
-                                    backgroundColor: formData.category_id === cat.id ? cat.color_code : `${cat.color_code}20`,
-                                    color: formData.category_id === cat.id ? '#fff' : cat.color_code,
-                                    boxShadow: formData.category_id === cat.id ? `0 4px 12px ${cat.color_code}40` : 'none'
+                                    backgroundColor: formData.period === option.value ? `${option.color}15` : undefined,
+                                    boxShadow: formData.period === option.value
+                                        ? `0 0 0 2px ${option.color}, 0 10px 15px -3px rgba(0,0,0,0.1)`
+                                        : undefined,
+                                    color: formData.period === option.value ? option.color : undefined
                                 }}
                             >
-                                {cat.name}
+                                <div className="text-xl mb-1">{option.emoji}</div>
+                                <div className="text-xs font-medium">{option.label}</div>
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Category */}
+                {categories && categories.length > 0 && (
+                    <div>
+                        <label className="text-sm font-medium text-slate-600 mb-2 block">Kategori</label>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => updateField('category_id', '')}
+                                className={clsx(
+                                    'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                                    !formData.category_id
+                                        ? 'bg-slate-200 text-slate-700 ring-2 ring-slate-400'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                )}
+                            >
+                                Yok
+                            </button>
+                            {categories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => updateField('category_id', cat.id)}
+                                    className="px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                                    style={{
+                                        backgroundColor: formData.category_id === cat.id ? cat.color_code : `${cat.color_code}20`,
+                                        color: formData.category_id === cat.id ? '#fff' : cat.color_code,
+                                        boxShadow: formData.category_id === cat.id ? `0 4px 12px ${cat.color_code}40` : 'none'
+                                    }}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Template selection mode
+    return (
+        <div className="space-y-5">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-slate-800">Hedef Şablonu Seç</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                    Hazır şablonlar ile hızlıca başla veya{' '}
+                    <button
+                        type="button"
+                        onClick={handleSwitchToCustom}
+                        className="text-blue-600 hover:text-blue-700 underline"
+                    >
+                        özel hedef oluştur
+                    </button>
+                </p>
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className={clsx(
+                        'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                        selectedCategory === null
+                            ? 'bg-slate-800 text-white shadow-lg'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    )}
+                >
+                    Tümü
+                </button>
+                {GOAL_TEMPLATE_CATEGORIES.map((cat) => (
+                    <button
+                        key={cat.slug}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.slug)}
+                        className="px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                        style={{
+                            backgroundColor: selectedCategory === cat.slug ? cat.color : `${cat.color}20`,
+                            color: selectedCategory === cat.slug ? '#fff' : cat.color
+                        }}
+                    >
+                        {cat.emoji} {cat.name}
+                    </button>
+                ))}
+            </div>
+
+            {/* Templates Grid */}
+            {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+            ) : goalTemplates.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                    <p>Henüz şablon bulunmuyor.</p>
+                    <button
+                        type="button"
+                        onClick={handleSwitchToCustom}
+                        className="mt-2 text-blue-600 hover:text-blue-700 underline"
+                    >
+                        Özel hedef oluştur
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[340px] overflow-y-auto pr-2">
+                    {goalTemplates.map((template) => {
+                        const isSelected = formData.goal_template_id === template.id
+                        const catInfo = GOAL_TEMPLATE_CATEGORIES.find(c => c.slug === template.category_slug)
+                        const categoryColor = catInfo?.color ?? '#6B7280'
+
+                        return (
+                            <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => handleTemplateSelect(template)}
+                                className={clsx(
+                                    'p-4 rounded-xl text-left transition-all border-2',
+                                    isSelected
+                                        ? 'border-blue-500 bg-blue-50 shadow-lg'
+                                        : 'border-transparent bg-slate-50 hover:bg-slate-100 hover:border-slate-200'
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
+                                        style={{ backgroundColor: `${categoryColor}20` }}
+                                    >
+                                        {template.emoji}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-slate-800 truncate">
+                                            {template.title}
+                                        </h4>
+                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                            {template.description ?? `${template.default_target_value ?? '?'} ${template.metric_unit} hedefi`}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span
+                                                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                                style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
+                                            >
+                                                {catInfo?.name ?? template.category_slug}
+                                            </span>
+                                            <span className="text-xs text-slate-400">
+                                                {template.difficulty === 'easy' ? '🌱' : template.difficulty === 'medium' ? '💪' : '🔥'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {isSelected && (
+                                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-4 h-4 text-white" />
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* Selected Template Info */}
+            {formData.goal_template_id && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                    <p className="text-sm text-blue-800">
+                        ✅ <strong>{formData.title}</strong> seçildi.
+                        Hedef değerini bir sonraki adımda özelleştirebilirsin.
+                    </p>
                 </div>
             )}
         </div>

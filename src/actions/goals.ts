@@ -2,6 +2,7 @@
 
 import { getAuthenticatedClient, AuthenticationError } from '@/lib/auth'
 import { createAdminClient } from '@/utils/supabase/server'
+import { revalidatePath } from 'next/cache'
 import type {
     Goal,
     GoalInsert,
@@ -11,8 +12,12 @@ import type {
     GoalMilestone,
     GoalMilestoneInsert,
     GoalMilestoneUpdate,
-    GoalEntry
+    GoalEntry,
+    GoalTemplate,
+    GoalTemplateWithQuests,
+    QuestTemplate
 } from '@/types/database.types'
+import { createQuestsFromTemplates } from './quests'
 
 // =====================================================
 // GOAL CRUD OPERATIONS
@@ -785,3 +790,261 @@ export async function deleteProgressEntry(entryId: string): Promise<boolean> {
     }
 }
 
+// =====================================================
+// GOAL TEMPLATE OPERATIONS
+// =====================================================
+
+interface ActionResult<T> {
+    data: T | null
+    error: string | null
+}
+
+/**
+ * Get all goal templates, optionally filtered by category
+ */
+export async function getGoalTemplates(
+    categorySlug?: string
+): Promise<ActionResult<GoalTemplate[]>> {
+    try {
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        let query = client
+            .from('goal_templates')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true })
+
+        if (categorySlug) {
+            query = query.eq('category_slug', categorySlug)
+        }
+
+        const { data, error } = await query
+
+        if (error) {
+            // Table might not exist yet
+            if (error.message?.includes('relation') || error.code === '42P01') {
+                return { data: [], error: null }
+            }
+            return { data: null, error: error.message }
+        }
+
+        return { data: (data ?? []) as GoalTemplate[], error: null }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Goal şablonları yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Get a single goal template by slug with linked quest templates
+ */
+export async function getGoalTemplateBySlug(
+    slug: string
+): Promise<ActionResult<GoalTemplateWithQuests | null>> {
+    try {
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        // Get goal template
+        const { data: goalTemplate, error: goalError } = await client
+            .from('goal_templates')
+            .select('*')
+            .eq('slug', slug)
+            .eq('is_active', true)
+            .single()
+
+        if (goalError || !goalTemplate) {
+            return { data: null, error: goalError?.message || 'Şablon bulunamadı' }
+        }
+
+        // Get linked quest templates
+        const { data: questTemplates } = await client
+            .from('quest_templates')
+            .select('*')
+            .eq('goal_template_id', goalTemplate.id)
+            .order('sort_order', { ascending: true })
+
+        return {
+            data: {
+                ...(goalTemplate as GoalTemplate),
+                quest_templates: (questTemplates ?? []) as QuestTemplate[]
+            },
+            error: null
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Goal şablonu yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Get all unique categories from goal templates
+ */
+export async function getGoalTemplateCategories(): Promise<ActionResult<string[]>> {
+    try {
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        const { data, error } = await client
+            .from('goal_templates')
+            .select('category_slug')
+            .eq('is_active', true)
+            .order('category_slug')
+
+        if (error) {
+            if (error.message?.includes('relation') || error.code === '42P01') {
+                return { data: [], error: null }
+            }
+            return { data: null, error: error.message }
+        }
+
+        // Get unique categories
+        const uniqueCategories = [...new Set((data ?? []).map((d: { category_slug: string }) => d.category_slug))] as string[]
+        return { data: uniqueCategories, error: null }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Kategoriler yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Create a goal from a template and auto-generate linked quests
+ */
+export async function createGoalFromTemplate(
+    templateId: string,
+    customizations?: {
+        title?: string
+        description?: string
+        target_value?: number
+        start_date?: string
+        end_date?: string
+    }
+): Promise<ActionResult<{ goal: Goal; questsCreated: number }>> {
+    try {
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        // 1. Get the goal template
+        const { data: template, error: templateError } = await client
+            .from('goal_templates')
+            .select('*')
+            .eq('id', templateId)
+            .single()
+
+        if (templateError || !template) {
+            return { data: null, error: 'Goal şablonu bulunamadı' }
+        }
+
+        const typedTemplate = template as GoalTemplate
+
+        // 2. Calculate dates
+        const startDate = customizations?.start_date || new Date().toISOString().split('T')[0]
+        const endDate = customizations?.end_date || (() => {
+            const end = new Date()
+            end.setDate(end.getDate() + typedTemplate.default_duration_days)
+            return end.toISOString().split('T')[0]
+        })()
+
+        // 3. Create the goal
+        const goalData: GoalInsert = {
+            user_id: user.id,
+            goal_template_id: typedTemplate.id,
+            title: customizations?.title ?? typedTemplate.title,
+            description: customizations?.description ?? typedTemplate.description,
+            target_value: customizations?.target_value ?? typedTemplate.default_target_value,
+            current_value: 0,
+            unit: typedTemplate.metric_unit,
+            period: typedTemplate.default_period,
+            start_date: startDate,
+            end_date: endDate,
+            metric_unit: typedTemplate.metric_unit,
+            metric_name: typedTemplate.metric_name,
+            is_completed: false
+        }
+
+        const { data: goal, error: goalError } = await supabase
+            .from('goals')
+            .insert(goalData)
+            .select()
+            .single()
+
+        if (goalError || !goal) {
+            return { data: null, error: goalError?.message || 'Goal oluşturulurken hata oluştu' }
+        }
+
+        // 4. Get linked quest templates
+        const { data: questTemplates, error: questTemplatesError } = await client
+            .from('quest_templates')
+            .select('id')
+            .eq('goal_template_id', typedTemplate.id)
+
+        // DEBUG: Log quest template linking
+        console.log('[createGoalFromTemplate] Goal Template ID:', typedTemplate.id)
+        console.log('[createGoalFromTemplate] Goal Template Slug:', typedTemplate.slug)
+        console.log('[createGoalFromTemplate] Quest Templates Found:', questTemplates?.length ?? 0)
+        console.log('[createGoalFromTemplate] Quest Templates Error:', questTemplatesError?.message ?? 'None')
+        if (questTemplates && questTemplates.length > 0) {
+            console.log('[createGoalFromTemplate] Quest Template IDs:', questTemplates.map((qt: { id: string }) => qt.id))
+        }
+
+        // 5. Create quests from templates
+        let questsCreated = 0
+        let templateIdsToCreate: string[] = []
+
+        if (questTemplates && questTemplates.length > 0) {
+            templateIdsToCreate = questTemplates.map((qt: { id: string }) => qt.id)
+            console.log('[createGoalFromTemplate] Using linked quest templates:', templateIdsToCreate.length)
+        } else {
+            // FALLBACK: If no quests linked via goal_template_id, try category_slug match
+            console.log('[createGoalFromTemplate] No linked quests, trying category_slug fallback...')
+
+            const { data: categoryQuests } = await client
+                .from('quest_templates')
+                .select('id')
+                .eq('category_slug', typedTemplate.category_slug)
+                .eq('is_recurring_default', true)
+                .limit(5)  // Get first 5 recurring quests from same category
+
+            if (categoryQuests && categoryQuests.length > 0) {
+                templateIdsToCreate = categoryQuests.map((qt: { id: string }) => qt.id)
+                console.log('[createGoalFromTemplate] FALLBACK: Found', templateIdsToCreate.length, 'quests via category_slug:', typedTemplate.category_slug)
+            } else {
+                console.log('[createGoalFromTemplate] WARNING: No quest templates found even with category fallback!')
+            }
+        }
+
+        // Create quests if we have any
+        if (templateIdsToCreate.length > 0) {
+            console.log('[createGoalFromTemplate] Creating quests from template IDs:', templateIdsToCreate)
+            const questResult = await createQuestsFromTemplates(templateIdsToCreate, goal.id)
+
+            console.log('[createGoalFromTemplate] Quest Result:', questResult.data?.length ?? 0, 'created, error:', questResult.error ?? 'None')
+            if (questResult.data) {
+                questsCreated = questResult.data.length
+            }
+        } else {
+            console.log('[createGoalFromTemplate] ERROR: No quest templates to create!')
+        }
+
+        revalidatePath('/')
+        return {
+            data: {
+                goal: goal as Goal,
+                questsCreated
+            },
+            error: null
+        }
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
+        const message = error instanceof Error ? error.message : 'Goal oluşturulurken hata oluştu'
+        return { data: null, error: message }
+    }
+}

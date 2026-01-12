@@ -168,6 +168,10 @@ export type Database = {
                     streak_count?: number
                     longest_streak?: number
                     last_activity_date?: string | null
+                    // Goal Template fields
+                    goal_template_id?: string | null
+                    metric_unit?: string | null
+                    metric_name?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -1135,8 +1139,52 @@ export interface QuestTemplate {
     estimated_minutes: number | null
     is_recurring_default: boolean
     recurrence_pattern: RecurrencePattern | null
+    goal_template_id: string | null  // Link to goal template
+    progress_contribution: number    // Value added to goal when quest completed
     sort_order: number
     created_at: string
 }
 
 export type QuestTemplateTimeOfDay = QuestTemplate['time_of_day']
+
+// =====================================================
+// Goal Template Types
+// =====================================================
+
+export type ProgressDirection = 'increase' | 'decrease'
+
+export interface GoalTemplate {
+    id: string
+    category_slug: CategorySlug
+    slug: string
+    title: string
+    description: string | null
+    emoji: string
+
+    // Progress Configuration
+    metric_unit: string
+    metric_name: string
+    default_target_value: number | null
+    progress_direction: ProgressDirection
+
+    // Time Configuration
+    default_period: GoalPeriod
+    default_duration_days: number
+
+    // Difficulty & XP
+    difficulty: 'easy' | 'medium' | 'hard'
+    completion_xp: number
+
+    // Quest → Goal Progress Formula
+    quest_progress_value: number
+
+    sort_order: number
+    is_active: boolean
+    created_at: string
+}
+
+// Goal Template with linked quest templates
+export interface GoalTemplateWithQuests extends GoalTemplate {
+    quest_templates: QuestTemplate[]
+}
+

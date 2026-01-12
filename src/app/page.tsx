@@ -398,6 +398,28 @@ export default function Home() {
         onClose={() => setIsGoalWizardOpen(false)}
         onSubmit={async (data) => {
           try {
+            // If a goal template was selected, use createGoalFromTemplate
+            if (data.goal_template_id) {
+              const { createGoalFromTemplate } = await import('@/actions/goals')
+
+              const result = await createGoalFromTemplate(data.goal_template_id, {
+                title: data.title,
+                description: data.description || undefined,
+                target_value: data.target_value,
+                start_date: data.start_date,
+                end_date: data.end_date || undefined
+              })
+
+              if (result.error) {
+                throw new Error(result.error)
+              }
+
+              // Refresh both goals and quests (since template auto-creates linked quests)
+              await Promise.all([fetchGoals(), fetchQuests()])
+              return
+            }
+
+            // Manual goal creation (custom goal without template)
             const goalPayload = {
               title: data.title,
               description: data.description || null,
@@ -416,7 +438,7 @@ export default function Home() {
             // Create the goal first
             const newGoal = await createGoal(goalPayload)
 
-            // If quest templates were selected, create quests linked to this goal
+            // If quest templates were selected in Step5, create quests linked to this goal
             if (data.selected_quest_template_ids && data.selected_quest_template_ids.length > 0 && newGoal) {
               const { createQuestFromTemplate } = await import('@/actions/quests')
 
@@ -426,12 +448,10 @@ export default function Home() {
                   createQuestFromTemplate(templateId, newGoal.id)
                 )
               )
-
-              // Refresh quests panel
-              await fetchQuests()
             }
 
-            await fetchGoals()
+            // Refresh both goals and quests
+            await Promise.all([fetchGoals(), fetchQuests()])
           } catch (error) {
             console.error('Failed to create goal:', error)
             throw error

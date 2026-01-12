@@ -116,8 +116,10 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         }
 
         // Filter recurring quests based on pattern
+        // FIX: If is_recurring is true but no pattern defined, default to 'daily'
         const activeRecurring = (recurringQuests || []).filter((quest: DailyQuest) => {
-            switch (quest.recurrence_pattern) {
+            const pattern = quest.recurrence_pattern || 'daily'
+            switch (pattern) {
                 case 'daily':
                     return true
                 case 'weekdays':
@@ -131,7 +133,7 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
                 case 'custom':
                     return quest.recurrence_days?.includes(dayOfWeek) ?? false
                 default:
-                    return false
+                    return true  // FIX: Show quest as fallback
             }
         })
 
@@ -397,6 +399,35 @@ export async function completeQuest(
                     last_perfect_day: today
                 })
                 .eq('user_id', user.id)
+        }
+
+        // 10. Update goal progress if quest is linked to a goal
+        if (quest.goal_id) {
+            // Get progress contribution from quest template
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const questAny = quest as any
+            const progressContribution = questAny.progress_contribution ?? 1
+
+            // Update goal's current_value
+            const { data: goal } = await supabase
+                .from('goals')
+                .select('current_value, target_value')
+                .eq('id', quest.goal_id)
+                .single()
+
+            if (goal) {
+                const newValue = (goal.current_value ?? 0) + progressContribution
+                const isNowCompleted = goal.target_value ? newValue >= goal.target_value : false
+
+                await supabase
+                    .from('goals')
+                    .update({
+                        current_value: newValue,
+                        is_completed: isNowCompleted,
+                        last_activity_date: today
+                    })
+                    .eq('id', quest.goal_id)
+            }
         }
 
         revalidatePath('/')
@@ -779,7 +810,10 @@ export async function createQuestFromTemplate(
             xp_reward: customizations?.xp_reward ?? typedTemplate.xp_reward,
             difficulty: customizations?.difficulty ?? typedTemplate.difficulty,
             is_recurring: customizations?.is_recurring ?? typedTemplate.is_recurring_default,
-            recurrence_pattern: customizations?.recurrence_pattern ?? typedTemplate.recurrence_pattern,
+            // FIX: If template is recurring but has no pattern, default to 'daily'
+            recurrence_pattern: customizations?.recurrence_pattern
+                ?? typedTemplate.recurrence_pattern
+                ?? (typedTemplate.is_recurring_default ? 'daily' : null),
             scheduled_date: customizations?.scheduled_date ?? getTodayDateString(),
             status: 'pending'
         }
@@ -832,6 +866,7 @@ export async function createQuestsFromTemplates(
         const today = getTodayDateString()
 
         // Create quests from templates
+        // FIX: Add fallback for recurrence_pattern when template is recurring but has no pattern
         const questsData: DailyQuestInsert[] = typedTemplates.map(template => ({
             user_id: user.id,
             goal_id: goalId,
@@ -841,7 +876,8 @@ export async function createQuestsFromTemplates(
             xp_reward: template.xp_reward,
             difficulty: template.difficulty,
             is_recurring: template.is_recurring_default,
-            recurrence_pattern: template.recurrence_pattern,
+            recurrence_pattern: template.recurrence_pattern
+                ?? (template.is_recurring_default ? 'daily' : null),
             scheduled_date: today,
             status: 'pending'
         }))

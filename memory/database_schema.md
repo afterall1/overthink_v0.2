@@ -386,11 +386,15 @@ ON categories FOR SELECT
 USING (true);
 ```
 
-### quest_templates (Global Read)
+### quest_templates & goal_templates (Global Read)
 ```sql
 -- SELECT only, public (templates are shared)
 CREATE POLICY "Quest templates are publicly readable"
 ON quest_templates FOR SELECT
+USING (true);
+
+CREATE POLICY "Goal templates are publicly readable"
+ON goal_templates FOR SELECT
 USING (true);
 ```
 
@@ -402,7 +406,8 @@ USING (true);
 |-------|----------|
 | `supabase/schema.sql` | Ana şema (users, categories, logs, goals) |
 | `supabase/migrations/20260112_quest_system.sql` | Quest System tabloları |
-| `supabase/migrations/20260112_quest_templates.sql` | 🆕 Quest Templates (124 şablon) |
+| `supabase/migrations/20260112_quest_templates.sql` | Quest Templates (124 şablon) |
+| `supabase/migrations/20260112_goal_templates.sql` | 🆕 Goal Templates (44 şablon) |
 
 Supabase Dashboard > SQL Editor'da çalıştırın.
 
@@ -426,21 +431,62 @@ Supabase Dashboard > SQL Editor'da çalıştırın.
 | `estimated_minutes` | INTEGER | NULLABLE | Tahmini süre |
 | `is_recurring_default` | BOOLEAN | DEFAULT false | Varsayılan tekrar |
 | `recurrence_pattern` | TEXT | CHECK | daily/weekdays/weekends/mwf/tts/custom |
+| `goal_template_id` | UUID | FK → goal_templates | 🆕 Bağlı goal template |
+| `progress_contribution` | NUMERIC | DEFAULT 1 | 🆕 Goal'e katkı |
 | `sort_order` | INTEGER | DEFAULT 0 | Sıralama |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+
+---
+
+## 🆕 goal_templates Tablosu (2026-01-12)
+
+> ⚠️ Migration: `supabase/migrations/20260112_goal_templates.sql`
+
+44 pre-defined goal şablonu içerir. 6 kategori: food, sport, dev, trade, etsy, gaming.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Template ID |
+| `category_slug` | TEXT | NOT NULL | Kategori slug'ı |
+| `slug` | TEXT | UNIQUE, NOT NULL | URL-safe identifier |
+| `title` | TEXT | NOT NULL | Hedef başlığı |
+| `description` | TEXT | NULLABLE | Açıklama |
+| `emoji` | TEXT | DEFAULT '🎯' | Emoji ikonu |
+| `metric_unit` | TEXT | NOT NULL | Ölçü birimi (kg, gün, %, vb.) |
+| `metric_name` | TEXT | NOT NULL | Metrik adı |
+| `default_target_value` | NUMERIC | NULLABLE | Varsayılan hedef değer |
+| `progress_direction` | TEXT | CHECK | increase/decrease |
+| `default_period` | TEXT | CHECK | daily/weekly/monthly/yearly |
+| `default_duration_days` | INTEGER | DEFAULT 30 | Varsayılan süre |
+| `difficulty` | TEXT | CHECK | easy/medium/hard |
+| `completion_xp` | INTEGER | DEFAULT 500 | Tamamlama XP'si |
+| `quest_progress_value` | NUMERIC | DEFAULT 1 | Quest başına ilerleme |
+| `sort_order` | INTEGER | DEFAULT 0 | Sıralama |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Aktif mi |
 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
 
 **Kategori Dağılımı:**
 
-| Kategori | Şablon Sayısı | Max XP/Gün |
-|----------|--------------|------------|
-| trade | 16 | ~250 |
-| food | 18 | ~260 |
-| sport | 22 | ~360 |
-| dev | 24 | ~450 |
-| etsy | 19 | ~350 |
-| gaming | 25 | ~420 |
+| Kategori | Şablon Sayısı | Örnek |
+|----------|--------------|-------|
+| food | 8 | Kilo Vermek, Sağlıklı Beslenme |
+| sport | 10 | Yağ Yakma, Günlük 10.000 Adım |
+| dev | 8 | Proje Tamamla, Günlük Commit |
+| trade | 6 | Trading Disiplini, Risk Yönetimi |
+| etsy | 6 | Aylık Gelir Hedefi, Yeni Ürün |
+| gaming | 6 | Rank Yükseltme, Yayın Tutarlılığı |
 
 ---
 
-**Son Güncelleme:** 2026-01-12
-**Versiyon:** 2.1.0 (Quest Templates eklendi)
+## goals Tablosuna Eklenen Yeni Sütunlar
+
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `goal_template_id` | UUID FK | Bağlı goal template |
+| `metric_unit` | TEXT | Ölçü birimi |
+| `metric_name` | TEXT | Metrik adı |
+
+---
+
+**Son Güncelleme:** 2026-01-12 (Akşam)
+**Versiyon:** 2.2.0 (Goal Templates eklendi)

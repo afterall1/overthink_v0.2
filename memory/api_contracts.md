@@ -95,6 +95,65 @@ Hedef siler.
 
 ---
 
+## 🆕 Actions: Goal Templates (`src/actions/goals.ts`)
+
+### `getGoalTemplates(categorySlug?)`
+Kategoriye göre goal şablonlarını getirir.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `categorySlug` | string | ❌ |
+
+**Return:** `Promise<ActionResult<GoalTemplate[]>>`
+
+---
+
+### `getGoalTemplateBySlug(slug)`
+Slug ile tek bir goal şablonu getirir.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `slug` | string | ✅ |
+
+**Return:** `Promise<ActionResult<GoalTemplateWithQuests>>`
+
+```typescript
+interface GoalTemplateWithQuests extends GoalTemplate {
+    quest_templates: QuestTemplate[]
+}
+```
+
+---
+
+### `getGoalTemplateCategories()`
+Unique goal template kategorilerini getirir.
+
+**Return:** `Promise<ActionResult<string[]>>`
+
+---
+
+### `createGoalFromTemplate(templateId, customizations?)`
+Şablondan goal oluşturur ve otomatik olarak bağlı questleri de oluşturur.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `templateId` | string | ✅ |
+| `customizations.title` | string | ❌ |
+| `customizations.description` | string | ❌ |
+| `customizations.target_value` | number | ❌ |
+| `customizations.start_date` | string | ❌ |
+| `customizations.end_date` | string | ❌ |
+
+**Return:** `Promise<ActionResult<{ goal: Goal; questsCreated: number }>>`
+
+> **Önemli:** Bu action otomatik olarak:
+> 1. Goal template'den goal oluşturur
+> 2. `goal_template_id` ile bağlı quest template'leri bulur
+> 3. Bulunan quest template'lerden günlük questler oluşturur
+> 4. Eğer bağlı quest yoksa, category_slug ile fallback arama yapar
+
+---
+
 ## Actions: Quests (`src/actions/quests.ts`)
 
 ### `createQuest(data)`

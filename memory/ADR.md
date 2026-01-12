@@ -428,6 +428,70 @@ Level 20: 100K+ XP
 
 ---
 
+## ADR-009: Goal-Quest Auto-Progress System
+
+**Tarih:** 2026-01-12  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Mevcut sistemde kullanıcılar hedef oluştururken:
+1. Tüm alanları manuel dolduruyor (title, description, target, unit, period...)
+2. İlişkili görevleri ayrı ayrı seçiyor
+3. Görev tamamlandığında hedef ilerlemesi otomatik güncellenmiyor
+
+Bu süreç:
+- Çok fazla manuel iş gerektiriyor
+- Hata yapmaya açık
+- Motivasyonu düşürüyor
+
+### Karar
+
+**Goal Templates + Auto-Progress** sistemi uygulandı:
+
+1. **44 adet Goal Template** oluşturuldu (6 kategori)
+2. **Quest Templates** → **Goal Templates** bağlantısı kuruldu (`goal_template_id`)
+3. Goal oluşturulduğunda **otomatik olarak bağlı questler oluşturuluyor**
+4. Quest tamamlandığında **hedef ilerlemesi otomatik artıyor** (`progress_contribution`)
+
+```
+User → Goal Template Seç → Auto-Create Goal + Auto-Create Quests
+                          ↓
+Quest Tamamla → Goal current_value += progress_contribution
+                          ↓
+Goal %100 → Auto Complete + XP Reward
+```
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Manuel goal + quest** | Kullanıcı tam kontrol | Çok yavaş, hata riski |
+| **AI-generated goals** | Akıllı, kişiselleştirilmiş | Karmaşık, maliyet |
+| **Template System ✓** | Hızlı, tutarlı, genişletilebilir | Şablon güncellemesi gerekir |
+| **Wizard-only** | Adım adım | Yine de manuel |
+
+### Sonuçlar
+
+**Pozitif:**
+- Hedef oluşturma süresi: ~5 dakika → ~30 saniye
+- Otomatik ilerleme takibi = daha az manuel iş
+- Tutarlı metrikler ve birimler
+- Fallback mekanizması (category_slug) ile robustness
+
+**Negatif:**
+- Şablonlar statik (DB'de)
+- Migration çalıştırılması gerekiyor
+- TypeScript tipleri yeniden oluşturulmalı
+
+**Mitigation:**
+- Fallback: Bağlı quest yoksa category_slug ile ara
+- Debug logs: Sorun tespiti için detaylı console.log
+- Özel hedef seçeneği: Template seçmek zorunlu değil
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -457,6 +521,6 @@ Level 20: 100K+ XP
 
 ---
 
-**Son Güncelleme:** 2026-01-12
-**Toplam ADR:** 8
+**Son Güncelleme:** 2026-01-12 (Akşam)
+**Toplam ADR:** 9
 
