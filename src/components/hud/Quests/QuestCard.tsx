@@ -24,10 +24,20 @@ import {
 // Types
 // =====================================================
 
+export interface QuestCardGoalInfo {
+    id: string
+    title: string
+    current_value?: number
+    target_value?: number
+    progress_percent?: number
+}
+
 export interface QuestCardProps {
     quest: DailyQuest
-    goal?: Pick<Goal, 'id' | 'title'> | null
+    goal?: QuestCardGoalInfo | null
     streakCount?: number
+    contributionDisplay?: string | null  // "+306 kcal (~1.1%)"
+    contributionPercent?: number | null  // 1.14
     onComplete: (questId: string) => Promise<void>
     onSkip?: (questId: string) => Promise<void>
     onClick?: (quest: DailyQuest) => void
@@ -93,6 +103,8 @@ export default function QuestCard({
     quest,
     goal,
     streakCount = 0,
+    contributionDisplay,
+    contributionPercent,
     onComplete,
     onSkip,
     onClick,
@@ -101,6 +113,7 @@ export default function QuestCard({
 }: QuestCardProps) {
     const [isCompleting, setIsCompleting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
+    const [prevProgress, setPrevProgress] = useState<number | null>(null)
 
     // Determine current state
     const getState = (): QuestState => {
@@ -150,11 +163,19 @@ export default function QuestCard({
         e.stopPropagation()
         if (!isInteractive) return
 
+        // Save previous progress for animation
+        if (goal?.progress_percent !== undefined) {
+            setPrevProgress(goal.progress_percent)
+        }
+
         setIsCompleting(true)
         try {
             await onComplete(quest.id)
             setShowSuccess(true)
-            setTimeout(() => setShowSuccess(false), 2000)
+            setTimeout(() => {
+                setShowSuccess(false)
+                setPrevProgress(null)
+            }, 2500)
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 throw error
@@ -162,7 +183,7 @@ export default function QuestCard({
         } finally {
             setIsCompleting(false)
         }
-    }, [isInteractive, onComplete, quest.id])
+    }, [isInteractive, onComplete, quest.id, goal?.progress_percent])
 
     return (
         <div className={twMerge("relative overflow-hidden rounded-2xl", className)}>
@@ -308,6 +329,35 @@ export default function QuestCard({
                                 Tamamlandı
                             </div>
                         )}
+
+                        {/* Goal Progress Badge - Shows how this quest contributes to goal */}
+                        {goal && goal.progress_percent !== undefined && state !== 'completed' && contributionDisplay && (
+                            <div className="mt-2 pt-2 border-t border-slate-100/50">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                    <span className="text-slate-500 flex items-center gap-1">
+                                        <Target className="w-3 h-3 text-violet-500" />
+                                        <span className="truncate max-w-[100px]">{goal.title}</span>
+                                    </span>
+                                    <span className="font-semibold text-teal-600 text-[10px]">
+                                        {contributionDisplay}
+                                    </span>
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-gradient-to-r from-violet-400 to-indigo-500 rounded-full"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.min(100, goal.progress_percent || 0)}%` }}
+                                        transition={{ duration: 0.5, ease: "easeOut" }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
+                                    <span>{(goal.progress_percent || 0).toFixed(1)}%</span>
+                                    {contributionPercent && (
+                                        <span className="text-teal-500">+{contributionPercent.toFixed(1)}%</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Quick Complete Button (for non-swipe users) */}
@@ -327,19 +377,75 @@ export default function QuestCard({
                 </div>
             </motion.div>
 
-            {/* Success Celebration Overlay */}
+            {/* Success Celebration Overlay with Progress Impact */}
             <AnimatePresence>
                 {showSuccess && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl
+                                   flex flex-col items-center justify-center pointer-events-none p-4"
                     >
-                        <div className="bg-emerald-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
-                            <Check className="w-5 h-5" />
+                        {/* Success Badge */}
+                        <motion.div
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                            className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 
+                                       flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-2"
+                        >
+                            <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                        </motion.div>
+
+                        {/* XP Reward */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-lg font-bold text-emerald-600 mb-2"
+                        >
                             +{quest.xp_reward} XP
-                        </div>
+                        </motion.div>
+
+                        {/* Goal Progress Impact */}
+                        {goal && prevProgress !== null && contributionPercent && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                                className="w-full max-w-[180px]"
+                            >
+                                <p className="text-[10px] text-slate-500 text-center mb-1 flex items-center justify-center gap-1">
+                                    <Target className="w-3 h-3 text-violet-500" />
+                                    {goal.title}
+                                </p>
+
+                                {/* Animated Progress Bar */}
+                                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: `${prevProgress}%` }}
+                                        animate={{ width: `${Math.min(100, prevProgress + contributionPercent)}%` }}
+                                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+                                        className="absolute h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+                                    />
+                                </div>
+
+                                {/* Progress Numbers */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.6 }}
+                                    className="flex items-center justify-center gap-2 mt-1"
+                                >
+                                    <span className="text-xs text-slate-400">{prevProgress.toFixed(1)}%</span>
+                                    <span className="text-xs text-teal-500">→</span>
+                                    <span className="text-xs font-bold text-teal-600">
+                                        {Math.min(100, prevProgress + contributionPercent).toFixed(1)}%
+                                    </span>
+                                </motion.div>
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -144,6 +144,9 @@ export type Database = {
                     streak_count: number
                     longest_streak: number
                     last_activity_date: string | null
+                    // Momentum system fields
+                    momentum_score: number
+                    habit_maturity_days: number
                     created_at: string
                     updated_at: string
                 }
@@ -168,6 +171,9 @@ export type Database = {
                     streak_count?: number
                     longest_streak?: number
                     last_activity_date?: string | null
+                    // Momentum system fields
+                    momentum_score?: number
+                    habit_maturity_days?: number
                     // Goal Template fields
                     goal_template_id?: string | null
                     metric_unit?: string | null
@@ -196,6 +202,9 @@ export type Database = {
                     streak_count?: number
                     longest_streak?: number
                     last_activity_date?: string | null
+                    // Momentum system fields
+                    momentum_score?: number
+                    habit_maturity_days?: number
                     created_at?: string
                     updated_at?: string
                 }
@@ -549,6 +558,7 @@ export type Database = {
                     ai_reasoning: string | null
                     difficulty: 'easy' | 'medium' | 'hard'
                     sort_order: number
+                    progress_contribution: number
                     created_at: string
                     updated_at: string
                 }
@@ -575,6 +585,7 @@ export type Database = {
                     ai_reasoning?: string | null
                     difficulty?: 'easy' | 'medium' | 'hard'
                     sort_order?: number
+                    progress_contribution?: number
                     created_at?: string
                     updated_at?: string
                 }
@@ -601,6 +612,7 @@ export type Database = {
                     ai_reasoning?: string | null
                     difficulty?: 'easy' | 'medium' | 'hard'
                     sort_order?: number
+                    progress_contribution?: number
                     created_at?: string
                     updated_at?: string
                 }
@@ -1093,7 +1105,7 @@ export type DailyQuestWithDetails = DailyQuest & {
 
 // Today's quests grouped
 export interface TodayQuestsGroup {
-    goal: Pick<Goal, 'id' | 'title' | 'period'> | null
+    goal: Pick<Goal, 'id' | 'title' | 'period' | 'current_value' | 'target_value'> | null
     quests: DailyQuest[]
     completedCount: number
     totalXp: number
@@ -1141,6 +1153,10 @@ export interface QuestTemplate {
     recurrence_pattern: RecurrencePattern | null
     goal_template_id: string | null  // Link to goal template
     progress_contribution: number    // Value added to goal when quest completed
+    contribution_unit: string | null // 'kcal', 'step', 'gram', 'minute', 'percent'
+    contribution_met_value: number | null // MET value for calorie calculation
+    contribution_display: string | null // Human-readable: "+306 kcal (~1.1%)"
+    contribution_type: 'direct' | 'momentum' // direct = measurable, momentum = consistency-based
     sort_order: number
     created_at: string
 }

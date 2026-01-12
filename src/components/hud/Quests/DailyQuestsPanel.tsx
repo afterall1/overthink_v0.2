@@ -29,7 +29,7 @@ import type {
 
 export interface DailyQuestsPanelProps {
     quests: DailyQuest[]
-    goals: Pick<Goal, 'id' | 'title' | 'period'>[]
+    goals: Pick<Goal, 'id' | 'title' | 'period' | 'current_value' | 'target_value'>[]
     xpStats?: UserXpStats | null
     onCompleteQuest: (questId: string) => Promise<void>
     onSkipQuest?: (questId: string) => Promise<void>
@@ -46,7 +46,7 @@ export interface DailyQuestsPanelProps {
 
 function groupQuestsByGoal(
     quests: DailyQuest[],
-    goals: Pick<Goal, 'id' | 'title' | 'period'>[]
+    goals: Pick<Goal, 'id' | 'title' | 'period' | 'current_value' | 'target_value'>[]
 ): TodayQuestsGroup[] {
     const goalMap = new Map(goals.map(g => [g.id, g]))
     const groups = new Map<string | null, DailyQuest[]>()
@@ -206,16 +206,38 @@ function QuestGroup({
                         className="overflow-hidden"
                     >
                         <div className="px-4 pb-4 space-y-2">
-                            {group.quests.map((quest, index) => (
-                                <QuestCard
-                                    key={quest.id}
-                                    quest={quest}
-                                    goal={group.goal}
-                                    onComplete={onCompleteQuest}
-                                    onSkip={onSkipQuest}
-                                    onClick={onQuestClick}
-                                />
-                            ))}
+                            {group.quests.map((quest) => {
+                                // Calculate goal progress percentage
+                                const goalProgressPercent = group.goal && group.goal.target_value
+                                    ? ((group.goal.current_value || 0) / group.goal.target_value) * 100
+                                    : undefined
+
+                                // Build goal info object for QuestCard
+                                const goalInfo = group.goal ? {
+                                    id: group.goal.id,
+                                    title: group.goal.title,
+                                    current_value: group.goal.current_value ?? undefined,
+                                    target_value: group.goal.target_value ?? undefined,
+                                    progress_percent: goalProgressPercent
+                                } : null
+
+                                // Get contribution info from quest (if available from template)
+                                const contributionDisplay = (quest as DailyQuest & { contribution_display?: string }).contribution_display || null
+                                const contributionPercent = quest.progress_contribution || null
+
+                                return (
+                                    <QuestCard
+                                        key={quest.id}
+                                        quest={quest}
+                                        goal={goalInfo}
+                                        contributionDisplay={contributionDisplay}
+                                        contributionPercent={contributionPercent}
+                                        onComplete={onCompleteQuest}
+                                        onSkip={onSkipQuest}
+                                        onClick={onQuestClick}
+                                    />
+                                )
+                            })}
                         </div>
                     </motion.div>
                 )}

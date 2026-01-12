@@ -31,8 +31,9 @@ overthink_v0.2/
 ├── 📁 supabase/              # Supabase konfigürasyonu
 │   ├── schema.sql            # Ana veritabanı şeması
 │   └── 📁 migrations/
-│       ├── 20260112_quest_system.sql     # Quest System tabloları
-│       └── 20260112_quest_templates.sql  # 🆕 Quest Templates (124 şablon)
+│       ├── 20260112_quest_system.sql        # Quest System tabloları
+│       ├── 20260112_quest_templates.sql     # Quest Templates (124 şablon)
+│       └── 20260113_momentum_score_system.sql # 🆕 Momentum Score System
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
@@ -83,14 +84,15 @@ overthink_v0.2/
 │   │   │   │   ├── GoalsPanel.tsx
 │   │   │   │   ├── GoalsStrip.tsx        # Ana ekran hedef şeridi
 │   │   │   │   ├── GoalCard.tsx          # Dikey kart tasarımı
-│   │   │   │   ├── GoalDetailModal.tsx   # Command Center Modal
+│   │   │   │   ├── GoalDetailModal.tsx   # 🆕 Command Center (Redesigned)
 │   │   │   │   ├── GoalModal.tsx
-│   │   │   │   ├── GoalCreationWizard.tsx # 🆕 Multi-step wizard
-│   │   │   │   ├── GoalCelebration.tsx    # 🆕 Completion celebration
-│   │   │   │   ├── ConfettiCelebration.tsx # 🆕 Confetti effects
-│   │   │   │   ├── GoalHealthIndicator.tsx # 🆕 Health bar
-│   │   │   │   ├── StreakBadge.tsx        # 🆕 Streak indicator
-│   │   │   │   ├── VelocityMeter.tsx      # 🆕 Progress velocity
+│   │   │   │   ├── GoalCreationWizard.tsx
+│   │   │   │   ├── GoalCelebration.tsx
+│   │   │   │   ├── ConfettiCelebration.tsx
+│   │   │   │   ├── GoalHealthIndicator.tsx
+│   │   │   │   ├── StreakBadge.tsx
+│   │   │   │   ├── VelocityMeter.tsx
+│   │   │   │   ├── MomentumGauge.tsx     # 🆕 Dual progress gauge
 │   │   │   │   ├── MilestoneList.tsx
 │   │   │   │   └── ProgressRing.tsx
 │   │   │   │

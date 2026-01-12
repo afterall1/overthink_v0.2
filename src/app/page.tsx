@@ -262,7 +262,7 @@ export default function Home() {
           <div className="h-full overflow-y-auto custom-scrollbar p-2">
             <DailyQuestsPanel
               quests={quests}
-              goals={goals.map(g => ({ id: g.id, title: g.title, period: g.period }))}
+              goals={goals.map(g => ({ id: g.id, title: g.title, period: g.period, current_value: g.current_value, target_value: g.target_value }))}
               xpStats={xpStats}
               onCompleteQuest={async (questId) => {
                 try {

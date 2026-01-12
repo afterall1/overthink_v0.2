@@ -804,13 +804,60 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                 </div>
             )}
 
-            {/* Selected Template Info */}
+            {/* Selected Template Info with Target Value Input */}
             {formData.goal_template_id && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                    <p className="text-sm text-blue-800">
+                    <p className="text-sm text-blue-800 mb-3">
                         ✅ <strong>{formData.title}</strong> seçildi.
-                        Hedef değerini bir sonraki adımda özelleştirebilirsin.
                     </p>
+
+                    {/* Target Value Input */}
+                    <div className="mt-3 space-y-2">
+                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-blue-600" />
+                            Hedef Değerini Belirle
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                min="1"
+                                value={formData.target_value ?? ''}
+                                onChange={(e) => updateField('target_value', e.target.value ? Number(e.target.value) : undefined)}
+                                placeholder="Hedef değer"
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 
+                                         text-slate-800 text-lg font-semibold
+                                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-300"
+                            />
+                            <span className="px-3 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-medium">
+                                {formData.unit}
+                            </span>
+                        </div>
+
+                        {/* Calculation Preview for calorie-based goals */}
+                        {formData.target_value && (formData.unit === '%' || formData.unit === 'kg') && (
+                            <div className="mt-3 p-3 rounded-xl bg-white/80 border border-blue-100">
+                                <p className="text-xs text-slate-600">
+                                    📊 <strong>Hesaplama:</strong>
+                                </p>
+                                {formData.unit === '%' && (
+                                    <p className="text-sm text-teal-700 font-medium mt-1">
+                                        %{formData.target_value} yağ azaltma = ~{Math.round(formData.target_value * 0.7 * 7700).toLocaleString()} kcal yakım
+                                        <span className="text-xs text-slate-500 block mt-0.5">
+                                            (70kg referans, 1kg yağ = 7,700 kcal)
+                                        </span>
+                                    </p>
+                                )}
+                                {formData.unit === 'kg' && formData.title?.toLowerCase().includes('kilo') && (
+                                    <p className="text-sm text-teal-700 font-medium mt-1">
+                                        {formData.target_value} kg = ~{(formData.target_value * 7700).toLocaleString()} kcal açık gerekli
+                                        <span className="text-xs text-slate-500 block mt-0.5">
+                                            (1kg = 7,700 kcal)
+                                        </span>
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -1012,27 +1059,56 @@ function Step5Quests({ formData, updateField }: Step5QuestsProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const [isGoalSpecific, setIsGoalSpecific] = useState(false)
 
+    // Fetch goal-specific quests when goal_template_id is available
     useEffect(() => {
         const fetchTemplates = async () => {
             setIsLoading(true)
+            setIsGoalSpecific(false)
+
+            console.log('[Step5Quests] Starting fetch, goal_template_id:', formData.goal_template_id)
+
             try {
                 const { getQuestTemplates } = await import('@/actions/quests')
+
+                // Priority 1: Fetch quests linked to the selected goal template
+                if (formData.goal_template_id) {
+                    console.log('[Step5Quests] Fetching goal-specific quests for:', formData.goal_template_id)
+                    const result = await getQuestTemplates(undefined, formData.goal_template_id)
+                    console.log('[Step5Quests] Goal-specific result:', result.data?.length ?? 0, 'quests found')
+
+                    if (result.data && result.data.length > 0) {
+                        setTemplates(result.data)
+                        setIsGoalSpecific(true)
+                        setIsLoading(false)
+                        console.log('[Step5Quests] Using goal-specific quests')
+                        return
+                    } else {
+                        console.warn('[Step5Quests] No goal-specific quests found, falling back to all')
+                    }
+                }
+
+                // Fallback: If no goal-specific quests, show all (migration not run yet)
+                console.log('[Step5Quests] Fetching all quests as fallback')
                 const result = await getQuestTemplates()
+                console.log('[Step5Quests] Fallback result:', result.data?.length ?? 0, 'quests found')
                 if (result.data) {
                     setTemplates(result.data)
                 }
             } catch (error) {
-                console.error('Failed to fetch templates:', error)
+                console.error('[Step5Quests] Failed to fetch templates:', error)
             } finally {
                 setIsLoading(false)
             }
         }
         fetchTemplates()
-    }, [])
+    }, [formData.goal_template_id])
 
+    // Filter only applies when showing all quests (not goal-specific)
     const filteredTemplates = templates.filter(t => {
-        const matchesCategory = !selectedCategory || t.category_slug === selectedCategory
+        // When showing goal-specific quests, skip category filter
+        const matchesCategory = isGoalSpecific || !selectedCategory || t.category_slug === selectedCategory
         const matchesSearch = !searchQuery ||
             t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             t.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1079,39 +1155,51 @@ function Step5Quests({ formData, updateField }: Step5QuestsProps) {
                 <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             </div>
 
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-                <button
-                    type="button"
-                    onClick={() => setSelectedCategory(null)}
-                    className={clsx(
-                        'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                        !selectedCategory
-                            ? 'bg-slate-800 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    )}
-                >
-                    Tümü
-                </button>
-                {QUEST_CATEGORIES.map(cat => (
+            {/* Goal-Specific Indicator */}
+            {isGoalSpecific && (
+                <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                    <p className="text-sm text-emerald-700 font-medium flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        <strong>{formData.title}</strong> hedefine özel görevler gösteriliyor
+                    </p>
+                </div>
+            )}
+
+            {/* Category Filter - Only show when NOT in goal-specific mode */}
+            {!isGoalSpecific && (
+                <div className="flex flex-wrap gap-2">
                     <button
-                        key={cat.slug}
                         type="button"
-                        onClick={() => setSelectedCategory(cat.slug)}
+                        onClick={() => setSelectedCategory(null)}
                         className={clsx(
                             'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                            selectedCategory === cat.slug
-                                ? 'text-white'
+                            !selectedCategory
+                                ? 'bg-slate-800 text-white'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         )}
-                        style={{
-                            backgroundColor: selectedCategory === cat.slug ? cat.color : undefined
-                        }}
                     >
-                        {cat.emoji} {cat.name}
+                        Tümü
                     </button>
-                ))}
-            </div>
+                    {QUEST_CATEGORIES.map(cat => (
+                        <button
+                            key={cat.slug}
+                            type="button"
+                            onClick={() => setSelectedCategory(cat.slug)}
+                            className={clsx(
+                                'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+                                selectedCategory === cat.slug
+                                    ? 'text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            )}
+                            style={{
+                                backgroundColor: selectedCategory === cat.slug ? cat.color : undefined
+                            }}
+                        >
+                            {cat.emoji} {cat.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Templates List */}
             <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -1181,6 +1269,11 @@ function Step5Quests({ formData, updateField }: Step5QuestsProps) {
                                         {template.difficulty === 'medium' && '💪'}
                                         {template.difficulty === 'hard' && '🔥'}
                                     </span>
+                                    {template.contribution_display && (
+                                        <span className="text-[10px] font-semibold text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">
+                                            {template.contribution_display}
+                                        </span>
+                                    )}
                                     <span className="text-xs font-bold text-amber-600">
                                         +{template.xp_reward} XP
                                     </span>

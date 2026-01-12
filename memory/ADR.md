@@ -492,6 +492,61 @@ Goal %100 → Auto Complete + XP Reward
 
 ---
 
+## ADR-010: Momentum Score System (Dual Progress)
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Expert Council (UX Psychologist, Data Visualization Expert, UI Designer)
+
+### Bağlam
+
+Bazı alışkanlıklar hedefe dolaylı katkı sağlar:
+- "Sağlıklı kahvaltı yap" → Kilo Vermek hedefi (kalori yakmaz ama tutarlılık önemli)
+- "Su iç 2L" → Sağlık hedefi (direkt metrik yok)
+
+Bu tür görevler tamamlandığında kullanıcı ilerleme hissi yaşamıyor.
+
+### Karar
+
+**Dual Progress System** uygulandı:
+1. **Direct Progress**: Kalori, adım, kg gibi ölçülebilir değerler
+2. **Momentum Score**: Tutarlılık bazlı 0-100 puan
+
+**Momentum Formülü:**
+```
+Momentum = Daily Completion×40 + Streak×30 + Maturity×20 + EarlyBird×10
+```
+
+Her görev `contribution_type` ile işaretlenir: `'direct'` veya `'momentum'`
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| Tek tip ilerleme | Basit | Dolaylı katkı görünmez |
+| Bonus XP sistemi | Anlaşılır | Hedefe bağlı değil |
+| **Dual Progress ✓** | Her katkı görünür | Ekstra UI gerekli |
+
+### Sonuçlar
+
+**Pozitif:**
+- Her alışkanlık görünür etki yaratır
+- Streak ve tutarlılık ödüllendirilir
+- Duolingo-benzeri motivasyon döngüsü
+- Olgunluk aşamaları (🌱→🌲) görsel ilerleme sağlar
+
+**Negatif:**
+- İki farklı ilerleme metriği karmaşık görünebilir
+- Migration çalıştırılması gerekiyor
+- GoalDetailModal tamamen yeniden yazıldı
+
+**Mitigation:**
+- MomentumGauge ile tek bakışta anlaşılır görselleştirme
+- Quest Contribution List ile hangi görevin ne katkı sağladığı açık
+- Streak multiplier badge ile bonus görünür
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -521,6 +576,7 @@ Goal %100 → Auto Complete + XP Reward
 
 ---
 
-**Son Güncelleme:** 2026-01-12 (Akşam)
-**Toplam ADR:** 9
+**Son Güncelleme:** 2026-01-13 01:10 UTC+3
+**Toplam ADR:** 10
+
 

@@ -407,7 +407,8 @@ USING (true);
 | `supabase/schema.sql` | Ana şema (users, categories, logs, goals) |
 | `supabase/migrations/20260112_quest_system.sql` | Quest System tabloları |
 | `supabase/migrations/20260112_quest_templates.sql` | Quest Templates (124 şablon) |
-| `supabase/migrations/20260112_goal_templates.sql` | 🆕 Goal Templates (44 şablon) |
+| `supabase/migrations/20260112_goal_templates.sql` | Goal Templates (44 şablon) |
+| `supabase/migrations/20260113_momentum_score_system.sql` | 🆕 Momentum Score System |
 
 Supabase Dashboard > SQL Editor'da çalıştırın.
 
@@ -485,8 +486,53 @@ Supabase Dashboard > SQL Editor'da çalıştırın.
 | `goal_template_id` | UUID FK | Bağlı goal template |
 | `metric_unit` | TEXT | Ölçü birimi |
 | `metric_name` | TEXT | Metrik adı |
+| `momentum_score` | NUMERIC (0-100) | 🆕 Tutarlılık puanı |
+| `habit_maturity_days` | INTEGER | 🆕 Alışkanlık olgunluk günleri |
 
 ---
 
-**Son Güncelleme:** 2026-01-12 (Akşam)
-**Versiyon:** 2.2.0 (Goal Templates eklendi)
+## 🆕 Momentum Score System (2026-01-13)
+
+> ⚠️ Migration: `supabase/migrations/20260113_momentum_score_system.sql`
+
+### Dual Progress System
+Hedefler artık iki tip ilerleme gösteriyor:
+- **Direct Progress**: Kalori, adım gibi ölçülebilir metrikler
+- **Momentum Score**: Tutarlılık bazlı dolaylı katkı (0-100)
+
+### Momentum Hesaplama Formülü
+```
+Momentum = (
+    Daily Completion Rate × 40  +
+    Streak Multiplier × 30      +
+    Habit Maturity × 20         +
+    Early Bird Bonus × 10
+) / max 100
+```
+
+### Streak Çarpanları
+| Gün | Çarpan | Label |
+|-----|--------|-------|
+| 3-6 | ×1.2 | RISING |
+| 7-13 | ×1.4 | STREAK |
+| 14-20 | ×1.6 | MASTER |
+| 21+ | ×2.0 | LEGEND |
+
+### Alışkanlık Olgunluk Aşamaları
+| Gün | Emoji | Aşama |
+|-----|-------|-------|
+| 0-6 | 🌱 | Tohum |
+| 7-13 | 🌿 | Filiz |
+| 14-20 | 🌳 | Büyüme |
+| 21+ | 🌲 | Olgun |
+
+### quest_templates ve daily_quests'e Eklenen Sütun
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `contribution_type` | TEXT | 'direct' veya 'momentum' |
+
+---
+
+**Son Güncelleme:** 2026-01-13 01:10 UTC+3
+**Versiyon:** 2.3.0 (Momentum Score System eklendi)
+
