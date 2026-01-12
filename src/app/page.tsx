@@ -9,18 +9,19 @@ import LoggerModal from "@/components/hud/LoggerModal"
 import EventModal from "@/components/hud/EventModal"
 import EventDetailModal from "@/components/hud/EventDetailModal"
 import CalendarPicker from "@/components/hud/CalendarPicker"
-import TodayFocus from "@/components/hud/TodayFocus"
-import UpcomingStream from "@/components/hud/UpcomingStream"
+// REMOVED: TodayFocus and UpcomingStream - Dashboard simplified
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
 import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard } from "@/components/hud/Goals"
+import { DailyQuestsPanel, QuestCreationModal } from "@/components/hud/Quests"
 import { AnimatePresence } from "framer-motion"
-import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails } from '@/types/database.types'
+import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails, DailyQuest, UserXpStats } from '@/types/database.types'
 import { getEventsByDateRange, createEvent, updateEventStatus, updateEvent, deleteEvent } from "@/actions/events"
 import { getLogsByDateRange, createLog, deleteLog } from "@/actions/logs"
 import { getActiveGoals, createGoal, updateGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
 import { getCategories } from "@/actions/categories"
-import { startOfDay, endOfDay, addDays, isSameDay } from 'date-fns'
+import { getQuestsForToday, completeQuest, skipQuest, getUserXpStats } from "@/actions/quests"
+import { startOfDay, endOfDay, addDays } from 'date-fns'
 
 const MOCK_DAILY_STATUS = {
   trade: false,
@@ -78,6 +79,28 @@ export default function Home() {
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]>([])
   const [isGoalsLoading, setIsGoalsLoading] = useState(false)
 
+  // Quest state
+  const [quests, setQuests] = useState<DailyQuest[]>([])
+  const [xpStats, setXpStats] = useState<UserXpStats | null>(null)
+  const [isQuestsLoading, setIsQuestsLoading] = useState(false)
+  const [isQuestCreationModalOpen, setIsQuestCreationModalOpen] = useState(false)
+
+  const fetchQuests = useCallback(async () => {
+    setIsQuestsLoading(true)
+    try {
+      const [questsResult, xpResult] = await Promise.all([
+        getQuestsForToday(),
+        getUserXpStats()
+      ])
+      if (questsResult.data) setQuests(questsResult.data)
+      if (xpResult.data) setXpStats(xpResult.data)
+    } catch (error) {
+      console.error('Failed to fetch quests:', error)
+    } finally {
+      setIsQuestsLoading(false)
+    }
+  }, [])
+
   const fetchGoals = useCallback(async () => {
     setIsGoalsLoading(true)
     try {
@@ -119,7 +142,8 @@ export default function Home() {
   useEffect(() => {
     fetchData()
     fetchGoals()
-  }, [fetchData, fetchGoals])
+    fetchQuests()
+  }, [fetchData, fetchGoals, fetchQuests])
 
   const handleEventCreate = async (eventData: EventInsert) => {
     try {
@@ -233,35 +257,34 @@ export default function Home() {
           />
         </div>
 
-        {/* Dual Horizon Grid Stage */}
+        {/* Daily Quests Panel - Full Width */}
         <div className="flex-1 overflow-hidden relative mx-2 mb-2">
-          <div className="h-full grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar p-2">
-
-            {/* Left Panel: Today Focus (50% width) */}
-            <div className="col-span-1 flex flex-col h-full">
-              <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg ring-1 ring-white/50 p-6 h-full min-h-[500px] flex flex-col transition-all duration-300 hover:bg-white/50">
-                <TodayFocus
-                  date={selectedDate}
-                  events={dayEvents.filter(e => isSameDay(new Date(e.scheduled_at), selectedDate))}
-                  onStatusChange={handleStatusChange}
-                  onEventClick={handleEventClick}
-                  onCreateClick={() => setIsEventModalOpen(true)}
-                />
-              </div>
-            </div>
-
-            {/* Right Panel: Upcoming Stream (50% width) */}
-            <div className="col-span-1 flex flex-col h-full">
-              <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl shadow-lg ring-1 ring-white/50 p-6 h-full overflow-y-auto custom-scrollbar transition-all duration-300 hover:bg-white/50">
-                <UpcomingStream
-                  anchorDate={selectedDate}
-                  events={dayEvents}
-                  onStatusChange={handleStatusChange}
-                  onEventClick={handleEventClick}
-                />
-              </div>
-            </div>
-
+          <div className="h-full overflow-y-auto custom-scrollbar p-2">
+            <DailyQuestsPanel
+              quests={quests}
+              goals={goals.map(g => ({ id: g.id, title: g.title, period: g.period }))}
+              xpStats={xpStats}
+              onCompleteQuest={async (questId) => {
+                try {
+                  await completeQuest(questId)
+                  await fetchQuests()
+                } catch (error) {
+                  console.error('Failed to complete quest:', error)
+                }
+              }}
+              onSkipQuest={async (questId) => {
+                try {
+                  await skipQuest(questId)
+                  await fetchQuests()
+                } catch (error) {
+                  console.error('Failed to skip quest:', error)
+                }
+              }}
+              onRefresh={fetchQuests}
+              onCreateQuest={() => setIsQuestCreationModalOpen(true)}
+              isLoading={isQuestsLoading}
+              className="h-full min-h-[500px]"
+            />
           </div>
         </div>
 
@@ -390,7 +413,24 @@ export default function Home() {
               best_time_of_day: data.best_time_of_day || 'anytime',
               difficulty_level: data.difficulty_level || 'medium'
             }
-            await createGoal(goalPayload)
+            // Create the goal first
+            const newGoal = await createGoal(goalPayload)
+
+            // If quest templates were selected, create quests linked to this goal
+            if (data.selected_quest_template_ids && data.selected_quest_template_ids.length > 0 && newGoal) {
+              const { createQuestFromTemplate } = await import('@/actions/quests')
+
+              // Create quests from each selected template
+              await Promise.all(
+                data.selected_quest_template_ids.map(templateId =>
+                  createQuestFromTemplate(templateId, newGoal.id)
+                )
+              )
+
+              // Refresh quests panel
+              await fetchQuests()
+            }
+
             await fetchGoals()
           } catch (error) {
             console.error('Failed to create goal:', error)
@@ -443,6 +483,16 @@ export default function Home() {
         isOpen={isCouncilOpen}
         onClose={() => setIsCouncilOpen(false)}
         activeEventId={selectedEvent?.id}
+      />
+
+      {/* Quest Creation Modal */}
+      <QuestCreationModal
+        isOpen={isQuestCreationModalOpen}
+        onClose={() => setIsQuestCreationModalOpen(false)}
+        goals={goals}
+        onQuestCreated={(quest) => {
+          setQuests(prev => [...prev, quest])
+        }}
       />
     </main>
   )

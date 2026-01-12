@@ -432,7 +432,7 @@ export default function DailyQuestsPanel({
                 ) : (
                     questGroups.map((group, index) => (
                         <QuestGroup
-                            key={group.goal?.id || 'general'}
+                            key={group.goal?.id || `general-${index}`}
                             group={group}
                             onCompleteQuest={onCompleteQuest}
                             onSkipQuest={onSkipQuest}

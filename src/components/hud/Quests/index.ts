@@ -19,3 +19,6 @@ export type { RitualCardProps } from './RitualCard'
 
 export { default as PerfectDayBadge } from './PerfectDayBadge'
 export type { PerfectDayBadgeProps } from './PerfectDayBadge'
+
+export { default as QuestCreationModal } from './QuestCreationModal'
+export type { QuestCreationModalProps } from './QuestCreationModal'

@@ -40,55 +40,111 @@
 | Phase 7.7: Goal Metrics Fix | ✅ Tamamlandı | 100% |
 | Phase 7.8: Goal Detail Experience Redesign | ✅ Tamamlandı | 100% |
 | Phase 7.9: Hybrid Health Algorithm | ✅ Tamamlandı | 100% |
-| **Phase 8: Quest System** | 🚧 **Devam Ediyor** | **70%** |
+| **Phase 8: Quest System** | 🚧 **Devam Ediyor** | **90%** |
+| Phase 8.1: Quest Templates | ✅ Tamamlandı | 100% |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-12 (Sabah Oturumu - Full Session)
+## Session Summary: 2026-01-12 (Sabah Oturumu)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Duolingo Success Research ✅
-8 web araştırması yapıldı ve Expert Council raporu hazırlandı.
+#### 1. SQL Migrations ✅
+Her iki migration başarıyla Supabase'de çalıştırıldı:
+- `20260112_quest_system.sql` - 6 tablo, RLS, triggers
+- `20260112_quest_templates.sql` - 124 quest şablonu
 
-#### 2. Quest System Foundation (Phase 8.1) ✅
-- SQL migration dosyası: `20260112_quest_system.sql`
-- TypeScript type definitions
-- Quest Engine lib: `questEngine.ts`
+#### 2. Dashboard Layout Refactoring ✅
+Expert Council kararıyla ana sayfa yeniden tasarlandı:
+- **Kaldırıldı:** TodayFocus ("Bugün") paneli
+- **Kaldırıldı:** UpcomingStream ("Ufuk Çizgisi") paneli  
+- **Güncellendi:** DailyQuestsPanel tam genişlikte, `min-h-[500px]`
+- Grid layout → Tek kolon flex layout
 
-#### 3. Quest System Core UI (Phase 8.2) ✅ **YENİ**
-Expert Council tarafından tasarlandı ve implement edildi:
+#### 3. Goal-Quest Integration Flow ✅
+Expert Council kararıyla hedef oluşturma akışı yeniden tasarlandı:
+- **GoalCreationWizard:** 4 adım → 5 adım (Step5Quests eklendi)
+- **Step 5:** Quest Template seçimi (multi-select, kategori filtresi, arama, XP preview)
+- **page.tsx:** Goal oluşturulduktan sonra seçilen template'lerden batch quest oluşturma
 
-**Yeni Bileşenler (7 dosya):**
-```
-src/components/hud/Quests/
-├── QuestCard.tsx           # Swipe-to-complete + XP badge
-├── DailyQuestsPanel.tsx    # Goal-grouped list + Perfect Day
-├── XPProgressBar.tsx       # 20-level system + glow effects
-├── QuestCompletionToast.tsx # Celebration + streak bonus
-├── RitualCard.tsx          # Habit stacking trigger→action
-├── PerfectDayBadge.tsx     # Perfect day progress
-└── index.ts                # Barrel exports
-```
+### ✅ Tamamlanan İşler
 
-#### 4. Quest System Server Actions (Phase 8.3) ✅ **YENİ**
-```
-src/actions/quests.ts       # 10 server actions
-```
+#### 1. Quest Template Research ✅
+Expert Council tarafından 6 kategori için detaylı araştırma yapıldı:
+- **Trade:** 16 şablon (pre-market, execution, post-market)
+- **Food:** 18 şablon (meal prep, tracking, mindful eating)
+- **Sport:** 22 şablon (workout, recovery, daily movement)
+- **Dev:** 24 şablon (deep work, code quality, learning)
+- **Etsy:** 19 şablon (listing, orders, customer comm)
+- **Gaming:** 25 şablon (warmup, training, analysis)
+
+**Toplam: 124 quest şablonu**
+
+#### 2. Quest Templates Database ✅
+- Yeni migration: `20260112_quest_templates.sql`
+- `quest_templates` tablosu oluşturuldu
+- Tüm 124 şablon seed data olarak eklendi
+- Slug'lar kategori prefix'li yapıldı (unique constraint için)
+
+#### 3. Quest Template Server Actions ✅
+4 yeni server action eklendi:
 
 | Action | Açıklama |
 |--------|----------|
-| `createQuest` | Yeni quest oluştur |
-| `getQuestsForToday` | Bugünkü questleri getir |
-| `getQuestsByGoal` | Goal bazlı questler |
-| `updateQuest` | Quest güncelle |
-| `deleteQuest` | Quest sil |
-| `completeQuest` | Quest tamamla + XP ver |
-| `skipQuest` | Quest atla |
-| `undoQuestCompletion` | Geri al |
-| `getUserXpStats` | XP istatistikleri |
-| `getDailySummary` | Günlük özet |
+| `getQuestTemplates(category?)` | Kategoriye göre şablonları getir |
+| `getTemplateCategories()` | Unique kategorileri getir |
+| `createQuestFromTemplate(templateId, goalId)` | Şablondan quest oluştur |
+| `createQuestsFromTemplates(templateIds, goalId)` | Batch quest oluşturma |
+
+#### 4. QuestCreationModal UI ✅
+Yeni component oluşturuldu:
+- 6 kategori kartı (glassmorphism)
+- Şablon arama ve filtreleme
+- Goal seçimi dropdown
+- XP, zorluk ve süre göstergesi
+- Framer Motion animasyonları
+
+#### 5. Dashboard Entegrasyonu ✅
+- `QuestCreationModal` page.tsx'e entegre edildi
+- DailyQuestsPanel'e `onCreateQuest` callback bağlandı
+- "+" butonu modal'ı açıyor
+
+#### 6. TypeScript Types ✅
+`QuestTemplate` interface eklendi:
+```typescript
+interface QuestTemplate {
+    id: string
+    category_slug: CategorySlug
+    slug: string
+    title: string
+    description: string | null
+    emoji: string
+    xp_reward: number
+    difficulty: 'easy' | 'medium' | 'hard'
+    time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime' | null
+    estimated_minutes: number | null
+    is_recurring_default: boolean
+    recurrence_pattern: RecurrencePattern | null
+    sort_order: number
+    created_at: string
+}
+```
+Projenin tüm dosyaları tarandı ve memory mimarisi güncellendi:
+
+| Dosya | Aksiyon | Versiyon |
+|-------|---------|----------|
+| `memory/api_contracts.md` | 🆕 Oluşturuldu | 1.0.0 |
+| `memory/project_structure.md` | ✏️ Güncellendi | 2.0.0 |
+| `memory/tech_stack.md` | ✏️ Güncellendi | 2.0.0 |
+| `memory/ADR.md` | ✏️ Güncellendi | 8 ADR |
+| `.vscode/antigravity-protocols.code-snippets` | ✏️ Düzeltildi | `docs/` → `memory/` |
+
+#### 6. Git Push ✅
+```
+Commit: feat(quest-system): add Quest System UI components and memory architecture updates
+24 files changed, 6005 insertions(+), 714 deletions(-)
+```
 
 ---
 
@@ -108,49 +164,69 @@ src/components/hud/Quests/
 src/actions/
 └── quests.ts                  # [NEW] 21KB - 10 server actions
 
+src/lib/
+└── questEngine.ts             # [NEW] 13KB - XP/Level/Streak engine
+
 supabase/migrations/
 └── 20260112_quest_system.sql  # [NEW] Quest System schema
+
+memory/
+└── api_contracts.md           # [NEW] Server Actions kontratları
 ```
 
 ### Güncellemeler
 ```
-src/lib/questEngine.ts         # [NEW] XP/Level/Streak engine
+memory/project_structure.md    # [UPDATE] v2.0.0 - 20+ eksik dosya eklendi
+memory/tech_stack.md           # [UPDATE] v2.0.0 - framer-motion, @google/genai
+memory/ADR.md                  # [UPDATE] 3 yeni ADR (006, 007, 008)
+memory/database_schema.md      # [UPDATE] v2.0.0 - Quest System tabloları
 src/types/database.types.ts    # [UPDATE] +450 lines (Quest types)
+.vscode/antigravity-protocols.code-snippets  # [FIX] docs/ → memory/
 ```
 
 ---
 
-## ⚠️ ACTION REQUIRED: Supabase Migration
+## ✅ Supabase Migration Tamamlandı (2026-01-12 08:31)
 
-SQL dosyasını Supabase Dashboard > SQL Editor'da çalıştırın:
+Her iki migration başarıyla çalıştırıldı:
 
-```sql
--- supabase/migrations/20260112_quest_system.sql
-```
+| Migration | Durum |
+|-----------|-------|
+| `20260112_quest_system.sql` | ✅ Tamamlandı |
+| `20260112_quest_templates.sql` | ✅ Tamamlandı |
 
-Bu migration 6 yeni tablo, indeksler, RLS politikaları ve trigger'lar oluşturur.
+**Oluşturulan tablolar:**
+- `goal_key_results` - OKR-style ölçülebilir sonuçlar
+- `daily_quests` - Günlük görevler
+- `quest_completions` - Tamamlama kayıtları
+- `rituals` - Habit stacking zinciri
+- `ritual_completions` - Ritual kayıtları
+- `user_xp_stats` - XP istatistikleri
+- `quest_templates` - 124 pre-defined şablon
 
 ---
 
 ## Bekleyen İşler
 
-### Phase 8: Quest System (Devam Ediyor - %70)
+## Bekleyen İşler
+
+### Phase 8: Quest System (Devam Ediyor - %90)
 - [x] Foundation (Schema + Types + Engine) ✅
 - [x] Core UI (QuestCard, DailyQuestsPanel, XPProgressBar, etc.) ✅
 - [x] Quest Logic (Server Actions, completion flow) ✅
-- [ ] **Dashboard Entegrasyonu** ← Sıradaki
-  - [ ] DailyQuestsPanel'i ana sayfaya ekle
-  - [ ] GoalDetailModal'a "Görevler" tab ekle
-  - [ ] StatusBar'a XP indicator ekle
+- [x] Dashboard Entegrasyonu ✅
+- [x] Quest Templates (124 şablon + UI) ✅
 - [ ] Rituals (Habit Stacking creation flow)
 - [ ] AI Suggestions (Smart quest generation)
 - [ ] Polish (Level up celebration, sounds)
 
 ### Yüksek Öncelik (Phase 8B)
-1. [ ] Dashboard entegrasyonu
-2. [ ] GoalDetailModal Quests tab
-3. [ ] Supabase migration çalıştır
-4. [ ] End-to-end test
+1. [x] Supabase quest_system migration ✅
+2. [x] Supabase quest_templates migration ✅
+3. [x] Dashboard entegrasyonu ✅
+4. [x] QuestCreationModal ✅
+5. [ ] End-to-end test
+6. [ ] GoalDetailModal Quests tab (opsiyonel)
 
 ### Phase 9: OAuth Providers (Sonraki)
 1. [ ] Google OAuth
@@ -166,24 +242,25 @@ Mevcut durumda quest akışı:
 2. ✅ Ana ekranda Vertical GoalsStrip görünür
 3. ✅ Hedef kartına tıkla → Goal Detail Command Center açılır
 4. ✅ İlerleme kaydet → Confetti + Pulse animasyonları
-5. 🔜 Daily Quests paneli ana sayfada gösterilecek
-6. 🔜 Quest tamamla → XP ve streak güncellemesi
-7. 🔜 Level up → Celebration animasyonu
+5. ✅ Daily Quests paneli ana sayfada gösteriliyor
+6. ✅ "+" butonu ile QuestCreationModal açılıyor
+7. 🔜 Quest tamamla → XP ve streak güncellemesi
+8. 🔜 Level up → Celebration animasyonu
 
 ---
 
 ## Önemli Notlar
 
-### Demo User ID
-```typescript
-const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111'
-```
+### Authentication (Gerçek Kullanıcı Zorunlu)
+> ⚠️ Demo user modu kaldırıldı. Tüm server actions `getAuthenticatedClient()` kullanır.
+> Giriş yapmayan kullanıcılar otomatik olarak `/login` sayfasına yönlendirilir.
 
 ### Key Design Decisions
 - **Swipe Gestures:** Framer Motion ile sola kaydırarak quest tamamlama
 - **XP System:** Duolingo-inspired 20+ seviye, streak bonusları
 - **Glassmorphism 3.0:** `bg-white/60 backdrop-blur-xl` base styling
 - **Goal Grouping:** Questler goal bazlı gruplanarak gösteriliyor
+- **Template System:** 124 şablon, kategori bazlı seçim
 
 ### Build Status
 ```
@@ -194,6 +271,6 @@ const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111'
 
 ---
 
-**Son Güncelleme:** 2026-01-12 06:37 UTC+3
+**Son Güncelleme:** 2026-01-12 08:15 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** Phase 8 Quest System Core UI tamamlandı. Dashboard entegrasyonu bekleniyor.
+**Durum:** Quest Templates tamamlandı (124 şablon). Phase 8 Quest System %90 tamamlandı.

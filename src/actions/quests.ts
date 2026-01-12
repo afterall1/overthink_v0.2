@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/server'
+import { getAuthenticatedClient, AuthenticationError } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import type {
     DailyQuest,
@@ -9,7 +10,9 @@ import type {
     QuestCompletion,
     QuestCompletionInsert,
     UserXpStats,
-    UserXpStatsUpdate
+    UserXpStatsUpdate,
+    QuestTemplate,
+    CategorySlug
 } from '@/types/database.types'
 import {
     calculateQuestXp,
@@ -42,18 +45,6 @@ interface QuestCompletionResult {
 }
 
 // =====================================================
-// Demo User ID (until auth is fully implemented)
-// =====================================================
-
-const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111'
-
-async function getCurrentUserId(): Promise<string> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    return user?.id ?? DEMO_USER_ID
-}
-
-// =====================================================
 // Quest CRUD Operations
 // =====================================================
 
@@ -64,14 +55,14 @@ export async function createQuest(
     questData: Omit<DailyQuestInsert, 'user_id'>
 ): Promise<ActionResult<DailyQuest>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('daily_quests')
             .insert({
                 ...questData,
-                user_id: userId
+                user_id: user.id
             })
             .select()
             .single()
@@ -83,6 +74,9 @@ export async function createQuest(
         revalidatePath('/')
         return { data, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Quest oluşturulurken hata oluştu'
         return { data: null, error: message }
     }
@@ -93,8 +87,8 @@ export async function createQuest(
  */
 export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
         const today = getTodayDateString()
         const dayOfWeek = new Date().getDay()
 
@@ -102,7 +96,7 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         const { data: scheduledQuests, error: scheduledError } = await supabase
             .from('daily_quests')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('is_recurring', false)
             .eq('scheduled_date', today)
 
@@ -114,7 +108,7 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         const { data: recurringQuests, error: recurringError } = await supabase
             .from('daily_quests')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('is_recurring', true)
 
         if (recurringError) {
@@ -149,7 +143,7 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
             const { data: completions } = await supabase
                 .from('quest_completions')
                 .select('quest_id')
-                .eq('user_id', userId)
+                .eq('user_id', user.id)
                 .eq('completed_date', today)
                 .in('quest_id', questIds)
 
@@ -167,6 +161,9 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
 
         return { data: allQuests, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Questler yüklenirken hata oluştu'
         return { data: null, error: message }
     }
@@ -177,13 +174,13 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
  */
 export async function getQuestsByGoal(goalId: string): Promise<ActionResult<DailyQuest[]>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('daily_quests')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('goal_id', goalId)
             .order('sort_order', { ascending: true })
 
@@ -193,6 +190,9 @@ export async function getQuestsByGoal(goalId: string): Promise<ActionResult<Dail
 
         return { data, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Questler yüklenirken hata oluştu'
         return { data: null, error: message }
     }
@@ -206,14 +206,14 @@ export async function updateQuest(
     updates: DailyQuestUpdate
 ): Promise<ActionResult<DailyQuest>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('daily_quests')
             .update(updates)
             .eq('id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .select()
             .single()
 
@@ -224,6 +224,9 @@ export async function updateQuest(
         revalidatePath('/')
         return { data, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Quest güncellenirken hata oluştu'
         return { data: null, error: message }
     }
@@ -234,14 +237,14 @@ export async function updateQuest(
  */
 export async function deleteQuest(questId: string): Promise<ActionResult<void>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { error } = await supabase
             .from('daily_quests')
             .delete()
             .eq('id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
 
         if (error) {
             return { data: null, error: error.message }
@@ -250,6 +253,9 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
         revalidatePath('/')
         return { data: undefined, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Quest silinirken hata oluştu'
         return { data: null, error: message }
     }
@@ -267,8 +273,8 @@ export async function completeQuest(
     notes?: string
 ): Promise<ActionResult<QuestCompletionResult>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
         const today = getTodayDateString()
 
         // 1. Get the quest
@@ -276,7 +282,7 @@ export async function completeQuest(
             .from('daily_quests')
             .select('*')
             .eq('id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .single()
 
         if (questError || !quest) {
@@ -300,7 +306,7 @@ export async function completeQuest(
             .from('quest_completions')
             .select('completed_date, streak_count')
             .eq('quest_id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .order('completed_date', { ascending: false })
             .limit(1)
 
@@ -324,7 +330,7 @@ export async function completeQuest(
         // 5. Create completion record
         const completionInsert: QuestCompletionInsert = {
             quest_id: questId,
-            user_id: userId,
+            user_id: user.id,
             goal_id: quest.goal_id,
             completed_date: today,
             xp_earned: xpBreakdown.totalXp,
@@ -354,20 +360,20 @@ export async function completeQuest(
         }
 
         // 7. Update user XP stats
-        const xpUpdateResult = await updateUserXpStats(userId, xpBreakdown.totalXp)
+        const xpUpdateResult = await updateUserXpStats(user.id, xpBreakdown.totalXp)
         const levelUp = xpUpdateResult.levelUp
 
         // 8. Check for perfect day
         const { data: todayQuests } = await supabase
             .from('daily_quests')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .or(`scheduled_date.eq.${today},is_recurring.eq.true`)
 
         const { data: todayCompletions } = await supabase
             .from('quest_completions')
             .select('quest_id')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('completed_date', today)
 
         const isPerfectDay = (todayQuests?.length || 0) > 0 &&
@@ -375,13 +381,13 @@ export async function completeQuest(
 
         // 9. If perfect day achieved, award bonus XP
         if (isPerfectDay) {
-            await updateUserXpStats(userId, QUEST_XP.PERFECT_DAY)
+            await updateUserXpStats(user.id, QUEST_XP.PERFECT_DAY)
 
             // Get current perfect_days_count and increment
             const { data: currentXpStats } = await supabase
                 .from('user_xp_stats')
                 .select('perfect_days_count')
-                .eq('user_id', userId)
+                .eq('user_id', user.id)
                 .single()
 
             await supabase
@@ -390,7 +396,7 @@ export async function completeQuest(
                     perfect_days_count: (currentXpStats?.perfect_days_count || 0) + 1,
                     last_perfect_day: today
                 })
-                .eq('user_id', userId)
+                .eq('user_id', user.id)
         }
 
         revalidatePath('/')
@@ -406,6 +412,9 @@ export async function completeQuest(
             error: null
         }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Quest tamamlanırken hata oluştu'
         return { data: null, error: message }
     }
@@ -416,14 +425,14 @@ export async function completeQuest(
  */
 export async function skipQuest(questId: string): Promise<ActionResult<DailyQuest>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('daily_quests')
             .update({ status: 'skipped' })
             .eq('id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .select()
             .single()
 
@@ -434,6 +443,9 @@ export async function skipQuest(questId: string): Promise<ActionResult<DailyQues
         revalidatePath('/')
         return { data, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Quest atlanırken hata oluştu'
         return { data: null, error: message }
     }
@@ -447,8 +459,8 @@ export async function undoQuestCompletion(
     completionDate?: string
 ): Promise<ActionResult<void>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
         const date = completionDate || getTodayDateString()
 
         // Get the completion to know XP to subtract
@@ -456,13 +468,13 @@ export async function undoQuestCompletion(
             .from('quest_completions')
             .select('xp_earned')
             .eq('quest_id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('completed_date', date)
             .single()
 
         if (completion) {
             // Subtract XP
-            await updateUserXpStats(userId, -(completion.xp_earned || 0))
+            await updateUserXpStats(user.id, -(completion.xp_earned || 0))
         }
 
         // Delete completion
@@ -470,7 +482,7 @@ export async function undoQuestCompletion(
             .from('quest_completions')
             .delete()
             .eq('quest_id', questId)
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('completed_date', date)
 
         if (error) {
@@ -486,6 +498,9 @@ export async function undoQuestCompletion(
         revalidatePath('/')
         return { data: undefined, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Geri alma işlemi başarısız'
         return { data: null, error: message }
     }
@@ -500,13 +515,13 @@ export async function undoQuestCompletion(
  */
 export async function getUserXpStats(): Promise<ActionResult<UserXpStats>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
 
         const { data, error } = await supabase
             .from('user_xp_stats')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .single()
 
         if (error) {
@@ -514,7 +529,7 @@ export async function getUserXpStats(): Promise<ActionResult<UserXpStats>> {
             if (error.code === 'PGRST116') {
                 const { data: newStats, error: createError } = await supabase
                     .from('user_xp_stats')
-                    .insert({ user_id: userId })
+                    .insert({ user_id: user.id })
                     .select()
                     .single()
 
@@ -530,6 +545,9 @@ export async function getUserXpStats(): Promise<ActionResult<UserXpStats>> {
 
         return { data, error: null }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'XP istatistikleri yüklenirken hata oluştu'
         return { data: null, error: message }
     }
@@ -542,7 +560,7 @@ async function updateUserXpStats(
     userId: string,
     xpDelta: number
 ): Promise<{ levelUp: boolean }> {
-    const supabase = await createAdminClient()
+    const supabase = createAdminClient()
 
     // Get current stats
     const { data: currentStats } = await supabase
@@ -596,22 +614,22 @@ export async function getDailySummary(date?: string): Promise<ActionResult<{
     streakStatus: 'maintained' | 'at_risk' | 'broken'
 }>> {
     try {
-        const supabase = await createAdminClient()
-        const userId = await getCurrentUserId()
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
         const targetDate = date || getTodayDateString()
 
         // Get today's quests
         const { data: quests } = await supabase
             .from('daily_quests')
             .select('id')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .or(`scheduled_date.eq.${targetDate},is_recurring.eq.true`)
 
         // Get completions for today
         const { data: completions } = await supabase
             .from('quest_completions')
             .select('xp_earned')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('completed_date', targetDate)
 
         const questsTotal = quests?.length || 0
@@ -643,7 +661,207 @@ export async function getDailySummary(date?: string): Promise<ActionResult<{
             error: null
         }
     } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
         const message = error instanceof Error ? error.message : 'Günlük özet yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+// =====================================================
+// Quest Templates
+// =====================================================
+
+/**
+ * Get quest templates, optionally filtered by category
+ */
+export async function getQuestTemplates(
+    categorySlug?: CategorySlug
+): Promise<ActionResult<QuestTemplate[]>> {
+    try {
+        const supabase = createAdminClient()
+
+        // Note: quest_templates is a new table, using rpc or raw query
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        let query = client
+            .from('quest_templates')
+            .select('*')
+            .order('sort_order', { ascending: true })
+
+        if (categorySlug) {
+            query = query.eq('category_slug', categorySlug)
+        }
+
+        const { data, error } = await query
+
+        if (error) {
+            // Table might not exist yet
+            if (error.message?.includes('relation') || error.code === '42P01') {
+                return { data: [], error: null }
+            }
+            return { data: null, error: error.message }
+        }
+
+        return { data: (data ?? []) as QuestTemplate[], error: null }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Quest şablonları yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Get all unique categories from templates
+ */
+export async function getTemplateCategories(): Promise<ActionResult<CategorySlug[]>> {
+    try {
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        const { data, error } = await client
+            .from('quest_templates')
+            .select('category_slug')
+            .order('category_slug')
+
+        if (error) {
+            if (error.message?.includes('relation') || error.code === '42P01') {
+                return { data: [], error: null }
+            }
+            return { data: null, error: error.message }
+        }
+
+        // Get unique categories
+        const uniqueCategories = [...new Set((data ?? []).map((d: { category_slug: string }) => d.category_slug))] as CategorySlug[]
+        return { data: uniqueCategories, error: null }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Kategoriler yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Create a quest from a template
+ */
+export async function createQuestFromTemplate(
+    templateId: string,
+    goalId: string | null,
+    customizations?: Partial<Omit<DailyQuestInsert, 'user_id'>>
+): Promise<ActionResult<DailyQuest>> {
+    try {
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        // Get template
+        const { data: template, error: templateError } = await client
+            .from('quest_templates')
+            .select('*')
+            .eq('id', templateId)
+            .single()
+
+        if (templateError || !template) {
+            return { data: null, error: 'Quest şablonu bulunamadı' }
+        }
+
+        const typedTemplate = template as unknown as QuestTemplate
+
+        // Create quest from template
+        const questData: DailyQuestInsert = {
+            user_id: user.id,
+            goal_id: goalId,
+            title: customizations?.title ?? typedTemplate.title,
+            description: customizations?.description ?? typedTemplate.description,
+            emoji: customizations?.emoji ?? typedTemplate.emoji,
+            xp_reward: customizations?.xp_reward ?? typedTemplate.xp_reward,
+            difficulty: customizations?.difficulty ?? typedTemplate.difficulty,
+            is_recurring: customizations?.is_recurring ?? typedTemplate.is_recurring_default,
+            recurrence_pattern: customizations?.recurrence_pattern ?? typedTemplate.recurrence_pattern,
+            scheduled_date: customizations?.scheduled_date ?? getTodayDateString(),
+            status: 'pending'
+        }
+
+        const { data, error } = await supabase
+            .from('daily_quests')
+            .insert(questData)
+            .select()
+            .single()
+
+        if (error) {
+            return { data: null, error: error.message }
+        }
+
+        revalidatePath('/')
+        return { data, error: null }
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
+        const message = error instanceof Error ? error.message : 'Quest oluşturulurken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+
+/**
+ * Create multiple quests from templates in batch
+ */
+export async function createQuestsFromTemplates(
+    templateIds: string[],
+    goalId: string | null
+): Promise<ActionResult<DailyQuest[]>> {
+    try {
+        const { user } = await getAuthenticatedClient()
+        const supabase = createAdminClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const client = supabase as any
+
+        // Get templates
+        const { data: templates, error: templatesError } = await client
+            .from('quest_templates')
+            .select('*')
+            .in('id', templateIds)
+
+        if (templatesError || !templates || templates.length === 0) {
+            return { data: null, error: 'Quest şablonları bulunamadı' }
+        }
+
+        const typedTemplates = templates as unknown as QuestTemplate[]
+        const today = getTodayDateString()
+
+        // Create quests from templates
+        const questsData: DailyQuestInsert[] = typedTemplates.map(template => ({
+            user_id: user.id,
+            goal_id: goalId,
+            title: template.title,
+            description: template.description,
+            emoji: template.emoji,
+            xp_reward: template.xp_reward,
+            difficulty: template.difficulty,
+            is_recurring: template.is_recurring_default,
+            recurrence_pattern: template.recurrence_pattern,
+            scheduled_date: today,
+            status: 'pending'
+        }))
+
+        const { data, error } = await supabase
+            .from('daily_quests')
+            .insert(questsData)
+            .select()
+
+        if (error) {
+            return { data: null, error: error.message }
+        }
+
+        revalidatePath('/')
+        return { data, error: null }
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
+        const message = error instanceof Error ? error.message : 'Questler oluşturulurken hata oluştu'
         return { data: null, error: message }
     }
 }

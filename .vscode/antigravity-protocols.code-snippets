@@ -24,24 +24,11 @@
 			"2. **Tailwind Only:** Sadece Tailwind CSS class'larını kullan. Karmaşık animasyonlar için `framer-motion` kullan, inline style yasak.",
 			"3. **Responsive Check:** Kodunu yazarken şu breakpointleri kontrol et: `sm` (Mobil), `md` (Tablet), `lg` (Desktop). Mobilde taşma (overflow) olmadığından emin ol.",
 			"4. **Accessibilty (A11y):** Tüm interaktif elemanlarda `aria-label` ve klavye navigasyonu (tab-index) desteği olduğundan emin ol.",
-			"5. **Dark Mode:** Projemiz varsayılan olarak Dark Mode'dur (#0a0a0a). Renk paletini buna göre seç.",
+			"5. **Glassmorphism 3.0:** Projemiz Light Mode Glassmorphism kullanır. Base styling: `bg-white/60 backdrop-blur-xl border border-white/40 shadow-lg`. Dark arka planlar YASAK.",
+			"6. **Animation:** Framer Motion ile smooth animasyonlar ekle. `whileHover`, `whileTap`, `AnimatePresence` kullan.",
 			"---"
 		],
 		"description": "Frontend, Tasarım ve Mobil uyumluluk kuralları"
-	},
-	"WebGL Protocol": {
-		"prefix": "must-3d",
-		"body": [
-			"",
-			"---",
-			"🧊 **WEBGL PERFORMANCE PROTOCOL:**",
-			"1. **Memory Leak Prevention:** Oluşturulan her Geometry ve Material için `dispose()` mekanizmasının çalıştığından emin ol.",
-			"2. **R3F Best Practices:** Animasyon döngüleri için React state yerine `useFrame` ve `useRef` kullan. Re-render'ları minimize et.",
-			"3. **Mobile Optimization:** `dpr` (Device Pixel Ratio) değerini mobilde [1, 1.5] arasına sabitle. Gölgeleri mobilde kapatacak kontrol ekle.",
-			"4. **Component Isolation:** 3D sahneleri `Canvas` içinde izole et ve HTML arayüzü ile karıştırma.",
-			"---"
-		],
-		"description": "Three.js ve React Three Fiber performans kuralları"
 	},
 	"Data Protocol": {
 		"prefix": "must-data",
@@ -50,11 +37,42 @@
 			"---",
 			"🛡️ **DATA INTEGRITY & SECURITY PROTOCOL:**",
 			"1. **Source of Truth:** Veri şeması için `memory/database_schema.md` dosyasını referans al. API kontratları için `memory/api_contracts.md` dosyasını kontrol et. Kendi kafandan sütun uydurma.",
-			"2. **Type Safety:** Supabase'den gelen veriyi frontend'de kullanmadan önce Zod veya TypeScript ile tip dönüşümünü (Type Casting) güvenli yap.",
+			"2. **Type Safety:** Supabase'den gelen veriyi frontend'de kullanmadan önce Zod veya TypeScript ile tip dönüşümünü (Type Casting) güvenli yap. Quest types için `src/types/database.types.ts` referans al.",
 			"3. **Secure Fetching:** Tüm veritabanı işlemlerini Server Component veya Server Action içinde yap. Client-side'da hassas veri ifşa etme.",
 			"4. **JSONB Handling:** `logs` tablosundaki JSON verisini işlerken null check yapmayı unutma.",
+			"5. **Quest Engine:** XP ve Level hesaplamaları için `src/lib/questEngine.ts` kullan. Formülleri değiştirme.",
 			"---"
 		],
 		"description": "Backend, Supabase ve Veri güvenliği kuralları"
+	},
+	"Auth Protocol": {
+		"prefix": "must-auth",
+		"body": [
+			"",
+			"---",
+			"� **AUTHENTICATION PROTOCOL:**",
+			"1. **Gerçek Kullanıcı Zorunlu:** Demo user modu kaldırıldı. Tüm server actions `getAuthenticatedClient()` kullanmalı.",
+			"2. **Auth Utility:** `src/lib/auth.ts` dosyasındaki `getAuthenticatedClient()` ve `requireAuth()` fonksiyonlarını kullan.",
+			"3. **Error Handling:** `AuthenticationError` yakalayarak kullanıcıyı `/login` sayfasına yönlendir.",
+			"4. **Protected Routes:** `middleware.ts` dosyasında korunan route'ları kontrol et.",
+			"5. **Session Refresh:** Supabase SSR ile session otomatik yenilenir, manuel müdahale gerekmiyor.",
+			"---"
+		],
+		"description": "Authentication ve kullanıcı oturumu kuralları"
+	},
+	"Quest Protocol": {
+		"prefix": "must-quest",
+		"body": [
+			"",
+			"---",
+			"⚡ **QUEST SYSTEM PROTOCOL:**",
+			"1. **Template System:** Quest oluştururken `quest_templates` tablosundaki 124 şablonu kullan. `getQuestTemplates(category)` ile şablonları getir.",
+			"2. **XP Calculation:** XP hesaplamaları için `src/lib/questEngine.ts` kullan. Formül: `baseXP + difficultyBonus + streakBonus + timeBonus`.",
+			"3. **Streak Logic:** Streak hesaplamaları için `src/lib/streakEngine.ts` kullan. Streak kırılma mantığını değiştirme.",
+			"4. **Goal Integration:** Questler opsiyonel olarak `goal_id` ile hedefe bağlanabilir. Bu bağlantıyı UI'da göster.",
+			"5. **Completion Flow:** Quest tamamlandığında `completeQuest()` action'ını çağır. XP breakdown ve animations'ı handle et.",
+			"---"
+		],
+		"description": "Quest System ve gamification kuralları"
 	}
 }

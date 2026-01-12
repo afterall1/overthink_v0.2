@@ -1118,3 +1118,25 @@ export type GoalWithQuests = GoalWithDetails & {
     rituals: Ritual[]
 }
 
+// =====================================================
+// Quest Template Types
+// =====================================================
+
+export interface QuestTemplate {
+    id: string
+    category_slug: CategorySlug
+    slug: string
+    title: string
+    description: string | null
+    emoji: string
+    xp_reward: number
+    difficulty: 'easy' | 'medium' | 'hard'
+    time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime' | null
+    estimated_minutes: number | null
+    is_recurring_default: boolean
+    recurrence_pattern: RecurrencePattern | null
+    sort_order: number
+    created_at: string
+}
+
+export type QuestTemplateTimeOfDay = QuestTemplate['time_of_day']

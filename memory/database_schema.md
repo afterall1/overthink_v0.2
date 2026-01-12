@@ -386,6 +386,14 @@ ON categories FOR SELECT
 USING (true);
 ```
 
+### quest_templates (Global Read)
+```sql
+-- SELECT only, public (templates are shared)
+CREATE POLICY "Quest templates are publicly readable"
+ON quest_templates FOR SELECT
+USING (true);
+```
+
 ---
 
 ## SQL Dosyaları
@@ -394,11 +402,45 @@ USING (true);
 |-------|----------|
 | `supabase/schema.sql` | Ana şema (users, categories, logs, goals) |
 | `supabase/migrations/20260112_quest_system.sql` | Quest System tabloları |
+| `supabase/migrations/20260112_quest_templates.sql` | 🆕 Quest Templates (124 şablon) |
 
 Supabase Dashboard > SQL Editor'da çalıştırın.
 
 ---
 
-**Son Güncelleme:** 2026-01-12
-**Versiyon:** 2.0.0 (Quest System eklendi)
+## 🆕 quest_templates Tablosu
 
+124 pre-defined quest şablonu içerir. 6 kategori: trade, food, sport, dev, etsy, gaming.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Template ID |
+| `category_slug` | TEXT | NOT NULL | Kategori slug'ı |
+| `slug` | TEXT | UNIQUE, NOT NULL | URL-safe identifier |
+| `title` | TEXT | NOT NULL | Görev başlığı |
+| `description` | TEXT | NULLABLE | Açıklama |
+| `emoji` | TEXT | DEFAULT '⚡' | Emoji ikonu |
+| `xp_reward` | INTEGER | CHECK (5-50) | XP ödülü |
+| `difficulty` | TEXT | CHECK | easy/medium/hard |
+| `time_of_day` | TEXT | CHECK | morning/afternoon/evening/anytime |
+| `estimated_minutes` | INTEGER | NULLABLE | Tahmini süre |
+| `is_recurring_default` | BOOLEAN | DEFAULT false | Varsayılan tekrar |
+| `recurrence_pattern` | TEXT | CHECK | daily/weekdays/weekends/mwf/tts/custom |
+| `sort_order` | INTEGER | DEFAULT 0 | Sıralama |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+
+**Kategori Dağılımı:**
+
+| Kategori | Şablon Sayısı | Max XP/Gün |
+|----------|--------------|------------|
+| trade | 16 | ~250 |
+| food | 18 | ~260 |
+| sport | 22 | ~360 |
+| dev | 24 | ~450 |
+| etsy | 19 | ~350 |
+| gaming | 25 | ~420 |
+
+---
+
+**Son Güncelleme:** 2026-01-12
+**Versiyon:** 2.1.0 (Quest Templates eklendi)

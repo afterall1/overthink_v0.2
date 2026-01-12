@@ -264,6 +264,10 @@ ALTER TABLE ritual_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_xp_stats ENABLE ROW LEVEL SECURITY;
 
 -- goal_key_results policies
+DROP POLICY IF EXISTS "Users can view own key_results" ON goal_key_results;
+DROP POLICY IF EXISTS "Users can insert own key_results" ON goal_key_results;
+DROP POLICY IF EXISTS "Users can update own key_results" ON goal_key_results;
+DROP POLICY IF EXISTS "Users can delete own key_results" ON goal_key_results;
 CREATE POLICY "Users can view own key_results" ON goal_key_results
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own key_results" ON goal_key_results
@@ -274,6 +278,10 @@ CREATE POLICY "Users can delete own key_results" ON goal_key_results
     FOR DELETE USING (auth.uid() = user_id);
 
 -- daily_quests policies
+DROP POLICY IF EXISTS "Users can view own quests" ON daily_quests;
+DROP POLICY IF EXISTS "Users can insert own quests" ON daily_quests;
+DROP POLICY IF EXISTS "Users can update own quests" ON daily_quests;
+DROP POLICY IF EXISTS "Users can delete own quests" ON daily_quests;
 CREATE POLICY "Users can view own quests" ON daily_quests
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own quests" ON daily_quests
@@ -284,6 +292,10 @@ CREATE POLICY "Users can delete own quests" ON daily_quests
     FOR DELETE USING (auth.uid() = user_id);
 
 -- quest_completions policies
+DROP POLICY IF EXISTS "Users can view own quest_completions" ON quest_completions;
+DROP POLICY IF EXISTS "Users can insert own quest_completions" ON quest_completions;
+DROP POLICY IF EXISTS "Users can update own quest_completions" ON quest_completions;
+DROP POLICY IF EXISTS "Users can delete own quest_completions" ON quest_completions;
 CREATE POLICY "Users can view own quest_completions" ON quest_completions
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own quest_completions" ON quest_completions
@@ -294,6 +306,10 @@ CREATE POLICY "Users can delete own quest_completions" ON quest_completions
     FOR DELETE USING (auth.uid() = user_id);
 
 -- rituals policies
+DROP POLICY IF EXISTS "Users can view own rituals" ON rituals;
+DROP POLICY IF EXISTS "Users can insert own rituals" ON rituals;
+DROP POLICY IF EXISTS "Users can update own rituals" ON rituals;
+DROP POLICY IF EXISTS "Users can delete own rituals" ON rituals;
 CREATE POLICY "Users can view own rituals" ON rituals
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own rituals" ON rituals
@@ -304,6 +320,9 @@ CREATE POLICY "Users can delete own rituals" ON rituals
     FOR DELETE USING (auth.uid() = user_id);
 
 -- ritual_completions policies
+DROP POLICY IF EXISTS "Users can view own ritual_completions" ON ritual_completions;
+DROP POLICY IF EXISTS "Users can insert own ritual_completions" ON ritual_completions;
+DROP POLICY IF EXISTS "Users can delete own ritual_completions" ON ritual_completions;
 CREATE POLICY "Users can view own ritual_completions" ON ritual_completions
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own ritual_completions" ON ritual_completions
@@ -312,6 +331,9 @@ CREATE POLICY "Users can delete own ritual_completions" ON ritual_completions
     FOR DELETE USING (auth.uid() = user_id);
 
 -- user_xp_stats policies
+DROP POLICY IF EXISTS "Users can view own xp_stats" ON user_xp_stats;
+DROP POLICY IF EXISTS "Users can insert own xp_stats" ON user_xp_stats;
+DROP POLICY IF EXISTS "Users can update own xp_stats" ON user_xp_stats;
 CREATE POLICY "Users can view own xp_stats" ON user_xp_stats
     FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own xp_stats" ON user_xp_stats
@@ -333,18 +355,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply triggers to tables with updated_at
+DROP TRIGGER IF EXISTS update_goal_key_results_updated_at ON goal_key_results;
 CREATE TRIGGER update_goal_key_results_updated_at
     BEFORE UPDATE ON goal_key_results
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_daily_quests_updated_at ON daily_quests;
 CREATE TRIGGER update_daily_quests_updated_at
     BEFORE UPDATE ON daily_quests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_rituals_updated_at ON rituals;
 CREATE TRIGGER update_rituals_updated_at
     BEFORE UPDATE ON rituals
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_xp_stats_updated_at ON user_xp_stats;
 CREATE TRIGGER update_user_xp_stats_updated_at
     BEFORE UPDATE ON user_xp_stats
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -363,6 +389,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS init_xp_stats_on_quest_completion ON quest_completions;
 CREATE TRIGGER init_xp_stats_on_quest_completion
     AFTER INSERT ON quest_completions
     FOR EACH ROW EXECUTE FUNCTION initialize_user_xp_stats();

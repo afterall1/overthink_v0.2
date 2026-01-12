@@ -8,7 +8,7 @@ import {
     Lightbulb, Clock, Zap, Star
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { GoalPeriod, Category } from '@/types/database.types'
+import type { GoalPeriod, Category, QuestTemplate, CategorySlug } from '@/types/database.types'
 
 // =====================================================
 // Types
@@ -38,6 +38,9 @@ export interface GoalWizardData {
         title: string
         target_value: number
     }>
+
+    // Step 5: Quests (Daily Tasks)
+    selected_quest_template_ids: string[]
 }
 
 interface GoalCreationWizardProps {
@@ -55,7 +58,8 @@ const STEPS = [
     { id: 1, title: 'Neden?', icon: Heart, description: 'Motivasyonun' },
     { id: 2, title: 'Ne?', icon: Target, description: 'Hedefin' },
     { id: 3, title: 'Ne Zaman?', icon: Calendar, description: 'Zamanlaman' },
-    { id: 4, title: 'Nasıl?', icon: Flag, description: 'Ara hedefler' }
+    { id: 4, title: 'Nasıl?', icon: Flag, description: 'Ara hedefler' },
+    { id: 5, title: 'Görevler', icon: Zap, description: 'Günlük rutinler' }
 ] as const
 
 const PERIOD_OPTIONS: { value: GoalPeriod; label: string; emoji: string; color: string }[] = [
@@ -115,7 +119,8 @@ export default function GoalCreationWizard({
         end_date: '',
         best_time_of_day: 'anytime',
         difficulty_level: 'medium',
-        milestones: []
+        milestones: [],
+        selected_quest_template_ids: []
     })
 
     // Reset form when modal opens/closes
@@ -135,7 +140,8 @@ export default function GoalCreationWizard({
                 end_date: '',
                 best_time_of_day: 'anytime',
                 difficulty_level: 'medium',
-                milestones: []
+                milestones: [],
+                selected_quest_template_ids: []
             })
             setErrors({})
         }
@@ -187,6 +193,9 @@ export default function GoalCreationWizard({
             case 4:
                 // Milestones are optional
                 break
+            case 5:
+                // Quest selection is optional but encouraged
+                break
         }
 
         setErrors(newErrors)
@@ -195,7 +204,7 @@ export default function GoalCreationWizard({
 
     const handleNext = () => {
         if (validateStep(currentStep)) {
-            setCurrentStep(prev => Math.min(prev + 1, 4))
+            setCurrentStep(prev => Math.min(prev + 1, 5))
         }
     }
 
@@ -222,7 +231,7 @@ export default function GoalCreationWizard({
     }
 
     // Progress percentage
-    const progress = (currentStep / 4) * 100
+    const progress = (currentStep / 5) * 100
 
     return (
         <AnimatePresence>
@@ -258,7 +267,7 @@ export default function GoalCreationWizard({
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-bold text-slate-800">Yeni Hedef</h2>
-                                            <p className="text-xs text-slate-400">Adım {currentStep}/4</p>
+                                            <p className="text-xs text-slate-400">Adım {currentStep}/5</p>
                                         </div>
                                     </div>
                                     <button
@@ -341,6 +350,13 @@ export default function GoalCreationWizard({
                                                 errors={errors}
                                             />
                                         )}
+                                        {currentStep === 5 && (
+                                            <Step5Quests
+                                                formData={formData}
+                                                updateField={updateField}
+                                                errors={errors}
+                                            />
+                                        )}
                                     </motion.div>
                                 </AnimatePresence>
                             </div>
@@ -358,7 +374,7 @@ export default function GoalCreationWizard({
                                     </button>
                                 )}
 
-                                {currentStep < 4 ? (
+                                {currentStep < 5 ? (
                                     <button
                                         onClick={handleNext}
                                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl 
@@ -383,8 +399,8 @@ export default function GoalCreationWizard({
                                             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         ) : (
                                             <>
-                                                <Check className="w-5 h-5" />
-                                                Hedefi Oluştur
+                                                <Zap className="w-5 h-5" />
+                                                Hedefi ve Görevleri Oluştur
                                             </>
                                         )}
                                     </button>
@@ -772,6 +788,242 @@ function Step4How({ formData, updateField }: StepProps) {
                     💡 <strong>İpucu:</strong> %25, %50, %75 gibi ara hedefler motivasyonunu artırır.
                 </p>
             </div>
+        </div>
+    )
+}
+
+// =====================================================
+// Step 5: Quest Selection
+// =====================================================
+
+interface Step5QuestsProps extends StepProps {
+    // Extended props for quest templates
+}
+
+const QUEST_CATEGORIES = [
+    { slug: 'trade' as CategorySlug, name: 'Trading', emoji: '📈', color: '#F59E0B' },
+    { slug: 'food' as CategorySlug, name: 'Beslenme', emoji: '🍎', color: '#10B981' },
+    { slug: 'sport' as CategorySlug, name: 'Spor', emoji: '💪', color: '#EF4444' },
+    { slug: 'dev' as CategorySlug, name: 'Yazılım', emoji: '💻', color: '#8B5CF6' },
+    { slug: 'etsy' as CategorySlug, name: 'Etsy', emoji: '🎨', color: '#EC4899' },
+    { slug: 'gaming' as CategorySlug, name: 'Gaming', emoji: '🎮', color: '#06B6D4' }
+]
+
+function Step5Quests({ formData, updateField }: Step5QuestsProps) {
+    const [templates, setTemplates] = useState<QuestTemplate[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
+
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            setIsLoading(true)
+            try {
+                const { getQuestTemplates } = await import('@/actions/quests')
+                const result = await getQuestTemplates()
+                if (result.data) {
+                    setTemplates(result.data)
+                }
+            } catch (error) {
+                console.error('Failed to fetch templates:', error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchTemplates()
+    }, [])
+
+    const filteredTemplates = templates.filter(t => {
+        const matchesCategory = !selectedCategory || t.category_slug === selectedCategory
+        const matchesSearch = !searchQuery ||
+            t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            t.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        return matchesCategory && matchesSearch
+    })
+
+    const toggleTemplate = (templateId: string) => {
+        const current = formData.selected_quest_template_ids
+        if (current.includes(templateId)) {
+            updateField('selected_quest_template_ids', current.filter(id => id !== templateId))
+        } else {
+            updateField('selected_quest_template_ids', [...current, templateId])
+        }
+    }
+
+    const totalXP = templates
+        .filter(t => formData.selected_quest_template_ids.includes(t.id))
+        .reduce((sum, t) => sum + t.xp_reward, 0)
+
+    const selectedCount = formData.selected_quest_template_ids.length
+
+    return (
+        <div className="space-y-5">
+            <div className="text-center mb-4">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 
+                              flex items-center justify-center shadow-lg shadow-amber-500/30">
+                    <Zap className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Günlük Görevlerini Seç</h3>
+                <p className="text-sm text-slate-500 mt-1">Bu hedefe ulaşmak için günlük rutinler</p>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Görev ara..."
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 
+                             text-sm text-slate-700 placeholder:text-slate-400
+                             focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-300"
+                />
+                <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className={clsx(
+                        'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+                        !selectedCategory
+                            ? 'bg-slate-800 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    )}
+                >
+                    Tümü
+                </button>
+                {QUEST_CATEGORIES.map(cat => (
+                    <button
+                        key={cat.slug}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.slug)}
+                        className={clsx(
+                            'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+                            selectedCategory === cat.slug
+                                ? 'text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        )}
+                        style={{
+                            backgroundColor: selectedCategory === cat.slug ? cat.color : undefined
+                        }}
+                    >
+                        {cat.emoji} {cat.name}
+                    </button>
+                ))}
+            </div>
+
+            {/* Templates List */}
+            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+                    </div>
+                ) : filteredTemplates.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                        <p>Bu kategoride şablon bulunamadı</p>
+                    </div>
+                ) : (
+                    filteredTemplates.map((template, index) => {
+                        const isSelected = formData.selected_quest_template_ids.includes(template.id)
+                        const isRecommended = index < 3
+
+                        return (
+                            <motion.button
+                                key={template.id}
+                                type="button"
+                                onClick={() => toggleTemplate(template.id)}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.03 }}
+                                className={clsx(
+                                    'w-full p-3 rounded-xl text-left transition-all flex items-center gap-3',
+                                    isSelected
+                                        ? 'bg-violet-100 ring-2 ring-violet-500'
+                                        : 'bg-slate-50 hover:bg-slate-100'
+                                )}
+                            >
+                                <div className={clsx(
+                                    'w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0',
+                                    isSelected
+                                        ? 'bg-violet-600 text-white'
+                                        : 'border-2 border-slate-300'
+                                )}>
+                                    {isSelected && <Check className="w-3 h-3" />}
+                                </div>
+
+                                <span className="text-xl flex-shrink-0">{template.emoji}</span>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-slate-700 truncate">
+                                            {template.title}
+                                        </span>
+                                        {isRecommended && (
+                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                                                ⭐ ÖNERİLEN
+                                            </span>
+                                        )}
+                                    </div>
+                                    {template.description && (
+                                        <p className="text-xs text-slate-500 truncate">{template.description}</p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={clsx(
+                                        'px-2 py-0.5 rounded text-xs font-bold',
+                                        template.difficulty === 'easy' && 'bg-emerald-100 text-emerald-700',
+                                        template.difficulty === 'medium' && 'bg-blue-100 text-blue-700',
+                                        template.difficulty === 'hard' && 'bg-red-100 text-red-700'
+                                    )}>
+                                        {template.difficulty === 'easy' && '🌱'}
+                                        {template.difficulty === 'medium' && '💪'}
+                                        {template.difficulty === 'hard' && '🔥'}
+                                    </span>
+                                    <span className="text-xs font-bold text-amber-600">
+                                        +{template.xp_reward} XP
+                                    </span>
+                                </div>
+                            </motion.button>
+                        )
+                    })
+                )}
+            </div>
+
+            {/* Selection Summary */}
+            {selectedCount > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200"
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Check className="w-5 h-5 text-violet-600" />
+                            <span className="font-semibold text-violet-800">
+                                {selectedCount} görev seçildi
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-amber-600 font-bold">
+                            <Zap className="w-4 h-4" />
+                            <span>+{totalXP} XP/gün</span>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Tip */}
+            {selectedCount === 0 && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
+                    <p className="text-sm text-amber-800">
+                        💡 <strong>İpucu:</strong> Günlük görevler hedefine ulaşmak için motivasyonunu artırır.
+                        En az 1-2 görev seçmeni öneririz.
+                    </p>
+                </div>
+            )}
         </div>
     )
 }

@@ -31,7 +31,8 @@ overthink_v0.2/
 ├── 📁 supabase/              # Supabase konfigürasyonu
 │   ├── schema.sql            # Ana veritabanı şeması
 │   └── 📁 migrations/
-│       └── 20260112_quest_system.sql  # Quest System tabloları
+│       ├── 20260112_quest_system.sql     # Quest System tabloları
+│       └── 20260112_quest_templates.sql  # 🆕 Quest Templates (124 şablon)
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
@@ -99,6 +100,7 @@ overthink_v0.2/
 │   │   │   │   ├── DailyQuestsPanel.tsx   # Goal-grouped list
 │   │   │   │   ├── XPProgressBar.tsx      # Level progress
 │   │   │   │   ├── QuestCompletionToast.tsx # Celebration toast
+│   │   │   │   ├── QuestCreationModal.tsx  # 🆕 Template selection modal
 │   │   │   │   ├── RitualCard.tsx         # Habit stacking
 │   │   │   │   └── PerfectDayBadge.tsx    # Perfect day indicator
 │   │   │   │

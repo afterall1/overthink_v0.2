@@ -178,6 +178,51 @@ Günlük özet getirir.
 
 ---
 
+## 🆕 Actions: Quest Templates (`src/actions/quests.ts`)
+
+### `getQuestTemplates(categorySlug?)`
+Kategoriye göre quest şablonlarını getirir.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `categorySlug` | CategorySlug | ❌ |
+
+**Return:** `Promise<ActionResult<QuestTemplate[]>>`
+
+---
+
+### `getTemplateCategories()`
+Unique kategorileri getirir.
+
+**Return:** `Promise<ActionResult<CategorySlug[]>>`
+
+---
+
+### `createQuestFromTemplate(templateId, goalId, customizations?)`
+Şablondan quest oluşturur.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `templateId` | string | ✅ |
+| `goalId` | string \| null | ✅ |
+| `customizations` | Partial<DailyQuestInsert> | ❌ |
+
+**Return:** `Promise<ActionResult<DailyQuest>>`
+
+---
+
+### `createQuestsFromTemplates(templateIds, goalId)`
+Birden fazla şablondan toplu quest oluşturur.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `templateIds` | string[] | ✅ |
+| `goalId` | string \| null | ✅ |
+
+**Return:** `Promise<ActionResult<DailyQuest[]>>`
+
+---
+
 ## Actions: AI (`src/actions/ai.ts`)
 
 ### `getCouncilAdvice(query)`
@@ -312,19 +357,27 @@ try {
 
 ## Authentication
 
-Tüm actions `getCurrentUserId()` ile kullanıcı doğrulama yapar:
+> ⚠️ **Demo user modu kaldırıldı.** Tüm actions `getAuthenticatedClient()` kullanır.
 
 ```typescript
-async function getCurrentUserId(): Promise<string> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    return user?.id ?? DEMO_USER_ID
-}
+import { getAuthenticatedClient, AuthenticationError } from '@/lib/auth'
 
-const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111'
+async function someAction() {
+    try {
+        const { supabase, user } = await getAuthenticatedClient()
+        // user.id artık gerçek kullanıcı ID'si
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli' }
+        }
+        throw error
+    }
+}
 ```
+
+Giriş yapmayan kullanıcılar otomatik olarak `/login` sayfasına yönlendirilir.
 
 ---
 
 **Son Güncelleme:** 2026-01-12
-**Versiyon:** 1.0.0
+**Versiyon:** 1.1.0 (Quest Templates, Authentication Update)
