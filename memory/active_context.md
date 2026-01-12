@@ -10,9 +10,9 @@
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║  PHASE 7.6: Goal Edit & Delete from Detail Modal ✅ Tamamlandı ║
+║  PHASE 8: Quest System - Core UI ✅ Tamamlandı                 ║
 ╠════════════════════════════════════════════════════════════════╣
-║  Hedef düzenleme ve silme özelliği detay modalına eklendi      ║
+║  Goal-Action Integration: Daily Quests + Habit Stacking        ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
@@ -36,111 +36,123 @@
 | Phase 6.2: GoalsStrip Dashboard | ✅ Tamamlandı | 100% |
 | Phase 6.3: GoalsStrip UI Refinement (Expert Council) | ✅ Tamamlandı | 100% |
 | Phase 7.5: Goal Detail Command Center | ✅ Tamamlandı | 100% |
-| **Phase 7.6: Goal Edit & Delete** | ✅ **Tamamlandı** | **100%** |
-| Phase 7: OAuth Providers | ⏳ Bekliyor | 0% |
+| Phase 7.6: Goal Edit & Delete | ✅ Tamamlandı | 100% |
+| Phase 7.7: Goal Metrics Fix | ✅ Tamamlandı | 100% |
+| Phase 7.8: Goal Detail Experience Redesign | ✅ Tamamlandı | 100% |
+| Phase 7.9: Hybrid Health Algorithm | ✅ Tamamlandı | 100% |
+| **Phase 8: Quest System** | 🚧 **Devam Ediyor** | **70%** |
+| Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-12 (Gece Oturumu - Part 2)
+## Session Summary: 2026-01-12 (Sabah Oturumu - Full Session)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Goal Detail Modal - Edit & Delete Feature
-**Amaç:** Kullanıcıların hedeflerini detay modalından düzenleyebilmesi ve silebilmesi.
+#### 1. Duolingo Success Research ✅
+8 web araştırması yapıldı ve Expert Council raporu hazırlandı.
 
-**Özellikler:**
-- **Düzenle Butonu:** Sol panelin altında, glassmorphism tarzında "Düzenle" butonu
-- **Sil Butonu:** Yanında kırmızı "Sil" butonu
-- **Silme Onay Dialogu:** AnimatePresence ile güzel animasyonlu onay kutusu
-- **Edit Flow:** GoalModal edit modunda açılır, pre-filled data ile
+#### 2. Quest System Foundation (Phase 8.1) ✅
+- SQL migration dosyası: `20260112_quest_system.sql`
+- TypeScript type definitions
+- Quest Engine lib: `questEngine.ts`
 
-**Teknik Detaylar:**
-- `GoalDetailModal.tsx` props güncellendi: `onEdit`, `onDelete`
-- `GoalsPanel.tsx` props güncellendi: `onEditGoal`, `onDeleteGoal` (async)
-- `page.tsx` güncellendi: `editingGoal` state, `updateGoal` action entegrasyonu
-- Dropdown menü yaklaşımı overflow-hidden sorunu nedeniyle kaldırıldı
-- Statik butonlar tercih edildi (daha güvenilir UX)
+#### 3. Quest System Core UI (Phase 8.2) ✅ **YENİ**
+Expert Council tarafından tasarlandı ve implement edildi:
 
-#### 2. GoalModal Edit Mode Enhancement
-**Sorun:** GoalModal zaten `editingGoal` prop'unu destekliyordu ama bağlı değildi.
+**Yeni Bileşenler (7 dosya):**
+```
+src/components/hud/Quests/
+├── QuestCard.tsx           # Swipe-to-complete + XP badge
+├── DailyQuestsPanel.tsx    # Goal-grouped list + Perfect Day
+├── XPProgressBar.tsx       # 20-level system + glow effects
+├── QuestCompletionToast.tsx # Celebration + streak bonus
+├── RitualCard.tsx          # Habit stacking trigger→action
+├── PerfectDayBadge.tsx     # Perfect day progress
+└── index.ts                # Barrel exports
+```
 
-**Çözüm:**
-- `page.tsx`'te `editingGoal` state eklendi
-- `updateGoal` action import edildi
-- GoalModal artık edit modunda `updateGoal`, create modunda `createGoal` çağırıyor
+#### 4. Quest System Server Actions (Phase 8.3) ✅ **YENİ**
+```
+src/actions/quests.ts       # 10 server actions
+```
 
-#### 3. Dropdown Menu Denemesi ve Kaldırılması
-**Deneme:** Önce three-dot menü → dropdown yaklaşımı denendi.
-
-**Sorunlar:**
-- `overflow-hidden` parent container dropdown'ı kesiyor
-- Z-index stacking context sorunları
-- Fixed positioned portal bile tam çalışmıyordu
-
-**Final Karar:** Dropdown kaldırıldı, statik butonlar eklendi (daha clean UX).
+| Action | Açıklama |
+|--------|----------|
+| `createQuest` | Yeni quest oluştur |
+| `getQuestsForToday` | Bugünkü questleri getir |
+| `getQuestsByGoal` | Goal bazlı questler |
+| `updateQuest` | Quest güncelle |
+| `deleteQuest` | Quest sil |
+| `completeQuest` | Quest tamamla + XP ver |
+| `skipQuest` | Quest atla |
+| `undoQuestCompletion` | Geri al |
+| `getUserXpStats` | XP istatistikleri |
+| `getDailySummary` | Günlük özet |
 
 ---
 
 ## Dosya Değişiklikleri (Bu Oturum)
 
+### Yeni Dosyalar
 ```
-src/
-├── components/hud/Goals/
-│   ├── GoalDetailModal.tsx              # [UPDATE] Edit/Delete butonları
-│   │   - onEdit, onDelete props eklendi
-│   │   - handleEdit, handleDeleteClick fonksiyonları
-│   │   - Delete Confirmation Dialog (AnimatePresence)
-│   │   - Sol panel footer'da Düzenle/Sil butonları
-│   │
-│   └── GoalsPanel.tsx                   # [UPDATE] New props
-│       - onEditGoal, onDeleteGoal props
-│       - GoalDetailModal'a bağlantı
-│
-├── app/
-│   └── page.tsx                         # [UPDATE] Edit flow
-│       - editingGoal state eklendi
-│       - updateGoal action import
-│       - onEditGoal handler
-│       - GoalModal editingGoal prop
+src/components/hud/Quests/
+├── QuestCard.tsx              # [NEW] 14KB - Swipe gesture quest card
+├── DailyQuestsPanel.tsx       # [NEW] 20KB - Main dashboard widget
+├── XPProgressBar.tsx          # [NEW] 11KB - Level progress bar
+├── QuestCompletionToast.tsx   # [NEW] 13KB - Completion toast
+├── RitualCard.tsx             # [NEW] 11KB - Habit stacking card
+├── PerfectDayBadge.tsx        # [NEW] 8KB - Perfect day indicator
+└── index.ts                   # [NEW] Barrel export
 
-memory/
-└── active_context.md                    # [GÜNCELLENDİ] Bu dosya
+src/actions/
+└── quests.ts                  # [NEW] 21KB - 10 server actions
+
+supabase/migrations/
+└── 20260112_quest_system.sql  # [NEW] Quest System schema
 ```
 
----
-
-## Environment Variables
-
-```bash
-# .env.local (GEREKLİ)
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...        # Admin operations için
-GOOGLE_GENERATIVE_AI_API_KEY=...     # AI Council için
+### Güncellemeler
+```
+src/lib/questEngine.ts         # [NEW] XP/Level/Streak engine
+src/types/database.types.ts    # [UPDATE] +450 lines (Quest types)
 ```
 
 ---
 
-## Bilinen Sorunlar
+## ⚠️ ACTION REQUIRED: Supabase Migration
 
-### 🟡 Schema Cache Sorunu (Workaround Aktif)
-**Durum:** Geçici çözüm uygulandı
-**Sorun:** `goal_milestones` ve `goal_entries` tabloları PostgREST schema cache'inde bulunmuyor.
-**Workaround:** Admin client + doğrudan `goals.current_value` güncelleme
-**Kalıcı Çözüm:** Supabase Dashboard → Settings → API → Reload Schema
+SQL dosyasını Supabase Dashboard > SQL Editor'da çalıştırın:
+
+```sql
+-- supabase/migrations/20260112_quest_system.sql
+```
+
+Bu migration 6 yeni tablo, indeksler, RLS politikaları ve trigger'lar oluşturur.
 
 ---
 
 ## Bekleyen İşler
 
-### Yüksek Öncelik
-1. [x] ~~Goal Detail Command Center~~ ✅
-2. [x] ~~GoalsStrip Monolith Redesign~~ ✅
-3. [x] ~~Goal Edit & Delete from Detail Modal~~ ✅
-4. [ ] Supabase schema cache yeniden yükleme (kalıcı çözüm)
-5. [ ] Phase 7: OAuth Providers (Login/Register)
+### Phase 8: Quest System (Devam Ediyor - %70)
+- [x] Foundation (Schema + Types + Engine) ✅
+- [x] Core UI (QuestCard, DailyQuestsPanel, XPProgressBar, etc.) ✅
+- [x] Quest Logic (Server Actions, completion flow) ✅
+- [ ] **Dashboard Entegrasyonu** ← Sıradaki
+  - [ ] DailyQuestsPanel'i ana sayfaya ekle
+  - [ ] GoalDetailModal'a "Görevler" tab ekle
+  - [ ] StatusBar'a XP indicator ekle
+- [ ] Rituals (Habit Stacking creation flow)
+- [ ] AI Suggestions (Smart quest generation)
+- [ ] Polish (Level up celebration, sounds)
 
-### Phase 7: OAuth Providers
+### Yüksek Öncelik (Phase 8B)
+1. [ ] Dashboard entegrasyonu
+2. [ ] GoalDetailModal Quests tab
+3. [ ] Supabase migration çalıştır
+4. [ ] End-to-end test
+
+### Phase 9: OAuth Providers (Sonraki)
 1. [ ] Google OAuth
 2. [ ] Apple Sign-In
 3. [ ] `/reset-password` sayfası
@@ -149,17 +161,39 @@ GOOGLE_GENERATIVE_AI_API_KEY=...     # AI Council için
 
 ## Test Flow
 
-Mevcut durumda goal akışı:
+Mevcut durumda quest akışı:
 1. ✅ Login yap
 2. ✅ Ana ekranda Vertical GoalsStrip görünür
-3. ✅ Hedef kartına tıkla → **Goal Detail Command Center** açılır
-4. ✅ Tablar arası geçiş yap (Overview, History, Milestones)
-5. ✅ "Hızlı İlerleme Kaydet" → Grafik ve Progress Ring anında güncellenir
-6. ✅ **"Düzenle" butonu** → GoalModal edit modunda açılır
-7. ✅ **"Sil" butonu** → Onay dialogu → Hedef silinir
+3. ✅ Hedef kartına tıkla → Goal Detail Command Center açılır
+4. ✅ İlerleme kaydet → Confetti + Pulse animasyonları
+5. 🔜 Daily Quests paneli ana sayfada gösterilecek
+6. 🔜 Quest tamamla → XP ve streak güncellemesi
+7. 🔜 Level up → Celebration animasyonu
 
 ---
 
-**Son Güncelleme:** 2026-01-12 03:42 UTC+3
+## Önemli Notlar
+
+### Demo User ID
+```typescript
+const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111'
+```
+
+### Key Design Decisions
+- **Swipe Gestures:** Framer Motion ile sola kaydırarak quest tamamlama
+- **XP System:** Duolingo-inspired 20+ seviye, streak bonusları
+- **Glassmorphism 3.0:** `bg-white/60 backdrop-blur-xl` base styling
+- **Goal Grouping:** Questler goal bazlı gruplanarak gösteriliyor
+
+### Build Status
+```
+✅ npm run build - Başarılı
+✅ TypeScript - Hatasız
+✅ Lint - Temiz
+```
+
+---
+
+**Son Güncelleme:** 2026-01-12 06:37 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** Goal Edit & Delete completed. Ready for OAuth Phase.
+**Durum:** Phase 8 Quest System Core UI tamamlandı. Dashboard entegrasyonu bekleniyor.

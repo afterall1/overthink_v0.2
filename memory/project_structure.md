@@ -17,6 +17,7 @@ overthink_v0.2/
 │   ├── tech_stack.md         # Teknoloji yığını
 │   ├── database_schema.md    # Veritabanı şeması
 │   ├── project_structure.md  # Bu dosya
+│   ├── api_contracts.md      # 🆕 Server Actions kontratları
 │   ├── auth_architecture.md  # 🔐 Authentication dokümantasyonu
 │   └── ADR.md                # Mimari kararlar
 │
@@ -28,7 +29,9 @@ overthink_v0.2/
 │       └── icon-512.png
 │
 ├── 📁 supabase/              # Supabase konfigürasyonu
-│   └── schema.sql            # Veritabanı şeması SQL
+│   ├── schema.sql            # Ana veritabanı şeması
+│   └── 📁 migrations/
+│       └── 20260112_quest_system.sql  # Quest System tabloları
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
@@ -60,31 +63,60 @@ overthink_v0.2/
 │   │   │   ├── card.tsx      # Shadcn Card
 │   │   │   ├── badge.tsx     # Shadcn Badge
 │   │   │   ├── separator.tsx # Shadcn Separator
-│   │   │   └── index.ts      # (Opsiyonel)
+│   │   │   └── index.ts
 │   │   │
 │   │   ├── 📁 hud/           # [MOLECULES] HUD overlay
-│   │   │   ├── 📁 AICouncil/      # AI Assistant UI
+│   │   │   │
+│   │   │   ├── 📁 AICouncil/      # 🆕 AI Assistant UI
 │   │   │   │   ├── index.ts
 │   │   │   │   ├── CouncilPanel.tsx
-│   │   │   │   └── CouncilFAB.tsx
+│   │   │   │   ├── CouncilFAB.tsx
+│   │   │   │   ├── CouncilChat.tsx
+│   │   │   │   ├── CouncilInput.tsx
+│   │   │   │   ├── CouncilHeader.tsx
+│   │   │   │   └── CouncilMemberAvatar.tsx
+│   │   │   │
 │   │   │   ├── 📁 Goals/          # Goals & Progress UI
+│   │   │   │   ├── index.ts
 │   │   │   │   ├── GoalsFAB.tsx
 │   │   │   │   ├── GoalsPanel.tsx
-│   │   │   │   ├── GoalsStrip.tsx       # 🆕 Ana ekran hedef şeridi (Monolith Design)
-│   │   │   │   ├── GoalCard.tsx         # Dikey kart tasarımı
-│   │   │   │   ├── GoalDetailModal.tsx  # 🆕 Command Center Modal
+│   │   │   │   ├── GoalsStrip.tsx        # Ana ekran hedef şeridi
+│   │   │   │   ├── GoalCard.tsx          # Dikey kart tasarımı
+│   │   │   │   ├── GoalDetailModal.tsx   # Command Center Modal
 │   │   │   │   ├── GoalModal.tsx
+│   │   │   │   ├── GoalCreationWizard.tsx # 🆕 Multi-step wizard
+│   │   │   │   ├── GoalCelebration.tsx    # 🆕 Completion celebration
+│   │   │   │   ├── ConfettiCelebration.tsx # 🆕 Confetti effects
+│   │   │   │   ├── GoalHealthIndicator.tsx # 🆕 Health bar
+│   │   │   │   ├── StreakBadge.tsx        # 🆕 Streak indicator
+│   │   │   │   ├── VelocityMeter.tsx      # 🆕 Progress velocity
 │   │   │   │   ├── MilestoneList.tsx
 │   │   │   │   └── ProgressRing.tsx
-│   │   │   ├── StatusBar.tsx      # Üst progress bar
-│   │   │   ├── LoggerModal.tsx    # FAB + log form modal
-│   │   │   ├── LogDrawer.tsx      # Sol log paneli
-│   │   │   ├── CalendarPicker.tsx # Global takvim picker
-│   │   │   ├── EventModal.tsx     # Yeni plan formu
-│   │   │   ├── EventTimeline.tsx  # Timeline panel
-│   │   │   ├── EventCard.tsx      # Event kartı
-│   │   │   ├── form-schemas.ts    # Zod şemaları
-│   │   │   └── index.ts           # Barrel export
+│   │   │   │
+│   │   │   ├── 📁 Quests/         # 🆕 Quest System UI
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── QuestCard.tsx          # Swipe-to-complete
+│   │   │   │   ├── DailyQuestsPanel.tsx   # Goal-grouped list
+│   │   │   │   ├── XPProgressBar.tsx      # Level progress
+│   │   │   │   ├── QuestCompletionToast.tsx # Celebration toast
+│   │   │   │   ├── RitualCard.tsx         # Habit stacking
+│   │   │   │   └── PerfectDayBadge.tsx    # Perfect day indicator
+│   │   │   │
+│   │   │   ├── StatusBar.tsx       # Üst progress bar
+│   │   │   ├── LoggerModal.tsx     # FAB + log form modal
+│   │   │   ├── LogDrawer.tsx       # Sol log paneli
+│   │   │   ├── CalendarPicker.tsx  # Global takvim picker
+│   │   │   ├── EventModal.tsx      # Yeni plan formu
+│   │   │   ├── EventDetailModal.tsx # 🆕 Event detay modal
+│   │   │   ├── EventTimeline.tsx   # Timeline panel
+│   │   │   ├── EventCard.tsx       # Event kartı
+│   │   │   ├── DayView.tsx         # 🆕 Günlük görünüm
+│   │   │   ├── AgendaView.tsx      # 🆕 Ajanda görünümü
+│   │   │   ├── TodayFocus.tsx      # 🆕 Bugünün odak paneli
+│   │   │   ├── UpcomingStream.tsx  # 🆕 Yaklaşan eventler
+│   │   │   ├── ControlDock.tsx     # 🆕 Alt kontrol paneli
+│   │   │   ├── form-schemas.ts     # Zod şemaları
+│   │   │   └── index.ts            # Barrel export
 │   │   │
 │   │   ├── 📁 3d/            # [ORGANISMS] WebGL bileşenleri
 │   │   │   ├── Scene.tsx         # Canvas + lighting
@@ -99,7 +131,7 @@ overthink_v0.2/
 │   │       └── index.ts
 │   │
 │   ├── 📁 types/             # TypeScript definitions
-│   │   └── database.types.ts # Supabase tablo tipleri
+│   │   └── database.types.ts # Supabase tablo tipleri + Quest types
 │   │
 │   ├── 📁 utils/             # Yardımcı fonksiyonlar
 │   │   └── 📁 supabase/      # Supabase clients
@@ -111,7 +143,9 @@ overthink_v0.2/
 │   │   ├── events.ts         # CRUD operations for events
 │   │   ├── goals.ts          # CRUD operations for goals
 │   │   ├── logs.ts           # CRUD operations for logs
-│   │   └── categories.ts     # Fetch categories from Supabase
+│   │   ├── categories.ts     # Fetch categories from Supabase
+│   │   ├── quests.ts         # 🆕 Quest CRUD + XP management
+│   │   └── ai.ts             # 🆕 AI Council server actions
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   └── useIsMobile.ts    # (Scene.tsx içinde şu an)
@@ -120,7 +154,19 @@ overthink_v0.2/
 │   │   ├── auth.ts           # 🔐 Centralized auth utilities
 │   │   ├── mockEvents.ts     # Demo event data
 │   │   ├── notifications.ts  # Web Push API utilities
-│   │   └── utils.ts          # Shadcn utility functions
+│   │   ├── utils.ts          # Shadcn utility functions
+│   │   ├── questEngine.ts    # 🆕 XP/Level/Streak calculations
+│   │   ├── streakEngine.ts   # 🆕 Advanced streak & health logic
+│   │   │
+│   │   └── 📁 ai/            # 🆕 AI Integration
+│   │       ├── index.ts
+│   │       ├── aiConfig.ts       # Gemini configuration
+│   │       ├── aiService.ts      # AI service layer
+│   │       ├── userDataAggregator.ts # User context builder
+│   │       └── 📁 prompts/       # System prompts
+│   │           ├── council.ts
+│   │           ├── goalInsight.ts
+│   │           └── questSuggestion.ts
 │   │
 │   └── middleware.ts         # Next.js middleware (auth)
 │
@@ -167,6 +213,7 @@ src/app/[route-name]/page.tsx
 |-----|-------|-------|
 | Temel UI (Button, Input) | `components/ui/` | `Button.tsx` |
 | HUD/Overlay | `components/hud/` | `EventModal.tsx` |
+| Feature Module | `components/hud/[Feature]/` | `Quests/QuestCard.tsx` |
 | 3D/WebGL | `components/3d/` | `Particle.tsx` |
 | Chart/Grafik | `components/analytics/` | `HeatMap.tsx` |
 | Page-specific | `app/[route]/components/` | Local bileşen |
@@ -182,6 +229,12 @@ src/hooks/use[HookName].ts
 src/lib/[utilName].ts
 ```
 Örnek: `src/lib/notifications.ts`
+
+### Yeni Server Action Ekleme
+```
+src/actions/[domain].ts
+```
+Örnek: `src/actions/quests.ts`
 
 ### Yeni Type Ekleme
 ```
@@ -204,6 +257,7 @@ src/types/[domain].types.ts
 | Page Component | page.tsx | `page.tsx` |
 | Layout | layout.tsx | `layout.tsx` |
 | Route Handler | route.ts | `route.ts` |
+| Server Action | camelCase.ts | `quests.ts` |
 
 ---
 
@@ -216,8 +270,10 @@ src/types/[domain].types.ts
 // Kullanım
 import { Button } from '@/components/ui'
 import { EventModal, CalendarPicker } from '@/components/hud'
+import { QuestCard, DailyQuestsPanel } from '@/components/hud/Quests'
 import { createClient } from '@/utils/supabase/client'
 import { getCurrentUser, requireAuth } from '@/lib/auth'
+import { calculateLevel, QUEST_XP } from '@/lib/questEngine'
 ```
 
 ---
@@ -231,8 +287,38 @@ import { getCurrentUser, requireAuth } from '@/lib/auth'
 | `middleware.ts` | Auth kontrolü | Protected routes listesi |
 | `lib/auth.ts` | Auth utilities | Session yönetimi |
 | `database.types.ts` | Supabase types | Şema değişince güncelle |
+| `questEngine.ts` | XP/Level sistemi | Formüller hassas |
+| `streakEngine.ts` | Streak/Health | Algoritma hassas |
 
 ---
 
-**Son Güncelleme:** 2026-01-12
-**Versiyon:** 1.2.0 (Authentication eklendi)
+## Feature Modules
+
+### Quests Module
+```
+components/hud/Quests/
+├── QuestCard.tsx         # Tek quest kartı (swipe gesture)
+├── DailyQuestsPanel.tsx  # Ana dashboard widget
+├── XPProgressBar.tsx     # Level progress bar
+├── QuestCompletionToast.tsx # Success toast
+├── RitualCard.tsx        # Habit stacking
+├── PerfectDayBadge.tsx   # Perfect day indicator
+└── index.ts              # Exports
+```
+
+### AI Module
+```
+lib/ai/
+├── aiConfig.ts           # Model settings
+├── aiService.ts          # Core AI service
+├── userDataAggregator.ts # Context builder
+└── prompts/              # System prompts
+    ├── council.ts
+    ├── goalInsight.ts
+    └── questSuggestion.ts
+```
+
+---
+
+**Son Güncelleme:** 2026-01-12 06:45 UTC+3
+**Versiyon:** 2.0.0 (Quest System, AI Council, yeni bileşenler eklendi)

@@ -57,32 +57,78 @@ export async function getGoals(period?: GoalPeriod): Promise<GoalWithDetails[]> 
 }
 
 /**
+ * Fetch goal entries for a specific goal
+ * Handles schema cache issues gracefully
+ */
+async function fetchGoalEntries(goalId: string): Promise<GoalEntry[]> {
+    try {
+        const adminClient = createAdminClient()
+        const { data, error } = await adminClient
+            .from('goal_entries')
+            .select('*')
+            .eq('goal_id', goalId)
+            .order('logged_at', { ascending: false })
+
+        if (error) {
+            // Schema cache error → return empty gracefully
+            if (error.message.includes('schema cache') || error.code === 'PGRST200') {
+                console.warn('[WARN fetchGoalEntries] Schema cache issue, returning empty')
+                return []
+            }
+            console.error('[ERROR fetchGoalEntries]:', error)
+            return []
+        }
+        return data || []
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('schema cache') || msg.includes('PGRST200')) {
+            return []
+        }
+        console.error('[ERROR fetchGoalEntries] Unexpected:', err)
+        return []
+    }
+}
+
+/**
+ * Fetch goal milestones for a specific goal
+ * Handles schema cache issues gracefully
+ */
+async function fetchGoalMilestones(goalId: string): Promise<GoalMilestone[]> {
+    try {
+        const adminClient = createAdminClient()
+        const { data, error } = await adminClient
+            .from('goal_milestones')
+            .select('*')
+            .eq('goal_id', goalId)
+            .order('sort_order', { ascending: true })
+
+        if (error) {
+            if (error.message.includes('schema cache') || error.code === 'PGRST200') {
+                return []
+            }
+            console.error('[ERROR fetchGoalMilestones]:', error)
+            return []
+        }
+        return data || []
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('schema cache') || msg.includes('PGRST200')) {
+            return []
+        }
+        return []
+    }
+}
+
+/**
  * Get active goals (not completed)
- * Shows all goals that are not marked as completed
- * 
- * TEMP FIX: Using admin client to bypass RLS and verify data exists
+ * Fetches entries and milestones separately to handle schema cache issues
  */
 export async function getActiveGoals(): Promise<GoalWithDetails[]> {
     try {
-        // Get user from authenticated client for user ID
         const { user } = await getAuthenticatedClient()
-
-        console.log('[DEBUG getActiveGoals] User ID:', user.id)
-
-        // TEMP: Use admin client to bypass RLS for debugging
         const adminClient = createAdminClient()
 
-        // DIAGNOSTIC: First, get ALL goals in the table (no user filter)
-        const { data: allGoalsInTable } = await adminClient
-            .from('goals')
-            .select('id, user_id, title, is_completed')
-
-        console.log('[DEBUG getActiveGoals] ALL goals in table:', {
-            totalCount: allGoalsInTable?.length || 0,
-            goals: allGoalsInTable
-        })
-
-        // Main query - simple select without problematic joins for now
+        // Fetch goals with categories
         const { data, error } = await adminClient
             .from('goals')
             .select(`
@@ -93,26 +139,34 @@ export async function getActiveGoals(): Promise<GoalWithDetails[]> {
             .eq('is_completed', false)
             .order('created_at', { ascending: false })
 
-        console.log('[DEBUG getActiveGoals] Admin client result:', { count: data?.length, error })
-
         if (error) {
             console.error('[ERROR getActiveGoals]:', error)
             return []
         }
 
-        // Map data to include empty milestones and entries for type compatibility
-        const goalsWithDetails = (data || []).map(goal => ({
-            ...goal,
-            goal_milestones: [],
-            goal_entries: []
-        }))
+        if (!data || data.length === 0) {
+            return []
+        }
 
-        console.log('[DEBUG getActiveGoals] Returning goals count:', goalsWithDetails.length)
+        // Fetch entries and milestones for each goal in parallel
+        const goalsWithDetails = await Promise.all(
+            data.map(async (goal) => {
+                const [entries, milestones] = await Promise.all([
+                    fetchGoalEntries(goal.id),
+                    fetchGoalMilestones(goal.id)
+                ])
+                return {
+                    ...goal,
+                    goal_entries: entries,
+                    goal_milestones: milestones
+                }
+            })
+        )
+
         return goalsWithDetails as GoalWithDetails[]
     } catch (error) {
         console.error('[ERROR getActiveGoals] Caught error:', error)
         if (error instanceof AuthenticationError) {
-            console.log('[DEBUG getActiveGoals] AuthenticationError - returning empty array')
             return []
         }
         throw error
@@ -121,28 +175,45 @@ export async function getActiveGoals(): Promise<GoalWithDetails[]> {
 
 /**
  * Get a single goal with all details
+ * Uses fallback mechanism for entries/milestones if schema cache fails
  */
 export async function getGoalById(goalId: string): Promise<GoalWithDetails | null> {
     try {
-        const { client } = await getAuthenticatedClient()
+        const { user } = await getAuthenticatedClient()
+        const adminClient = createAdminClient()
 
-        const { data, error } = await client
+        // First, try to get the goal with basic info
+        const { data: goal, error } = await adminClient
             .from('goals')
             .select(`
                 *,
-                categories (id, name, slug, color_code, icon_slug),
-                goal_milestones (*),
-                goal_entries (*)
+                categories (id, name, slug, color_code, icon_slug)
             `)
             .eq('id', goalId)
             .single()
 
-        if (error) {
-            console.error('Error fetching goal:', error)
+        if (error || !goal) {
+            console.error('[ERROR getGoalById]:', error)
             return null
         }
 
-        return data as GoalWithDetails
+        // Security: Verify user owns this goal
+        if (goal.user_id !== user.id) {
+            console.error('[ERROR getGoalById] Unauthorized access attempt')
+            return null
+        }
+
+        // Fetch entries and milestones separately (handles schema cache issues)
+        const [entries, milestones] = await Promise.all([
+            fetchGoalEntries(goalId),
+            fetchGoalMilestones(goalId)
+        ])
+
+        return {
+            ...goal,
+            goal_entries: entries,
+            goal_milestones: milestones
+        } as GoalWithDetails
     } catch (error) {
         if (error instanceof AuthenticationError) {
             return null

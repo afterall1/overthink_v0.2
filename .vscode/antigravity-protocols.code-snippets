@@ -5,11 +5,11 @@
 			"",
 			"---",
 			"🚨 **CRITICAL EXECUTION PROTOCOL (MUST FOLLOW):**",
-			"1. **Context Check:** İşleme başlamadan önce `docs/active_context.md` ve `docs/tech_stack.md` dosyalarını oku. Mevcut mimariye %100 uyumlu ol.",
+			"1. **Context Check:** İşleme başlamadan önce `memory/active_context.md` ve `memory/tech_stack.md` dosyalarını oku. Mevcut mimariye %100 uyumlu ol.",
 			"2. **Strict TypeScript:** `any` kullanımı KESİNLİKLE yasaktır. Gerekirse yeni Interface/Type tanımla ve bunu `types/` klasörüne ekle.",
 			"3. **No Placeholders:** Kodun içinde asla 'TODO', 'Buraya mantık gelecek' gibi eksik kısımlar bırakma. Üretilen kod çalıştırılabilir ve bitmiş olmalı.",
 			"4. **Error Handling:** Olası hata durumlarını (try-catch, API failures) öngör ve kullanıcıya sessizce hata vermek yerine anlamlı geri bildirim mekanizmasını entegre et.",
-			"5. **Memory Update:** İşlem bittikten sonra, eğer önemli bir değişiklik yaptıysan `docs/active_context.md` dosyasını güncellemeni bekliyorum.",
+			"5. **Memory Update:** İşlem bittikten sonra, eğer önemli bir değişiklik yaptıysan `memory/active_context.md` dosyasını güncellemeni bekliyorum.",
 			"---"
 		],
 		"description": "Genel kodlama kuralları ve hafıza kontrolü"
@@ -49,7 +49,7 @@
 			"",
 			"---",
 			"🛡️ **DATA INTEGRITY & SECURITY PROTOCOL:**",
-			"1. **Source of Truth:** Veri şeması için `docs/database_schema.md` dosyasını referans al. Kendi kafandan sütun uydurma.",
+			"1. **Source of Truth:** Veri şeması için `memory/database_schema.md` dosyasını referans al. API kontratları için `memory/api_contracts.md` dosyasını kontrol et. Kendi kafandan sütun uydurma.",
 			"2. **Type Safety:** Supabase'den gelen veriyi frontend'de kullanmadan önce Zod veya TypeScript ile tip dönüşümünü (Type Casting) güvenli yap.",
 			"3. **Secure Fetching:** Tüm veritabanı işlemlerini Server Component veya Server Action içinde yap. Client-side'da hassas veri ifşa etme.",
 			"4. **JSONB Handling:** `logs` tablosundaki JSON verisini işlerken null check yapmayı unutma.",

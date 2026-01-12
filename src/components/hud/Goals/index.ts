@@ -11,4 +11,7 @@ export { default as GoalCelebration } from './GoalCelebration'
 export { default as StreakBadge } from './StreakBadge'
 export { default as GoalHealthIndicator } from './GoalHealthIndicator'
 export { default as VelocityMeter } from './VelocityMeter'
+// Dopamine-boosting celebrations
+export { default as ConfettiCelebration, useConfetti } from './ConfettiCelebration'
+
 

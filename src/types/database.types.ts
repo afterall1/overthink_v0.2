@@ -449,6 +449,452 @@ export type Database = {
                     }
                 ]
             }
+            // =====================================================
+            // Quest System Tables
+            // =====================================================
+            goal_key_results: {
+                Row: {
+                    id: string
+                    goal_id: string
+                    user_id: string
+                    title: string
+                    description: string | null
+                    metric_type: 'numeric' | 'boolean' | 'percentage'
+                    metric_name: string | null
+                    target_value: number | null
+                    current_value: number | null
+                    unit: string | null
+                    frequency: 'daily' | 'weekly' | 'monthly'
+                    is_completed: boolean
+                    completed_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    goal_id: string
+                    user_id: string
+                    title: string
+                    description?: string | null
+                    metric_type?: 'numeric' | 'boolean' | 'percentage'
+                    metric_name?: string | null
+                    target_value?: number | null
+                    current_value?: number | null
+                    unit?: string | null
+                    frequency?: 'daily' | 'weekly' | 'monthly'
+                    is_completed?: boolean
+                    completed_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    goal_id?: string
+                    user_id?: string
+                    title?: string
+                    description?: string | null
+                    metric_type?: 'numeric' | 'boolean' | 'percentage'
+                    metric_name?: string | null
+                    target_value?: number | null
+                    current_value?: number | null
+                    unit?: string | null
+                    frequency?: 'daily' | 'weekly' | 'monthly'
+                    is_completed?: boolean
+                    completed_at?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "goal_key_results_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "goal_key_results_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            daily_quests: {
+                Row: {
+                    id: string
+                    user_id: string
+                    goal_id: string | null
+                    key_result_id: string | null
+                    title: string
+                    description: string | null
+                    emoji: string
+                    xp_reward: number
+                    bonus_xp: number
+                    scheduled_time: string | null
+                    scheduled_date: string | null
+                    due_time: string | null
+                    is_recurring: boolean
+                    recurrence_pattern: 'daily' | 'weekdays' | 'weekends' | 'mwf' | 'tts' | 'custom' | null
+                    recurrence_days: number[] | null
+                    status: 'pending' | 'completed' | 'skipped' | 'expired'
+                    completed_at: string | null
+                    is_ai_suggested: boolean
+                    ai_confidence: number | null
+                    ai_reasoning: string | null
+                    difficulty: 'easy' | 'medium' | 'hard'
+                    sort_order: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    goal_id?: string | null
+                    key_result_id?: string | null
+                    title: string
+                    description?: string | null
+                    emoji?: string
+                    xp_reward?: number
+                    bonus_xp?: number
+                    scheduled_time?: string | null
+                    scheduled_date?: string | null
+                    due_time?: string | null
+                    is_recurring?: boolean
+                    recurrence_pattern?: 'daily' | 'weekdays' | 'weekends' | 'mwf' | 'tts' | 'custom' | null
+                    recurrence_days?: number[] | null
+                    status?: 'pending' | 'completed' | 'skipped' | 'expired'
+                    completed_at?: string | null
+                    is_ai_suggested?: boolean
+                    ai_confidence?: number | null
+                    ai_reasoning?: string | null
+                    difficulty?: 'easy' | 'medium' | 'hard'
+                    sort_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    goal_id?: string | null
+                    key_result_id?: string | null
+                    title?: string
+                    description?: string | null
+                    emoji?: string
+                    xp_reward?: number
+                    bonus_xp?: number
+                    scheduled_time?: string | null
+                    scheduled_date?: string | null
+                    due_time?: string | null
+                    is_recurring?: boolean
+                    recurrence_pattern?: 'daily' | 'weekdays' | 'weekends' | 'mwf' | 'tts' | 'custom' | null
+                    recurrence_days?: number[] | null
+                    status?: 'pending' | 'completed' | 'skipped' | 'expired'
+                    completed_at?: string | null
+                    is_ai_suggested?: boolean
+                    ai_confidence?: number | null
+                    ai_reasoning?: string | null
+                    difficulty?: 'easy' | 'medium' | 'hard'
+                    sort_order?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "daily_quests_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "daily_quests_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "daily_quests_key_result_id_fkey"
+                        columns: ["key_result_id"]
+                        isOneToOne: false
+                        referencedRelation: "goal_key_results"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            quest_completions: {
+                Row: {
+                    id: string
+                    quest_id: string
+                    user_id: string
+                    goal_id: string | null
+                    completed_date: string
+                    completed_at: string
+                    xp_earned: number
+                    base_xp: number
+                    streak_bonus_xp: number
+                    time_bonus_xp: number
+                    streak_count: number
+                    notes: string | null
+                    mood_rating: number | null
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    quest_id: string
+                    user_id: string
+                    goal_id?: string | null
+                    completed_date: string
+                    completed_at?: string
+                    xp_earned?: number
+                    base_xp?: number
+                    streak_bonus_xp?: number
+                    time_bonus_xp?: number
+                    streak_count?: number
+                    notes?: string | null
+                    mood_rating?: number | null
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    quest_id?: string
+                    user_id?: string
+                    goal_id?: string | null
+                    completed_date?: string
+                    completed_at?: string
+                    xp_earned?: number
+                    base_xp?: number
+                    streak_bonus_xp?: number
+                    time_bonus_xp?: number
+                    streak_count?: number
+                    notes?: string | null
+                    mood_rating?: number | null
+                    created_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "quest_completions_quest_id_fkey"
+                        columns: ["quest_id"]
+                        isOneToOne: false
+                        referencedRelation: "daily_quests"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "quest_completions_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "quest_completions_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            rituals: {
+                Row: {
+                    id: string
+                    user_id: string
+                    goal_id: string | null
+                    trigger_habit: string
+                    action: string
+                    linked_quest_id: string | null
+                    emoji: string
+                    current_streak: number
+                    longest_streak: number
+                    last_completed_date: string | null
+                    base_xp: number
+                    streak_multiplier: number
+                    is_active: boolean
+                    total_completions: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    goal_id?: string | null
+                    trigger_habit: string
+                    action: string
+                    linked_quest_id?: string | null
+                    emoji?: string
+                    current_streak?: number
+                    longest_streak?: number
+                    last_completed_date?: string | null
+                    base_xp?: number
+                    streak_multiplier?: number
+                    is_active?: boolean
+                    total_completions?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    goal_id?: string | null
+                    trigger_habit?: string
+                    action?: string
+                    linked_quest_id?: string | null
+                    emoji?: string
+                    current_streak?: number
+                    longest_streak?: number
+                    last_completed_date?: string | null
+                    base_xp?: number
+                    streak_multiplier?: number
+                    is_active?: boolean
+                    total_completions?: number
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "rituals_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "rituals_goal_id_fkey"
+                        columns: ["goal_id"]
+                        isOneToOne: false
+                        referencedRelation: "goals"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "rituals_linked_quest_id_fkey"
+                        columns: ["linked_quest_id"]
+                        isOneToOne: false
+                        referencedRelation: "daily_quests"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            ritual_completions: {
+                Row: {
+                    id: string
+                    ritual_id: string
+                    user_id: string
+                    completed_date: string
+                    completed_at: string
+                    xp_earned: number
+                    streak_at_completion: number
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    ritual_id: string
+                    user_id: string
+                    completed_date: string
+                    completed_at?: string
+                    xp_earned?: number
+                    streak_at_completion?: number
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    ritual_id?: string
+                    user_id?: string
+                    completed_date?: string
+                    completed_at?: string
+                    xp_earned?: number
+                    streak_at_completion?: number
+                    created_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "ritual_completions_ritual_id_fkey"
+                        columns: ["ritual_id"]
+                        isOneToOne: false
+                        referencedRelation: "rituals"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "ritual_completions_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            user_xp_stats: {
+                Row: {
+                    id: string
+                    user_id: string
+                    total_xp: number
+                    current_level: number
+                    xp_to_next_level: number
+                    xp_today: number
+                    xp_this_week: number
+                    xp_this_month: number
+                    longest_quest_streak: number
+                    current_daily_streak: number
+                    perfect_days_count: number
+                    perfect_weeks_count: number
+                    quests_completed_count: number
+                    rituals_completed_count: number
+                    last_xp_earned_at: string | null
+                    last_perfect_day: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    total_xp?: number
+                    current_level?: number
+                    xp_to_next_level?: number
+                    xp_today?: number
+                    xp_this_week?: number
+                    xp_this_month?: number
+                    longest_quest_streak?: number
+                    current_daily_streak?: number
+                    perfect_days_count?: number
+                    perfect_weeks_count?: number
+                    quests_completed_count?: number
+                    rituals_completed_count?: number
+                    last_xp_earned_at?: string | null
+                    last_perfect_day?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    total_xp?: number
+                    current_level?: number
+                    xp_to_next_level?: number
+                    xp_today?: number
+                    xp_this_week?: number
+                    xp_this_month?: number
+                    longest_quest_streak?: number
+                    current_daily_streak?: number
+                    perfect_days_count?: number
+                    perfect_weeks_count?: number
+                    quests_completed_count?: number
+                    rituals_completed_count?: number
+                    last_xp_earned_at?: string | null
+                    last_perfect_day?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "user_xp_stats_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: true
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never
@@ -592,3 +1038,83 @@ export type LogData =
 // =====================================================
 
 export type CategorySlug = 'trade' | 'food' | 'sport' | 'dev' | 'etsy' | 'gaming'
+
+// =====================================================
+// Quest System Types
+// =====================================================
+
+// Key Result types
+export type GoalKeyResult = Database['public']['Tables']['goal_key_results']['Row']
+export type GoalKeyResultInsert = Database['public']['Tables']['goal_key_results']['Insert']
+export type GoalKeyResultUpdate = Database['public']['Tables']['goal_key_results']['Update']
+export type KeyResultMetricType = GoalKeyResult['metric_type']
+export type KeyResultFrequency = GoalKeyResult['frequency']
+
+// Daily Quest types
+export type DailyQuest = Database['public']['Tables']['daily_quests']['Row']
+export type DailyQuestInsert = Database['public']['Tables']['daily_quests']['Insert']
+export type DailyQuestUpdate = Database['public']['Tables']['daily_quests']['Update']
+export type QuestStatus = DailyQuest['status']
+export type QuestDifficulty = DailyQuest['difficulty']
+export type RecurrencePattern = DailyQuest['recurrence_pattern']
+
+// Quest Completion types
+export type QuestCompletion = Database['public']['Tables']['quest_completions']['Row']
+export type QuestCompletionInsert = Database['public']['Tables']['quest_completions']['Insert']
+export type QuestCompletionUpdate = Database['public']['Tables']['quest_completions']['Update']
+
+// Ritual (Habit Stacking) types
+export type Ritual = Database['public']['Tables']['rituals']['Row']
+export type RitualInsert = Database['public']['Tables']['rituals']['Insert']
+export type RitualUpdate = Database['public']['Tables']['rituals']['Update']
+
+// Ritual Completion types
+export type RitualCompletion = Database['public']['Tables']['ritual_completions']['Row']
+export type RitualCompletionInsert = Database['public']['Tables']['ritual_completions']['Insert']
+
+// User XP Stats types
+export type UserXpStats = Database['public']['Tables']['user_xp_stats']['Row']
+export type UserXpStatsInsert = Database['public']['Tables']['user_xp_stats']['Insert']
+export type UserXpStatsUpdate = Database['public']['Tables']['user_xp_stats']['Update']
+
+// =====================================================
+// Quest System Composite Types
+// =====================================================
+
+// Quest with related data
+export type DailyQuestWithDetails = DailyQuest & {
+    goals: Pick<Goal, 'id' | 'title' | 'period'> | null
+    goal_key_results: Pick<GoalKeyResult, 'id' | 'title'> | null
+}
+
+// Today's quests grouped
+export interface TodayQuestsGroup {
+    goal: Pick<Goal, 'id' | 'title' | 'period'> | null
+    quests: DailyQuest[]
+    completedCount: number
+    totalXp: number
+}
+
+// Daily summary
+export interface DailySummary {
+    date: string
+    questsCompleted: number
+    questsTotal: number
+    xpEarned: number
+    isPerfectDay: boolean
+    streakStatus: 'maintained' | 'at_risk' | 'broken'
+}
+
+// Ritual with streak info
+export type RitualWithStreak = Ritual & {
+    streakStatus: 'active' | 'at_risk' | 'inactive'
+    nextMilestone: number
+}
+
+// Goal with key results and quests
+export type GoalWithQuests = GoalWithDetails & {
+    goal_key_results: GoalKeyResult[]
+    daily_quests: DailyQuest[]
+    rituals: Ritual[]
+}
+

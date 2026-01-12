@@ -265,6 +265,169 @@ Styling yaklaşımı seçilmeli.
 
 ---
 
+## ADR-006: Quest System Architecture (Goal-Action Integration)
+
+**Tarih:** 2026-01-12  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Kullanıcıların hedeflerine ulaşmasını kolaylaştırmak için günlük aksiyon takibi gerekiyordu. Mevcut Goals sistemi sadece progress tracking yapıyordu, günlük alışkanlık oluşturma mekanizması eksikti.
+
+### Karar
+
+**Goal-Action Hierarchy** mimarisi kabul edildi:
+
+```
+Goal → Key Results (OKR) → Daily Quests → Rituals (Habit Stacking)
+```
+
+**Yeni tablolar:**
+- `goal_key_results` - OKR-style ölçülebilir sonuçlar
+- `daily_quests` - Recurring/tek seferlik görevler
+- `quest_completions` - Tamamlama kayıtları + XP
+- `rituals` - Habit stacking zinciri
+- `ritual_completions` - Ritual kayıtları
+- `user_xp_stats` - Kullanıcı XP istatistikleri
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Simple Tasks** | Basit | Gamification yok |
+| **Third-party (Habitica)** | Hazır | Entegrasyon zor |
+| **Custom Quest System ✓** | Tam kontrol, gamification | Development time |
+
+### Sonuçlar
+
+**Pozitif:**
+- Duolingo-inspired XP sistemi motivasyonu artırır
+- Streak mekanizması alışkanlık oluşturur
+- Habit stacking bilimsel olarak etkili
+- Perfect Day bonusu günlük tutarlılığı ödüllendirir
+
+**Negatif:**
+- 6 yeni tablo, schema complexity
+- XP hesaplama mantığı karmaşık
+- Migration gerekli
+
+**Mitigation:**
+- `questEngine.ts` tüm hesaplamaları merkezi yönetir
+- Comprehensive TypeScript types ile type safety
+
+---
+
+## ADR-007: AI Council Integration (Gemini 2.0)
+
+**Tarih:** 2026-01-12  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi
+
+### Bağlam
+
+Kullanıcıların hedef belirleme ve progress tracking'de AI desteğine ihtiyaçları vardı. Motivasyonel mesajlar, goal insights ve smart öneriler için AI entegrasyonu gerekiyordu.
+
+### Karar
+
+**Google Gemini 2.0 Flash** modeli ile AI Council entegrasyonu.
+
+```
+src/lib/ai/
+├── aiConfig.ts           # Model: gemini-2.0-flash-exp
+├── aiService.ts          # Core service
+├── userDataAggregator.ts # Context builder
+└── prompts/              # System prompts
+```
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **OpenAI GPT-4** | Mature, powerful | Pahalı, rate limits |
+| **Claude** | Nuanced, safe | API erişimi sınırlı |
+| **Gemini ✓** | Hızlı, generous quota | Daha yeni |
+| **Local LLM** | Privacy | Resource intensive |
+
+### Sonuçlar
+
+**Pozitif:**
+- Gemini 2.0 Flash çok hızlı response
+- Google Cloud pricing uygun
+- @google/genai SDK kolay kullanım
+- Turkish language support iyi
+
+**Negatif:**
+- Google dependency
+- API key management
+- Rate limit dikkat
+
+**Mitigation:**
+- Error handling with fallback
+- Response caching (planned)
+- User context aggregation for quality
+
+---
+
+## ADR-008: Gamification XP & Level System
+
+**Tarih:** 2026-01-12  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** AI Architect (Expert Council)
+
+### Bağlam
+
+Quest System için motivasyon mekanizması gerekiyordu. Duolingo'nun başarılı gamification stratejileri referans alındı.
+
+### Karar
+
+**20+ Level XP System** with exponential curve:
+
+```typescript
+// XP per level: 100 * 1.5^(level-1)
+Level 1:  0-100 XP      (100 XP)
+Level 2:  100-250 XP    (150 XP)
+Level 3:  250-475 XP    (225 XP)
+...
+Level 20: 100K+ XP
+```
+
+**XP Sources:**
+- Quest completion: 10-25 XP (difficulty based)
+- Streak bonus: +2 XP per streak day (max +20 XP)
+- Time bonus: +5 XP (sabah tamamlama)
+- Perfect Day: +100 XP (tüm questler)
+- Ritual: 5-15 XP
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Linear XP** | Basit | Monoton |
+| **Points only** | Hesaplanabilir | Less engaging |
+| **Exponential ✓** | Duolingo-proven | Complex math |
+| **Badge system** | Visual | No progression feel |
+
+### Sonuçlar
+
+**Pozitif:**
+- Duolingo-proven engagement model
+- Clear progression feeling
+- Streak mechanics create habit
+- Loss aversion (streak break) motivates
+
+**Negatif:**
+- "Gaming" hissi yaratabilir
+- XP inflation riski
+- Competitive olmayan kullanıcılar için
+
+**Mitigation:**
+- Focus on personal progress, not leaderboards
+- Streak freezes (planned)
+- XP audit system (planned)
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -294,5 +457,6 @@ Styling yaklaşımı seçilmeli.
 
 ---
 
-**Son Güncelleme:** 2026-01-10
-**Toplam ADR:** 5
+**Son Güncelleme:** 2026-01-12
+**Toplam ADR:** 8
+

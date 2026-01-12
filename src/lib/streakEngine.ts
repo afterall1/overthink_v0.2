@@ -11,6 +11,7 @@ import {
     startOfDay,
     isToday,
     isYesterday,
+    isSameDay,
     format,
     subDays
 } from 'date-fns'
@@ -52,6 +53,38 @@ export interface VelocityInfo {
     estimatedCompletionDate: Date | null
     velocityMessage: string
 }
+
+// =====================================================
+// XP Rewards System (Duolingo-inspired)
+// =====================================================
+
+export interface XPInfo {
+    totalXP: number
+    todayXP: number
+    level: number
+    levelProgress: number  // 0-100 within current level
+    nextLevelXP: number
+}
+
+// XP reward constants
+export const XP_REWARDS = {
+    LOG_PROGRESS: 10,           // Any progress logged
+    DAILY_TARGET: 25,           // Complete daily target bonus
+    STREAK_BONUS: 5,            // Per streak day
+    MILESTONE_COMPLETE: 50,     // Complete a milestone
+    GOAL_COMPLETE: 200,         // Complete entire goal
+    CONSISTENCY_BONUS: 15       // 5+ days in a row
+} as const
+
+// XP thresholds for levels (cumulative)
+export const XP_LEVELS = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 5000, 7000, 10000] as const
+
+// Health calculation weights (Duolingo-inspired hybrid approach)
+const HEALTH_WEIGHTS = {
+    PROGRESS: 0.40,      // Overall progress toward goal
+    CONSISTENCY: 0.35,   // Recent activity frequency  
+    MOMENTUM: 0.25       // Trend direction (accelerating/decelerating)
+} as const
 
 // =====================================================
 // Streak Calculations
@@ -260,7 +293,11 @@ function getStreakMessage(status: StreakStatus, streak: number): string {
 // =====================================================
 
 /**
- * Calculate goal health based on activity consistency
+ * Calculate goal health based on HYBRID approach
+ * Uses progress + consistency + momentum (not just entries)
+ * 
+ * This solves the problem where a goal with 94% progress but 0 entries
+ * would show as "Critical" - now it considers overall progress too.
  */
 export function calculateGoalHealth(
     goal: Goal,
@@ -274,21 +311,35 @@ export function calculateGoalHealth(
     const last7Days = getActivityInLastNDays(entries, 7)
     const consistencyScore = last7Days / 7
 
-    // Determine health level (1-5)
+    // Calculate momentum (trend direction)
+    const momentumScore = calculateMomentum(goal, entries)
+
+    // Normalize progress to 0-1 scale
+    const normalizedProgress = progress / 100
+
+    // HYBRID HEALTH FORMULA (Duolingo-inspired)
+    // Even with 0 entries, high progress still gives decent health
+    const hybridScore = (
+        HEALTH_WEIGHTS.PROGRESS * normalizedProgress +
+        HEALTH_WEIGHTS.CONSISTENCY * consistencyScore +
+        HEALTH_WEIGHTS.MOMENTUM * Math.max(0, (momentumScore + 1) / 2) // Normalize -1..1 to 0..1
+    )
+
+    // Convert hybrid score (0-1) to health level (1-5)
     let healthLevel: 1 | 2 | 3 | 4 | 5
 
     if (progress >= 100) {
-        healthLevel = 5
-    } else if (consistencyScore >= 0.8 && streakInfo.currentStreak >= 5) {
-        healthLevel = 5
-    } else if (consistencyScore >= 0.6 && streakInfo.currentStreak >= 3) {
-        healthLevel = 4
-    } else if (consistencyScore >= 0.4 || streakInfo.currentStreak >= 2) {
-        healthLevel = 3
-    } else if (consistencyScore >= 0.2 || daysActive >= 1) {
-        healthLevel = 2
+        healthLevel = 5  // Goal completed = always champion
+    } else if (hybridScore >= 0.75) {
+        healthLevel = 5  // Excellent across all metrics
+    } else if (hybridScore >= 0.55) {
+        healthLevel = 4  // Good progress and/or consistency
+    } else if (hybridScore >= 0.35) {
+        healthLevel = 3  // Moderate - making progress
+    } else if (hybridScore >= 0.15 || daysActive >= 1) {
+        healthLevel = 2  // Needs attention but not critical
     } else {
-        healthLevel = 1
+        healthLevel = 1  // Critical - no progress, no activity
     }
 
     const statusMap: Record<number, GoalHealthInfo['healthStatus']> = {
@@ -307,12 +358,13 @@ export function calculateGoalHealth(
         1: '#EF4444'  // red
     }
 
+    // Enhanced messages with momentum context
     const messageMap: Record<number, string> = {
-        5: 'Şampiyonlar gibi ilerliyorsun!',
-        4: 'Harika performans!',
+        5: 'Şampiyonlar gibi ilerliyorsun! 🏆',
+        4: 'Harika performans! Momentum sende.',
         3: 'İstikrarlı devam ediyorsun.',
-        2: 'Biraz daha odaklan!',
-        1: 'Dikkat! Hedefe odaklanma zamanı.'
+        2: 'Küçük bir adım at, momentum kazan!',
+        1: 'Bugün başla, her adım önemli!'
     }
 
     return {
@@ -321,6 +373,50 @@ export function calculateGoalHealth(
         healthMessage: messageMap[healthLevel],
         healthColor: colorMap[healthLevel]
     }
+}
+
+/**
+ * Calculate momentum - detects if user is accelerating or decelerating
+ * Returns: -1 (slowing down) to +1 (accelerating)
+ */
+function calculateMomentum(goal: Goal, entries: GoalEntry[]): number {
+    // If no entries, check if there's progress (manual value updates)
+    if (entries.length === 0) {
+        const progress = calculateProgress(goal)
+        // If goal has significant progress but no entries, 
+        // assume neutral to slightly positive momentum
+        if (progress >= 50) return 0.3
+        if (progress >= 25) return 0.1
+        return 0
+    }
+
+    if (entries.length < 2) {
+        // Single entry = positive start
+        return 0.2
+    }
+
+    // Compare last 3 days activity vs previous 3 days
+    const today = startOfDay(new Date())
+    const last3Days = getActivityInLastNDays(entries, 3)
+
+    // Get activity from 4-7 days ago
+    const olderEntries = entries.filter(e => {
+        const entryDate = startOfDay(parseISO(e.logged_at))
+        const daysAgo = differenceInDays(today, entryDate)
+        return daysAgo >= 3 && daysAgo <= 6
+    })
+    const prev3Days = new Set(
+        olderEntries.map(e => format(startOfDay(parseISO(e.logged_at)), 'yyyy-MM-dd'))
+    ).size
+
+    // Calculate momentum (-1 to +1)
+    const diff = last3Days - prev3Days
+
+    if (diff >= 2) return 1      // Strong acceleration
+    if (diff === 1) return 0.5   // Slight acceleration
+    if (diff === 0) return 0     // Steady
+    if (diff === -1) return -0.5 // Slight deceleration
+    return -1                    // Strong deceleration
 }
 
 /**
@@ -462,4 +558,111 @@ export function getStreakMilestoneMessage(milestone: number): string {
         365: '🎖️ 1 YIL! LEGEND!'
     }
     return messages[milestone] || `🎉 ${milestone} günlük zincir!`
+}
+
+// =====================================================
+// XP Calculation Functions (Duolingo-style)
+// =====================================================
+
+/**
+ * Calculate XP information for a goal
+ */
+export function calculateXP(goal: Goal, entries: GoalEntry[], completedMilestones: number): XPInfo {
+    let totalXP = 0
+    let todayXP = 0
+    const today = startOfDay(new Date())
+
+    // XP for each logged entry
+    for (const entry of entries) {
+        totalXP += XP_REWARDS.LOG_PROGRESS
+
+        // Check if entry is from today
+        if (isSameDay(parseISO(entry.logged_at), today)) {
+            todayXP += XP_REWARDS.LOG_PROGRESS
+        }
+    }
+
+    // Streak bonus
+    const streakInfo = calculateStreak(entries)
+    if (streakInfo.currentStreak > 0) {
+        totalXP += XP_REWARDS.STREAK_BONUS * streakInfo.currentStreak
+    }
+
+    // Consistency bonus (5+ active days in last 7)
+    const last7Days = getActivityInLastNDays(entries, 7)
+    if (last7Days >= 5) {
+        totalXP += XP_REWARDS.CONSISTENCY_BONUS
+    }
+
+    // Milestone completion XP
+    totalXP += completedMilestones * XP_REWARDS.MILESTONE_COMPLETE
+
+    // Goal completion bonus
+    if (goal.is_completed || calculateProgress(goal) >= 100) {
+        totalXP += XP_REWARDS.GOAL_COMPLETE
+    }
+
+    // Calculate level from total XP
+    const level = calculateLevel(totalXP)
+    const currentLevelThreshold = XP_LEVELS[level - 1] || 0
+    const nextLevelThreshold = XP_LEVELS[level] || XP_LEVELS[XP_LEVELS.length - 1]
+    const xpInLevel = totalXP - currentLevelThreshold
+    const xpNeededForLevel = nextLevelThreshold - currentLevelThreshold
+    const levelProgress = Math.min(100, (xpInLevel / xpNeededForLevel) * 100)
+
+    return {
+        totalXP,
+        todayXP,
+        level,
+        levelProgress,
+        nextLevelXP: nextLevelThreshold
+    }
+}
+
+/**
+ * Calculate level from total XP
+ */
+function calculateLevel(totalXP: number): number {
+    for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+        if (totalXP >= XP_LEVELS[i]) {
+            return i + 1
+        }
+    }
+    return 1
+}
+
+/**
+ * Get XP reward message
+ */
+export function getXPRewardMessage(xpGained: number, reason: keyof typeof XP_REWARDS): string {
+    const messages: Record<keyof typeof XP_REWARDS, string> = {
+        LOG_PROGRESS: `+${xpGained} XP kazandın! 📝`,
+        DAILY_TARGET: `+${xpGained} XP Bonus! Günlük hedef tamamlandı! 🎯`,
+        STREAK_BONUS: `+${xpGained} XP Zincir bonusu! 🔥`,
+        MILESTONE_COMPLETE: `+${xpGained} XP Milestone tamamlandı! 🏅`,
+        GOAL_COMPLETE: `+${xpGained} XP HEDEF TAMAMLANDI! 🏆`,
+        CONSISTENCY_BONUS: `+${xpGained} XP Tutarlılık bonusu! ⭐`
+    }
+    return messages[reason]
+}
+
+/**
+ * Get level badge info
+ */
+export function getLevelBadge(level: number): { name: string; color: string; emoji: string } {
+    const badges: Record<number, { name: string; color: string; emoji: string }> = {
+        1: { name: 'Çaylak', color: '#94A3B8', emoji: '🌱' },
+        2: { name: 'Acemi', color: '#84CC16', emoji: '🌿' },
+        3: { name: 'Deneyimli', color: '#22C55E', emoji: '🌲' },
+        4: { name: 'Uzman', color: '#3B82F6', emoji: '💎' },
+        5: { name: 'Usta', color: '#8B5CF6', emoji: '⚡' },
+        6: { name: 'Profesyonel', color: '#A855F7', emoji: '🔮' },
+        7: { name: 'Şampiyon', color: '#EC4899', emoji: '🏆' },
+        8: { name: 'Efsane', color: '#F59E0B', emoji: '👑' },
+        9: { name: 'Titan', color: '#EF4444', emoji: '🔥' },
+        10: { name: 'Tanrısal', color: '#DC2626', emoji: '⭐' },
+        11: { name: 'Efsanevi', color: '#B91C1C', emoji: '💫' },
+        12: { name: 'LEGEND', color: '#7C2D12', emoji: '🎖️' }
+    }
+    return badges[Math.min(level, 12)] || badges[1]
 }
