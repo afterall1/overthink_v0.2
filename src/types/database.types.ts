@@ -136,6 +136,14 @@ export type Database = {
                     is_completed: boolean
                     start_date: string
                     end_date: string | null
+                    // Enhanced fields for psychological tracking
+                    motivation: string | null
+                    identity_statement: string | null
+                    best_time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime' | null
+                    difficulty_level: 'easy' | 'medium' | 'hard' | 'extreme' | null
+                    streak_count: number
+                    longest_streak: number
+                    last_activity_date: string | null
                     created_at: string
                     updated_at: string
                 }
@@ -152,6 +160,14 @@ export type Database = {
                     is_completed?: boolean
                     start_date: string
                     end_date?: string | null
+                    // Enhanced fields for psychological tracking
+                    motivation?: string | null
+                    identity_statement?: string | null
+                    best_time_of_day?: 'morning' | 'afternoon' | 'evening' | 'anytime' | null
+                    difficulty_level?: 'easy' | 'medium' | 'hard' | 'extreme' | null
+                    streak_count?: number
+                    longest_streak?: number
+                    last_activity_date?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -168,6 +184,14 @@ export type Database = {
                     is_completed?: boolean
                     start_date?: string
                     end_date?: string | null
+                    // Enhanced fields for psychological tracking
+                    motivation?: string | null
+                    identity_statement?: string | null
+                    best_time_of_day?: 'morning' | 'afternoon' | 'evening' | 'anytime' | null
+                    difficulty_level?: 'easy' | 'medium' | 'hard' | 'extreme' | null
+                    streak_count?: number
+                    longest_streak?: number
+                    last_activity_date?: string | null
                     created_at?: string
                     updated_at?: string
                 }

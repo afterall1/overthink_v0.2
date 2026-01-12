@@ -10,9 +10,9 @@
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║  PHASE 6.2: GoalsStrip Dashboard ✅ Tamamlandı                ║
+║  PHASE 7.6: Goal Edit & Delete from Detail Modal ✅ Tamamlandı ║
 ╠════════════════════════════════════════════════════════════════╣
-║  Ana ekrana motivasyon odaklı hedef şeridi eklendi            ║
+║  Hedef düzenleme ve silme özelliği detay modalına eklendi      ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
@@ -33,44 +33,51 @@
 | Phase 5.7: Auth Architecture | ✅ Tamamlandı | 100% |
 | Phase 6: Authentication | ✅ Tamamlandı | 100% |
 | Phase 6.1: Goals Bug Fix | ✅ Tamamlandı | 100% |
-| **Phase 6.2: GoalsStrip Dashboard** | ✅ **Tamamlandı** | **100%** |
+| Phase 6.2: GoalsStrip Dashboard | ✅ Tamamlandı | 100% |
+| Phase 6.3: GoalsStrip UI Refinement (Expert Council) | ✅ Tamamlandı | 100% |
+| Phase 7.5: Goal Detail Command Center | ✅ Tamamlandı | 100% |
+| **Phase 7.6: Goal Edit & Delete** | ✅ **Tamamlandı** | **100%** |
 | Phase 7: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-12 (Gece Oturumu)
+## Session Summary: 2026-01-12 (Gece Oturumu - Part 2)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. PGRST200 goal_entries Hatası Fix
-**Sorun:** "Hızlı İlerleme Kaydet" butonu `Could not find the table 'public.goal_entries' in the schema cache` hatası veriyordu.
-
-**Çözüm:**
-- `logProgress()` fonksiyonu admin client + fallback mekanizması ile güncellendi
-- `getProgressHistory()` ve `deleteProgressEntry()` da güncellendi
-- Schema cache hatası yakalanıp doğrudan `goals.current_value` güncelleniyor
-
-#### 2. Progress UI Refresh Fix
-**Sorun:** İlerleme kaydedilince % yüzdesi anında güncellenmiyor, sayfadan geri gelince güncelleniyordu.
-
-**Çözüm:**
-- `GoalsPanel.tsx`'e `useEffect` eklendi - `selectedGoal` ile `goals` prop senkronizasyonu
-- `handleProgressSubmit` async + loading state eklendi
-- Ekle butonuna spinner animasyonu eklendi
-
-#### 3. GoalsStrip Bileşeni (Dahiler Konseyi Kararı)
-**Amaç:** Kullanıcı ana ekranda hedef ilerlemesini görsün → Motivasyon artışı
-
-**Konsey Katılımcıları:** UX Designer, UI Designer, Mobile-First Developer, Behavioral Psychologist
-
-**Karar:** Yatay scroll edilebilir "GoalsStrip" bileşeni
+#### 1. Goal Detail Modal - Edit & Delete Feature
+**Amaç:** Kullanıcıların hedeflerini detay modalından düzenleyebilmesi ve silebilmesi.
 
 **Özellikler:**
-- 40px progress ring'ler
-- Maks 5 aktif hedef gösterimi
-- Horizontal scroll + swipe desteği
-- Empty state CTA: "Hedef Belirle"
-- Tıkla → GoalsPanel açılır
+- **Düzenle Butonu:** Sol panelin altında, glassmorphism tarzında "Düzenle" butonu
+- **Sil Butonu:** Yanında kırmızı "Sil" butonu
+- **Silme Onay Dialogu:** AnimatePresence ile güzel animasyonlu onay kutusu
+- **Edit Flow:** GoalModal edit modunda açılır, pre-filled data ile
+
+**Teknik Detaylar:**
+- `GoalDetailModal.tsx` props güncellendi: `onEdit`, `onDelete`
+- `GoalsPanel.tsx` props güncellendi: `onEditGoal`, `onDeleteGoal` (async)
+- `page.tsx` güncellendi: `editingGoal` state, `updateGoal` action entegrasyonu
+- Dropdown menü yaklaşımı overflow-hidden sorunu nedeniyle kaldırıldı
+- Statik butonlar tercih edildi (daha güvenilir UX)
+
+#### 2. GoalModal Edit Mode Enhancement
+**Sorun:** GoalModal zaten `editingGoal` prop'unu destekliyordu ama bağlı değildi.
+
+**Çözüm:**
+- `page.tsx`'te `editingGoal` state eklendi
+- `updateGoal` action import edildi
+- GoalModal artık edit modunda `updateGoal`, create modunda `createGoal` çağırıyor
+
+#### 3. Dropdown Menu Denemesi ve Kaldırılması
+**Deneme:** Önce three-dot menü → dropdown yaklaşımı denendi.
+
+**Sorunlar:**
+- `overflow-hidden` parent container dropdown'ı kesiyor
+- Z-index stacking context sorunları
+- Fixed positioned portal bile tam çalışmıyordu
+
+**Final Karar:** Dropdown kaldırıldı, statik butonlar eklendi (daha clean UX).
 
 ---
 
@@ -78,34 +85,26 @@
 
 ```
 src/
-├── actions/
-│   └── goals.ts                         # [FIX] PGRST200 fallback eklendi
-│       - logProgress: admin client + direct goal update
-│       - getProgressHistory: schema cache error handling
-│       - deleteProgressEntry: graceful fallback
-│
 ├── components/hud/Goals/
-│   ├── GoalsStrip.tsx                   # [NEW] Ana ekran hedef şeridi
-│   │   - Horizontal scroll container
-│   │   - Mini progress ring cards
-│   │   - Empty state CTA
-│   │   - Loading skeleton
+│   ├── GoalDetailModal.tsx              # [UPDATE] Edit/Delete butonları
+│   │   - onEdit, onDelete props eklendi
+│   │   - handleEdit, handleDeleteClick fonksiyonları
+│   │   - Delete Confirmation Dialog (AnimatePresence)
+│   │   - Sol panel footer'da Düzenle/Sil butonları
 │   │
-│   ├── GoalsPanel.tsx                   # [FIX] UI refresh sorunu
-│   │   - useEffect: selectedGoal sync with goals prop
-│   │   - async handleProgressSubmit with loading state
-│   │   - Spinner on Ekle button
-│   │
-│   └── index.ts                         # [UPDATE] GoalsStrip export
+│   └── GoalsPanel.tsx                   # [UPDATE] New props
+│       - onEditGoal, onDeleteGoal props
+│       - GoalDetailModal'a bağlantı
 │
 ├── app/
-│   └── page.tsx                         # [UPDATE] GoalsStrip entegrasyonu
-│       - Import GoalsStrip
-│       - Header ile Dual Horizon arası yerleşim
-│
+│   └── page.tsx                         # [UPDATE] Edit flow
+│       - editingGoal state eklendi
+│       - updateGoal action import
+│       - onEditGoal handler
+│       - GoalModal editingGoal prop
+
 memory/
-├── active_context.md                    # [GÜNCELLENDİ] Bu dosya
-└── project_structure.md                 # [GÜNCELLENMELİ] GoalsStrip eklendi
+└── active_context.md                    # [GÜNCELLENDİ] Bu dosya
 ```
 
 ---
@@ -135,21 +134,16 @@ GOOGLE_GENERATIVE_AI_API_KEY=...     # AI Council için
 ## Bekleyen İşler
 
 ### Yüksek Öncelik
-1. [x] ~~PGRST200 goal_entries hatası~~ ✅
-2. [x] ~~Progress UI refresh sorunu~~ ✅
-3. [x] ~~GoalsStrip ana ekran entegrasyonu~~ ✅
+1. [x] ~~Goal Detail Command Center~~ ✅
+2. [x] ~~GoalsStrip Monolith Redesign~~ ✅
+3. [x] ~~Goal Edit & Delete from Detail Modal~~ ✅
 4. [ ] Supabase schema cache yeniden yükleme (kalıcı çözüm)
-5. [ ] Debug console.log'ları temizle (production)
+5. [ ] Phase 7: OAuth Providers (Login/Register)
 
-### Phase 7: OAuth Providers (İsteğe Bağlı)
+### Phase 7: OAuth Providers
 1. [ ] Google OAuth
 2. [ ] Apple Sign-In
 3. [ ] `/reset-password` sayfası
-
-### Genel İyileştirmeler
-1. [ ] Error boundary
-2. [ ] i18n desteği
-3. [ ] PWA Service Worker
 
 ---
 
@@ -157,14 +151,15 @@ GOOGLE_GENERATIVE_AI_API_KEY=...     # AI Council için
 
 Mevcut durumda goal akışı:
 1. ✅ Login yap
-2. ✅ Ana ekranda GoalsStrip görünür (header altında)
-3. ✅ Hedef yoksa "Hedef Belirle" CTA gösterilir
-4. ✅ Hedef oluştur → Strip'te progress ring görünür
-5. ✅ Hedef kartına tıkla → GoalsPanel açılır
-6. ✅ "Hızlı İlerleme Kaydet" → % anında güncellenir
+2. ✅ Ana ekranda Vertical GoalsStrip görünür
+3. ✅ Hedef kartına tıkla → **Goal Detail Command Center** açılır
+4. ✅ Tablar arası geçiş yap (Overview, History, Milestones)
+5. ✅ "Hızlı İlerleme Kaydet" → Grafik ve Progress Ring anında güncellenir
+6. ✅ **"Düzenle" butonu** → GoalModal edit modunda açılır
+7. ✅ **"Sil" butonu** → Onay dialogu → Hedef silinir
 
 ---
 
-**Son Güncelleme:** 2026-01-12 02:04 UTC+3
+**Son Güncelleme:** 2026-01-12 03:42 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** GoalsStrip dashboard component completed. Progress refresh bug fixed.
+**Durum:** Goal Edit & Delete completed. Ready for OAuth Phase.

@@ -239,5 +239,51 @@ refactor(3d): optimize Habitat render loop
 
 ---
 
-**Son Güncelleme:** 2026-01-10
-**Versiyon:** 1.0.0
+## 11. OTURUM SONU PROTOKOLÜ
+
+Her çalışma oturumu sonunda aşağıdaki adımlar MUTLAKA uygulanmalıdır:
+
+### Checklist
+
+```
+1. [ ] memory/active_context.md güncelle
+   - Tamamlanan işleri listele
+   - Değişen dosyaları belirt
+   - Sıradaki görevleri yaz
+   - "Son Güncelleme" timestamp'ini güncelle
+
+2. [ ] İlgili memory dosyalarını güncelle:
+   - Yeni dosya eklendiyse → project_structure.md
+   - DB şeması değiştiyse → database_schema.md
+   - Yeni kütüphane eklendiyse → tech_stack.md
+   - Önemli karar alındıysa → ADR.md
+
+3. [ ] Build verification yap
+   - `npm run build` başarılı olmalı
+   - Lint hataları giderilmeli
+```
+
+### Memory Sync Komutu
+
+Kullanıcı şu komutu verdiğinde yukarıdaki protokol tetiklenir:
+
+```
+"Memory Sync Protokolü Başlatılıyor"
+```
+
+### Dosya Timestamp Formatı
+
+Her memory dosyasının sonunda şu format kullanılmalıdır:
+
+```markdown
+---
+
+**Son Güncelleme:** YYYY-MM-DD HH:MM UTC+3
+**Güncelleyen:** AI Assistant
+**Versiyon:** X.Y.Z
+```
+
+---
+
+**Son Güncelleme:** 2026-01-12
+**Versiyon:** 1.1.0

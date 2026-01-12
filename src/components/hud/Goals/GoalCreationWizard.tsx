@@ -1,0 +1,777 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+    X, ChevronRight, ChevronLeft, Check,
+    Target, Heart, Calendar, Flag,
+    Lightbulb, Clock, Zap, Star
+} from 'lucide-react'
+import { clsx } from 'clsx'
+import type { GoalPeriod, Category } from '@/types/database.types'
+
+// =====================================================
+// Types
+// =====================================================
+
+export interface GoalWizardData {
+    // Step 1: Why
+    motivation: string
+    identity_statement: string
+
+    // Step 2: What
+    title: string
+    description: string
+    target_value: number | undefined
+    unit: string
+    period: GoalPeriod
+    category_id: string
+
+    // Step 3: When
+    start_date: string
+    end_date: string
+    best_time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime'
+    difficulty_level: 'easy' | 'medium' | 'hard' | 'extreme'
+
+    // Step 4: How (Milestones)
+    milestones: Array<{
+        title: string
+        target_value: number
+    }>
+}
+
+interface GoalCreationWizardProps {
+    isOpen: boolean
+    onClose: () => void
+    onSubmit: (data: GoalWizardData) => Promise<void>
+    categories: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]
+}
+
+// =====================================================
+// Constants
+// =====================================================
+
+const STEPS = [
+    { id: 1, title: 'Neden?', icon: Heart, description: 'Motivasyonun' },
+    { id: 2, title: 'Ne?', icon: Target, description: 'Hedefin' },
+    { id: 3, title: 'Ne Zaman?', icon: Calendar, description: 'Zamanlaman' },
+    { id: 4, title: 'Nasıl?', icon: Flag, description: 'Ara hedefler' }
+] as const
+
+const PERIOD_OPTIONS: { value: GoalPeriod; label: string; emoji: string; color: string }[] = [
+    { value: 'daily', label: 'Günlük', emoji: '🌅', color: '#10B981' },
+    { value: 'weekly', label: 'Haftalık', emoji: '📅', color: '#3B82F6' },
+    { value: 'monthly', label: 'Aylık', emoji: '🌙', color: '#8B5CF6' },
+    { value: 'yearly', label: 'Yıllık', emoji: '🎯', color: '#F59E0B' }
+]
+
+const TIME_OF_DAY_OPTIONS = [
+    { value: 'morning', label: 'Sabah', emoji: '🌅', time: '06:00-12:00' },
+    { value: 'afternoon', label: 'Öğleden Sonra', emoji: '☀️', time: '12:00-18:00' },
+    { value: 'evening', label: 'Akşam', emoji: '🌙', time: '18:00-24:00' },
+    { value: 'anytime', label: 'Esnek', emoji: '⏰', time: 'Her zaman' }
+] as const
+
+const DIFFICULTY_OPTIONS = [
+    { value: 'easy', label: 'Kolay', emoji: '🌱', description: 'Küçük adımlarla başla' },
+    { value: 'medium', label: 'Orta', emoji: '💪', description: 'Dengeli zorluk' },
+    { value: 'hard', label: 'Zor', emoji: '🔥', description: 'Kendini zorla' },
+    { value: 'extreme', label: 'Ekstrem', emoji: '⚡', description: 'Sınırları aş' }
+] as const
+
+const IDENTITY_TEMPLATES = [
+    'Sağlıklı yaşayan biri',
+    'Disiplinli çalışan biri',
+    'Sürekli gelişen biri',
+    'Hedeflerine ulaşan biri'
+]
+
+// =====================================================
+// Component
+// =====================================================
+
+export default function GoalCreationWizard({
+    isOpen,
+    onClose,
+    onSubmit,
+    categories
+}: GoalCreationWizardProps) {
+    const [currentStep, setCurrentStep] = useState(1)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [errors, setErrors] = useState<Partial<Record<string, string>>>({})
+
+    const today = new Date().toISOString().split('T')[0]
+
+    const [formData, setFormData] = useState<GoalWizardData>({
+        motivation: '',
+        identity_statement: '',
+        title: '',
+        description: '',
+        target_value: undefined,
+        unit: '',
+        period: 'weekly',
+        category_id: '',
+        start_date: today,
+        end_date: '',
+        best_time_of_day: 'anytime',
+        difficulty_level: 'medium',
+        milestones: []
+    })
+
+    // Reset form when modal opens/closes
+    useEffect(() => {
+        if (isOpen) {
+            setCurrentStep(1)
+            setFormData({
+                motivation: '',
+                identity_statement: '',
+                title: '',
+                description: '',
+                target_value: undefined,
+                unit: '',
+                period: 'weekly',
+                category_id: '',
+                start_date: today,
+                end_date: '',
+                best_time_of_day: 'anytime',
+                difficulty_level: 'medium',
+                milestones: []
+            })
+            setErrors({})
+        }
+    }, [isOpen, today])
+
+    // Auto-generate milestones when target_value changes
+    useEffect(() => {
+        if (formData.target_value && formData.target_value > 0 && formData.milestones.length === 0) {
+            const target = formData.target_value
+            const unit = formData.unit || 'birim'
+            setFormData(prev => ({
+                ...prev,
+                milestones: [
+                    { title: `%25 - ${Math.round(target * 0.25)} ${unit}`, target_value: Math.round(target * 0.25) },
+                    { title: `%50 - ${Math.round(target * 0.50)} ${unit}`, target_value: Math.round(target * 0.50) },
+                    { title: `%75 - ${Math.round(target * 0.75)} ${unit}`, target_value: Math.round(target * 0.75) }
+                ]
+            }))
+        }
+    }, [formData.target_value, formData.unit, formData.milestones.length])
+
+    const updateField = <K extends keyof GoalWizardData>(
+        field: K,
+        value: GoalWizardData[K]
+    ) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: undefined }))
+        }
+    }
+
+    const validateStep = (step: number): boolean => {
+        const newErrors: Record<string, string> = {}
+
+        switch (step) {
+            case 1:
+                // Motivation is optional but encouraged
+                break
+            case 2:
+                if (!formData.title.trim()) {
+                    newErrors.title = 'Hedef başlığı gerekli'
+                }
+                break
+            case 3:
+                if (!formData.start_date) {
+                    newErrors.start_date = 'Başlangıç tarihi gerekli'
+                }
+                break
+            case 4:
+                // Milestones are optional
+                break
+        }
+
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
+    const handleNext = () => {
+        if (validateStep(currentStep)) {
+            setCurrentStep(prev => Math.min(prev + 1, 4))
+        }
+    }
+
+    const handleBack = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 1))
+    }
+
+    const handleSubmit = async () => {
+        if (!validateStep(currentStep)) return
+
+        setIsSubmitting(true)
+        try {
+            await onSubmit(formData)
+            onClose()
+        } catch (error) {
+            console.error('Failed to create goal:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleClose = () => {
+        onClose()
+    }
+
+    // Progress percentage
+    const progress = (currentStep / 4) * 100
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={handleClose}
+                        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50"
+                    />
+
+                    {/* Modal */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="fixed inset-x-4 top-[5%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 
+                                 md:w-full md:max-w-lg z-50 max-h-[90vh] overflow-hidden flex flex-col"
+                    >
+                        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-indigo-500/10 
+                                      border border-white/60 overflow-hidden flex flex-col max-h-full">
+
+                            {/* Header */}
+                            <div className="flex-none p-5 border-b border-slate-100">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 
+                                                      flex items-center justify-center shadow-lg shadow-violet-500/30">
+                                            <Target className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-800">Yeni Hedef</h2>
+                                            <p className="text-xs text-slate-400">Adım {currentStep}/4</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleClose}
+                                        className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-slate-400" />
+                                    </button>
+                                </div>
+
+                                {/* Step Indicators */}
+                                <div className="flex items-center gap-2">
+                                    {STEPS.map((step, index) => (
+                                        <div key={step.id} className="flex-1 flex items-center">
+                                            <div
+                                                className={clsx(
+                                                    'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all',
+                                                    currentStep === step.id
+                                                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/30'
+                                                        : currentStep > step.id
+                                                            ? 'bg-emerald-500 text-white'
+                                                            : 'bg-slate-100 text-slate-400'
+                                                )}
+                                            >
+                                                {currentStep > step.id ? (
+                                                    <Check className="w-4 h-4" />
+                                                ) : (
+                                                    <step.icon className="w-4 h-4" />
+                                                )}
+                                            </div>
+                                            {index < STEPS.length - 1 && (
+                                                <div
+                                                    className={clsx(
+                                                        'flex-1 h-1 mx-1 rounded-full transition-colors',
+                                                        currentStep > step.id ? 'bg-emerald-500' : 'bg-slate-100'
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Content - Scrollable */}
+                            <div className="flex-1 overflow-y-auto p-5">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={currentStep}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        {currentStep === 1 && (
+                                            <Step1Why
+                                                formData={formData}
+                                                updateField={updateField}
+                                                errors={errors}
+                                            />
+                                        )}
+                                        {currentStep === 2 && (
+                                            <Step2What
+                                                formData={formData}
+                                                updateField={updateField}
+                                                errors={errors}
+                                                categories={categories}
+                                            />
+                                        )}
+                                        {currentStep === 3 && (
+                                            <Step3When
+                                                formData={formData}
+                                                updateField={updateField}
+                                                errors={errors}
+                                            />
+                                        )}
+                                        {currentStep === 4 && (
+                                            <Step4How
+                                                formData={formData}
+                                                updateField={updateField}
+                                                errors={errors}
+                                            />
+                                        )}
+                                    </motion.div>
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex-none p-5 border-t border-slate-100 flex gap-3">
+                                {currentStep > 1 && (
+                                    <button
+                                        onClick={handleBack}
+                                        className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 
+                                                 text-slate-600 font-semibold hover:bg-slate-200 transition-colors"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                        Geri
+                                    </button>
+                                )}
+
+                                {currentStep < 4 ? (
+                                    <button
+                                        onClick={handleNext}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl 
+                                                 bg-gradient-to-r from-violet-600 to-indigo-600 text-white 
+                                                 font-bold shadow-lg shadow-violet-500/30 
+                                                 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all"
+                                    >
+                                        Devam Et
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={isSubmitting}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl 
+                                                 bg-gradient-to-r from-emerald-600 to-teal-600 text-white 
+                                                 font-bold shadow-lg shadow-emerald-500/30 
+                                                 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all
+                                                 disabled:opacity-50"
+                                    >
+                                        {isSubmitting ? (
+                                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Check className="w-5 h-5" />
+                                                Hedefi Oluştur
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    )
+}
+
+// =====================================================
+// Step Components
+// =====================================================
+
+interface StepProps {
+    formData: GoalWizardData
+    updateField: <K extends keyof GoalWizardData>(field: K, value: GoalWizardData[K]) => void
+    errors: Partial<Record<string, string>>
+    categories?: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]
+}
+
+function Step1Why({ formData, updateField }: StepProps) {
+    return (
+        <div className="space-y-6">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 
+                              flex items-center justify-center shadow-lg shadow-rose-500/30">
+                    <Heart className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Bu hedef neden önemli?</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                    Motivasyonunu tanımla - zor zamanlarda seni ayakta tutacak.
+                </p>
+            </div>
+
+            <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                    <Lightbulb className="w-4 h-4 text-amber-500" />
+                    Motivasyonun Nedir?
+                </label>
+                <textarea
+                    value={formData.motivation}
+                    onChange={(e) => updateField('motivation', e.target.value)}
+                    rows={3}
+                    placeholder="Örn: Daha sağlıklı olmak istiyorum çünkü çocuklarımla oynayabilmek istiyorum..."
+                    className="ethereal-input resize-none"
+                />
+            </div>
+
+            <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                    <Star className="w-4 h-4 text-violet-500" />
+                    Ben ... olan biriyim
+                </label>
+                <input
+                    type="text"
+                    value={formData.identity_statement}
+                    onChange={(e) => updateField('identity_statement', e.target.value)}
+                    placeholder="Örn: sağlıklı yaşayan"
+                    className="ethereal-input"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {IDENTITY_TEMPLATES.map((template) => (
+                        <button
+                            key={template}
+                            type="button"
+                            onClick={() => updateField('identity_statement', template)}
+                            className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 
+                                     hover:bg-violet-100 hover:text-violet-700 transition-colors"
+                        >
+                            {template}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
+                <p className="text-sm text-amber-800">
+                    💡 <strong>İpucu:</strong> "Neden" sorusunu cevaplamak, hedefe bağlılığını %42 artırır.
+                </p>
+            </div>
+        </div>
+    )
+}
+
+function Step2What({ formData, updateField, errors, categories }: StepProps) {
+    return (
+        <div className="space-y-5">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-slate-800">Hedefini Tanımla</h3>
+                <p className="text-sm text-slate-500 mt-1">Net ve ölçülebilir bir hedef belirle.</p>
+            </div>
+
+            {/* Title */}
+            <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                    <Target className="w-4 h-4" />
+                    Hedef Başlığı *
+                </label>
+                <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => updateField('title', e.target.value)}
+                    placeholder="Örn: Haftada 3 gün spor yap"
+                    className="ethereal-input"
+                />
+                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+            </div>
+
+            {/* Description */}
+            <div>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Açıklama</label>
+                <textarea
+                    value={formData.description}
+                    onChange={(e) => updateField('description', e.target.value)}
+                    rows={2}
+                    placeholder="Detaylar..."
+                    className="ethereal-input resize-none"
+                />
+            </div>
+
+            {/* Target Value & Unit */}
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Hedef Değer</label>
+                    <input
+                        type="number"
+                        value={formData.target_value ?? ''}
+                        onChange={(e) => updateField('target_value', e.target.value ? Number(e.target.value) : undefined)}
+                        min="0"
+                        placeholder="Örn: 3"
+                        className="ethereal-input"
+                    />
+                </div>
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Birim</label>
+                    <input
+                        type="text"
+                        value={formData.unit}
+                        onChange={(e) => updateField('unit', e.target.value)}
+                        placeholder="gün, saat, km..."
+                        className="ethereal-input"
+                    />
+                </div>
+            </div>
+
+            {/* Period */}
+            <div>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Periyot</label>
+                <div className="grid grid-cols-4 gap-2">
+                    {PERIOD_OPTIONS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateField('period', option.value)}
+                            className={clsx(
+                                'p-3 rounded-xl text-center transition-all',
+                                formData.period === option.value
+                                    ? 'ring-2 shadow-lg'
+                                    : 'bg-slate-50 hover:bg-slate-100'
+                            )}
+                            style={{
+                                backgroundColor: formData.period === option.value ? `${option.color}15` : undefined,
+                                boxShadow: formData.period === option.value
+                                    ? `0 0 0 2px ${option.color}, 0 10px 15px -3px rgba(0,0,0,0.1)`
+                                    : undefined,
+                                color: formData.period === option.value ? option.color : undefined
+                            }}
+                        >
+                            <div className="text-xl mb-1">{option.emoji}</div>
+                            <div className="text-xs font-medium">{option.label}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Category */}
+            {categories && categories.length > 0 && (
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Kategori</label>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => updateField('category_id', '')}
+                            className={clsx(
+                                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                                !formData.category_id
+                                    ? 'bg-slate-200 text-slate-700 ring-2 ring-slate-400'
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            )}
+                        >
+                            Yok
+                        </button>
+                        {categories.map(cat => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => updateField('category_id', cat.id)}
+                                className="px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                                style={{
+                                    backgroundColor: formData.category_id === cat.id ? cat.color_code : `${cat.color_code}20`,
+                                    color: formData.category_id === cat.id ? '#fff' : cat.color_code,
+                                    boxShadow: formData.category_id === cat.id ? `0 4px 12px ${cat.color_code}40` : 'none'
+                                }}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+function Step3When({ formData, updateField, errors }: StepProps) {
+    return (
+        <div className="space-y-5">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-slate-800">Zamanlamanı Ayarla</h3>
+                <p className="text-sm text-slate-500 mt-1">Ne zaman ve nasıl çalışacaksın?</p>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                        <Calendar className="w-4 h-4" />
+                        Başlangıç *
+                    </label>
+                    <input
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) => updateField('start_date', e.target.value)}
+                        className="ethereal-input"
+                    />
+                    {errors.start_date && <p className="text-xs text-red-500 mt-1">{errors.start_date}</p>}
+                </div>
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-2 block">Bitiş</label>
+                    <input
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => updateField('end_date', e.target.value)}
+                        className="ethereal-input"
+                    />
+                </div>
+            </div>
+
+            {/* Time of Day */}
+            <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                    <Clock className="w-4 h-4" />
+                    En İyi Zaman Dilimi
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                    {TIME_OF_DAY_OPTIONS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateField('best_time_of_day', option.value)}
+                            className={clsx(
+                                'p-3 rounded-xl text-left transition-all',
+                                formData.best_time_of_day === option.value
+                                    ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
+                            )}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">{option.emoji}</span>
+                                <div>
+                                    <div className="text-sm font-medium">{option.label}</div>
+                                    <div className="text-xs opacity-70">{option.time}</div>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Difficulty */}
+            <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
+                    <Zap className="w-4 h-4" />
+                    Zorluk Seviyesi
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                    {DIFFICULTY_OPTIONS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateField('difficulty_level', option.value)}
+                            className={clsx(
+                                'p-3 rounded-xl text-center transition-all',
+                                formData.difficulty_level === option.value
+                                    ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
+                            )}
+                        >
+                            <div className="text-xl mb-1">{option.emoji}</div>
+                            <div className="text-xs font-medium">{option.label}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function Step4How({ formData, updateField }: StepProps) {
+    const addMilestone = () => {
+        updateField('milestones', [
+            ...formData.milestones,
+            { title: '', target_value: 0 }
+        ])
+    }
+
+    const updateMilestone = (index: number, field: 'title' | 'target_value', value: string | number) => {
+        const updated = [...formData.milestones]
+        updated[index] = { ...updated[index], [field]: value }
+        updateField('milestones', updated)
+    }
+
+    const removeMilestone = (index: number) => {
+        updateField('milestones', formData.milestones.filter((_, i) => i !== index))
+    }
+
+    return (
+        <div className="space-y-5">
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-slate-800">Ara Hedefler</h3>
+                <p className="text-sm text-slate-500 mt-1">Büyük hedefi küçük adımlara böl.</p>
+            </div>
+
+            <div className="space-y-3">
+                {formData.milestones.map((milestone, index) => (
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 group"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold">
+                            {index + 1}
+                        </div>
+                        <input
+                            type="text"
+                            value={milestone.title}
+                            onChange={(e) => updateMilestone(index, 'title', e.target.value)}
+                            placeholder="Ara hedef adı"
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700"
+                        />
+                        <input
+                            type="number"
+                            value={milestone.target_value || ''}
+                            onChange={(e) => updateMilestone(index, 'target_value', Number(e.target.value))}
+                            placeholder="Değer"
+                            className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm text-center"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => removeMilestone(index)}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 text-red-500 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </motion.div>
+                ))}
+            </div>
+
+            <button
+                type="button"
+                onClick={addMilestone}
+                className="w-full py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 
+                         hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 transition-all"
+            >
+                + Ara Hedef Ekle
+            </button>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                <p className="text-sm text-blue-800">
+                    💡 <strong>İpucu:</strong> %25, %50, %75 gibi ara hedefler motivasyonunu artırır.
+                </p>
+            </div>
+        </div>
+    )
+}

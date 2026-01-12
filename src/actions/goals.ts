@@ -153,6 +153,7 @@ export async function getGoalById(goalId: string): Promise<GoalWithDetails | nul
 
 /**
  * Create a new goal
+ * Backwards compatible - handles case where enhanced columns don't exist yet
  */
 export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise<Goal | null> {
     console.log('[DEBUG createGoal] Input data:', goalData)
@@ -160,27 +161,62 @@ export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise
     const { client, user } = await getAuthenticatedClient()
     console.log('[DEBUG createGoal] User ID:', user.id)
 
-    const insertData = {
-        ...goalData,
-        user_id: user.id
+    // Separate core fields from enhanced fields
+    // Core fields exist in original schema
+    const coreFields = {
+        user_id: user.id,
+        title: goalData.title,
+        description: goalData.description ?? null,
+        target_value: goalData.target_value ?? null,
+        current_value: goalData.current_value ?? 0,
+        unit: goalData.unit ?? null,
+        period: goalData.period ?? 'weekly',
+        is_completed: goalData.is_completed ?? false,
+        start_date: goalData.start_date,
+        end_date: goalData.end_date ?? null,
+        category_id: goalData.category_id ?? null
     }
-    console.log('[DEBUG createGoal] Insert data:', insertData)
 
-    const { data, error } = await client
+    // Enhanced fields from Expert Council update (may not exist in DB yet)
+    const rawData = goalData as Record<string, unknown>
+    const enhancedFields = {
+        motivation: typeof rawData.motivation === 'string' ? rawData.motivation : null,
+        identity_statement: typeof rawData.identity_statement === 'string' ? rawData.identity_statement : null,
+        best_time_of_day: typeof rawData.best_time_of_day === 'string' ? rawData.best_time_of_day as 'morning' | 'afternoon' | 'evening' | 'anytime' : 'anytime' as const,
+        difficulty_level: typeof rawData.difficulty_level === 'string' ? rawData.difficulty_level as 'easy' | 'medium' | 'hard' | 'extreme' : 'medium' as const,
+        streak_count: 0,
+        longest_streak: 0,
+        last_activity_date: null as string | null
+    }
+
+    // First try with all fields (enhanced schema)
+    const fullInsertData = { ...coreFields, ...enhancedFields }
+    console.log('[DEBUG createGoal] Attempting with enhanced schema...')
+
+    let result = await client
         .from('goals')
-        .insert(insertData)
+        .insert(fullInsertData)
         .select()
         .single()
 
-    console.log('[DEBUG createGoal] Result:', { data, error })
+    // If enhanced fields fail (schema not updated), fallback to core-only
+    if (result.error && result.error.message.includes('schema cache')) {
+        console.log('[DEBUG createGoal] Enhanced schema not available, falling back to core fields...')
 
-    if (error) {
-        console.error('[ERROR createGoal]:', error)
-        throw new Error(`Failed to create goal: ${error.message}`)
+        result = await client
+            .from('goals')
+            .insert(coreFields)
+            .select()
+            .single()
     }
 
-    console.log('[DEBUG createGoal] Successfully created goal:', data?.id)
-    return data
+    if (result.error) {
+        console.error('[ERROR createGoal]:', result.error)
+        throw new Error(`Failed to create goal: ${result.error.message}`)
+    }
+
+    console.log('[DEBUG createGoal] Successfully created goal:', result.data?.id)
+    return result.data
 }
 
 /**

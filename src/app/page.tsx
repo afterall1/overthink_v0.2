@@ -13,12 +13,12 @@ import TodayFocus from "@/components/hud/TodayFocus"
 import UpcomingStream from "@/components/hud/UpcomingStream"
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
-import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip } from "@/components/hud/Goals"
+import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard } from "@/components/hud/Goals"
 import { AnimatePresence } from "framer-motion"
 import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails } from '@/types/database.types'
 import { getEventsByDateRange, createEvent, updateEventStatus, updateEvent, deleteEvent } from "@/actions/events"
 import { getLogsByDateRange, createLog, deleteLog } from "@/actions/logs"
-import { getActiveGoals, createGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
+import { getActiveGoals, createGoal, updateGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
 import { getCategories } from "@/actions/categories"
 import { startOfDay, endOfDay, addDays, isSameDay } from 'date-fns'
 
@@ -70,36 +70,26 @@ export default function Home() {
 
   // Goals state
   const [isGoalsOpen, setIsGoalsOpen] = useState(false)
-  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false) // Legacy modal for edit
+  const [isGoalWizardOpen, setIsGoalWizardOpen] = useState(false) // New wizard for create
+  const [editingGoal, setEditingGoal] = useState<GoalWithDetails | null>(null) // Goal being edited
   const [goals, setGoals] = useState<GoalWithDetails[]>([])
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null) // [NEW] Lifted State
   const [categories, setCategories] = useState<Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]>([])
   const [isGoalsLoading, setIsGoalsLoading] = useState(false)
 
   const fetchGoals = useCallback(async () => {
     setIsGoalsLoading(true)
-    console.log('[CLIENT DEBUG] fetchGoals started')
     try {
       const [goalsData, categoriesData] = await Promise.all([
         getActiveGoals(),
         getCategories()
       ])
-      console.log('[CLIENT DEBUG] fetchGoals result:', {
-        goalsData,
-        goalsCount: goalsData?.length || 0,
-        firstGoal: goalsData?.[0] || null,
-        categoriesData
-      })
-      console.log('[CLIENT DEBUG] Goals count:', goalsData?.length || 0)
-
-      // If goals are empty but categories work, it's an RLS issue
-      if (goalsData?.length === 0 && categoriesData?.length > 0) {
-        console.warn('[CLIENT DEBUG] ⚠️ POSSIBLE RLS ISSUE: Categories load but goals empty!')
-      }
 
       setGoals(goalsData)
       setCategories(categoriesData)
     } catch (error) {
-      console.error("[CLIENT DEBUG] Failed to fetch goals", error)
+      console.error("Failed to fetch goals", error)
     } finally {
       setIsGoalsLoading(false)
     }
@@ -235,9 +225,9 @@ export default function Home() {
           <GoalsStrip
             goals={goals}
             onGoalClick={(goal) => {
-              setIsGoalsOpen(true)
+              setSelectedGoalId(goal.id)
             }}
-            onCreateClick={() => setIsGoalModalOpen(true)}
+            onCreateClick={() => setIsGoalWizardOpen(true)}
             onViewAllClick={() => setIsGoalsOpen(true)}
             isLoading={isGoalsLoading}
           />
@@ -342,15 +332,24 @@ export default function Home() {
         onClose={() => setIsGoalsOpen(false)}
         goals={goals}
         categories={categories}
-        onCreateClick={() => setIsGoalModalOpen(true)}
-        onGoalClick={(goal) => console.log('Goal clicked:', goal.id)}
+        onCreateClick={() => setIsGoalWizardOpen(true)}
+        selectedGoalId={selectedGoalId}
+        onGoalSelect={setSelectedGoalId}
         onDeleteGoal={async (goalId) => {
           try {
             await deleteGoal(goalId)
+            setSelectedGoalId(null) // Clear selection after delete
             await fetchGoals()
           } catch (error) {
             console.error('Failed to delete goal:', error)
+            throw error // Re-throw for modal to handle
           }
+        }}
+        onEditGoal={(goal) => {
+          // Close detail modal and open GoalModal in edit mode
+          setSelectedGoalId(null)
+          setEditingGoal(goal)
+          setIsGoalModalOpen(true)
         }}
         onToggleMilestone={async (milestoneId) => {
           try {
@@ -370,11 +369,45 @@ export default function Home() {
         }}
         isLoading={isGoalsLoading}
       />
+      {/* Goal Creation Wizard - New Enhanced Flow */}
+      <GoalCreationWizard
+        isOpen={isGoalWizardOpen}
+        onClose={() => setIsGoalWizardOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            const goalPayload = {
+              title: data.title,
+              description: data.description || null,
+              target_value: data.target_value ?? null,
+              unit: data.unit || null,
+              period: data.period,
+              category_id: data.category_id || null,
+              start_date: data.start_date,
+              end_date: data.end_date || null,
+              // New psychological fields
+              motivation: data.motivation || null,
+              identity_statement: data.identity_statement || null,
+              best_time_of_day: data.best_time_of_day || 'anytime',
+              difficulty_level: data.difficulty_level || 'medium'
+            }
+            await createGoal(goalPayload)
+            await fetchGoals()
+          } catch (error) {
+            console.error('Failed to create goal:', error)
+            throw error
+          }
+        }}
+        categories={categories}
+      />
+
+      {/* GoalModal - For editing goals */}
       <GoalModal
         isOpen={isGoalModalOpen}
-        onClose={() => setIsGoalModalOpen(false)}
+        onClose={() => {
+          setIsGoalModalOpen(false)
+          setEditingGoal(null)
+        }}
         onSubmit={async (data) => {
-          console.log('[CLIENT DEBUG] Goal form submitted with data:', data)
           try {
             const goalPayload = {
               title: data.title,
@@ -386,18 +419,22 @@ export default function Home() {
               start_date: data.start_date,
               end_date: data.end_date || null
             }
-            console.log('[CLIENT DEBUG] Calling createGoal with:', goalPayload)
-            const result = await createGoal(goalPayload)
-            console.log('[CLIENT DEBUG] createGoal result:', result)
-            console.log('[CLIENT DEBUG] Refreshing goals list...')
+            if (editingGoal) {
+              // Update existing goal
+              await updateGoal(editingGoal.id, goalPayload)
+            } else {
+              // Create new goal (legacy fallback)
+              await createGoal(goalPayload)
+            }
             await fetchGoals()
-            console.log('[CLIENT DEBUG] Goals refreshed')
+            setEditingGoal(null)
           } catch (error) {
-            console.error('[CLIENT DEBUG] Failed to create goal:', error)
+            console.error('Failed to save goal:', error)
             throw error
           }
         }}
         categories={categories}
+        editingGoal={editingGoal}
       />
 
       {/* AI Council */}
