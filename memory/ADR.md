@@ -862,6 +862,65 @@ GoalCreationWizard'da "Kilo Vermek" template'i seçildiğinde:
 
 ---
 
+## ADR-016: Step 3 UX Simplification - Removing Redundant Selectors
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Expert Council (4/4 Onay)
+
+### Bağlam
+
+GoalCreationWizard Step 3/5'te iki selector vardı:
+1. **En İyi Zaman Dilimi** (`best_time_of_day`): morning, afternoon, evening, anytime
+2. **Zorluk Seviyesi** (`difficulty_level`): easy, medium, hard, extreme
+
+**Problemler:**
+1. `goalCalculator.ts` zaten `feasibilityScore` hesaplıyordu - sistem ile kullanıcı seçimi çakışabilir
+2. `best_time_of_day` değeri hiçbir yerde kullanılmıyordu (quest scheduling YOK)
+3. `difficulty_level` quest/goal logic'inde kullanılmıyordu (template'ten geliyor)
+4. Cognitive load: 8 ekstra karar noktası
+
+### Karar
+
+**Her iki selector da Step 3'ten kaldırıldı:**
+
+1. `GoalWizardData` interface'den field'lar kaldırıldı
+2. `TIME_OF_DAY_OPTIONS` ve `DIFFICULTY_OPTIONS` sabitleri kaldırıldı
+3. `Step3When` bileşeni sadeleştirildi - sadece tarih seçimi + GoalInsightCard
+4. "Akıllı Sistem" bilgi notu eklendi
+
+**NOT:** `goals` veritabanı tablosunda bu sütunlar hala mevcut (legacy, optional). Wizard artık bunları sormasa da, veritabanı şeması değiştirilmedi.
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Koru, ama collapsed yap** | Gelişmiş kullanıcılar erişebilir | Hala UI karmaşıklığı |
+| **Koru, read-only göster** | Şeffaflık | Gereksiz complexity |
+| **Tamamen kaldır ✓** | Temiz UX, DRY | Gelecekte gerekirse tekrar ekle |
+| **Sadece difficulty kaldır** | Kısmi iyileştirme | Tutarsız mantık |
+
+### Sonuçlar
+
+**Pozitif:**
+- UX sadeleşti (8 karar → 0 karar)
+- Sistem tutarlılığı arttı (feasibility tek kaynak)
+- Step 3 scroll azaldı (~300px → ~100px)
+- Cognitive load düştü
+
+**Negatif:**
+- Notification timing için `best_time_of_day` gerekirse Phase 9+'da tekrar eklenmeli
+- Legacy veri: DB'de bu field'lar hala var (backward compatible)
+
+**Dosyalar:**
+- `src/components/hud/Goals/GoalCreationWizard.tsx`
+  - Interface, constants (removed)
+  - Step3When component (simplified)
+- `src/app/page.tsx`
+  - goalPayload field'ları kaldırıldı
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -891,6 +950,6 @@ GoalCreationWizard'da "Kilo Vermek" template'i seçildiğinde:
 
 ---
 
-**Son Güncelleme:** 2026-01-13 11:22 UTC+3
-**Toplam ADR:** 15
+**Son Güncelleme:** 2026-01-13 11:55 UTC+3
+**Toplam ADR:** 16
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     X, ChevronRight, ChevronLeft, Check,
     Target, Heart, Calendar, Flag,
-    Lightbulb, Clock, Zap, Star
+    Lightbulb, Zap, Star, Timer
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
@@ -39,8 +39,6 @@ export interface GoalWizardData {
     // Step 3: When
     start_date: string
     end_date: string
-    best_time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime'
-    difficulty_level: 'easy' | 'medium' | 'hard' | 'extreme'
 
     // Goal Template (optional - if selected, auto-populates other fields)
     goal_template_id: string | null
@@ -81,19 +79,8 @@ const PERIOD_OPTIONS: { value: GoalPeriod; label: string; emoji: string; color: 
     { value: 'yearly', label: 'Yıllık', emoji: '🎯', color: '#F59E0B' }
 ]
 
-const TIME_OF_DAY_OPTIONS = [
-    { value: 'morning', label: 'Sabah', emoji: '🌅', time: '06:00-12:00' },
-    { value: 'afternoon', label: 'Öğleden Sonra', emoji: '☀️', time: '12:00-18:00' },
-    { value: 'evening', label: 'Akşam', emoji: '🌙', time: '18:00-24:00' },
-    { value: 'anytime', label: 'Esnek', emoji: '⏰', time: 'Her zaman' }
-] as const
-
-const DIFFICULTY_OPTIONS = [
-    { value: 'easy', label: 'Kolay', emoji: '🌱', description: 'Küçük adımlarla başla' },
-    { value: 'medium', label: 'Orta', emoji: '💪', description: 'Dengeli zorluk' },
-    { value: 'hard', label: 'Zor', emoji: '🔥', description: 'Kendini zorla' },
-    { value: 'extreme', label: 'Ekstrem', emoji: '⚡', description: 'Sınırları aş' }
-] as const
+// TIME_OF_DAY_OPTIONS and DIFFICULTY_OPTIONS removed
+// System calculates feasibility via goalCalculator.ts automatically
 
 const IDENTITY_TEMPLATES = [
     'Sağlıklı yaşayan biri',
@@ -129,8 +116,6 @@ export default function GoalCreationWizard({
         category_id: '',
         start_date: today,
         end_date: '',
-        best_time_of_day: 'anytime',
-        difficulty_level: 'medium',
         goal_template_id: null,
         milestones: [],
         selected_quest_template_ids: []
@@ -151,8 +136,6 @@ export default function GoalCreationWizard({
                 category_id: '',
                 start_date: today,
                 end_date: '',
-                best_time_of_day: 'anytime',
-                difficulty_level: 'medium',
                 goal_template_id: null,
                 milestones: [],
                 selected_quest_template_ids: []
@@ -1078,7 +1061,7 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                                                         {/* Quick Duration Chips */}
                                                         <div>
                                                             <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
-                                                                <Clock className="w-4 h-4 text-blue-600" />
+                                                                <Timer className="w-4 h-4 text-blue-600" />
                                                                 Süre
                                                             </label>
                                                             <div className="flex flex-wrap gap-2">
@@ -1225,7 +1208,7 @@ function Step3When({ formData, updateField, errors }: StepProps) {
         <div className="space-y-5">
             <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-slate-800">Zamanlamanı Ayarla</h3>
-                <p className="text-sm text-slate-500 mt-1">Ne zaman ve nasıl çalışacaksın?</p>
+                <p className="text-sm text-slate-500 mt-1">Hedefinin başlangıç ve bitiş tarihlerini belirle.</p>
             </div>
 
             {/* Dates */}
@@ -1254,7 +1237,7 @@ function Step3When({ formData, updateField, errors }: StepProps) {
                 </div>
             </div>
 
-            {/* Intelligent Calculation Card */}
+            {/* Intelligent Calculation Card - Shows system-calculated feasibility */}
             {calculation && (
                 <GoalInsightCard calculation={calculation} />
             )}
@@ -1263,66 +1246,19 @@ function Step3When({ formData, updateField, errors }: StepProps) {
             {!calculation && formData.target_value && (
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center">
                     <p className="text-sm text-slate-500">
-                        📅 Bitiş tarihi seçtiğinde akıllı hesaplama göreceğsin
+                        📅 Bitiş tarihi seçtiğinde akıllı hesaplama ve zorluk analizi göreceğsin
                     </p>
                 </div>
             )}
 
-            {/* Time of Day */}
-            <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
-                    <Clock className="w-4 h-4" />
-                    En İyi Zaman Dilimi
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                    {TIME_OF_DAY_OPTIONS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateField('best_time_of_day', option.value)}
-                            className={clsx(
-                                'p-3 rounded-xl text-left transition-all',
-                                formData.best_time_of_day === option.value
-                                    ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
-                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
-                            )}
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">{option.emoji}</span>
-                                <div>
-                                    <div className="text-sm font-medium">{option.label}</div>
-                                    <div className="text-xs opacity-70">{option.time}</div>
-                                </div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Difficulty */}
-            <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
-                    <Zap className="w-4 h-4" />
-                    Zorluk Seviyesi
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                    {DIFFICULTY_OPTIONS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateField('difficulty_level', option.value)}
-                            className={clsx(
-                                'p-3 rounded-xl text-center transition-all',
-                                formData.difficulty_level === option.value
-                                    ? 'bg-violet-100 ring-2 ring-violet-400 text-violet-700'
-                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
-                            )}
-                        >
-                            <div className="text-xl mb-1">{option.emoji}</div>
-                            <div className="text-xs font-medium">{option.label}</div>
-                        </button>
-                    ))}
-                </div>
+            {/* System note about automatic calculation */}
+            <div className="p-3 rounded-xl bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100">
+                <p className="text-xs text-violet-700 flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>
+                        <strong>Akıllı Sistem:</strong> Zorluk seviyesi ve zaman önerileri hedefine göre otomatik hesaplanır.
+                    </span>
+                </p>
             </div>
         </div>
     )

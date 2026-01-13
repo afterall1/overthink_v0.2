@@ -462,11 +462,9 @@ export default function Home() {
               category_id: data.category_id || null,
               start_date: data.start_date,
               end_date: data.end_date || null,
-              // New psychological fields
+              // Psychological fields for motivation
               motivation: data.motivation || null,
-              identity_statement: data.identity_statement || null,
-              best_time_of_day: data.best_time_of_day || 'anytime',
-              difficulty_level: data.difficulty_level || 'medium'
+              identity_statement: data.identity_statement || null
             }
             // Create the goal first
             const newGoal = await createGoal(goalPayload)

@@ -10,9 +10,9 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.25: Goal Creation Auto-Population from Health Profile       ║
+║  PHASE 8.26: Goal Wizard Step 3 UX Simplification                    ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  DRY violation fixed - No redundant input for weight goals           ║
+║  Redundant selectors removed - System auto-calculates feasibility    ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -55,37 +55,41 @@
 | Phase 8.22: Bug Fixes & Data Integrity Refinement | ✅ Tamamlandı | 100% |
 | Phase 8.23: AI-Powered Health Quest System | ✅ Tamamlandı | 100% |
 | Phase 8.24: Context-Aware Health UI Integration | ✅ Tamamlandı | 100% |
-| **Phase 8.25: Goal Creation Auto-Population** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.25: Goal Creation Auto-Population | ✅ Tamamlandı | 100% |
+| **Phase 8.26: Step 3 UX Simplification** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Oturum 2)
+## Session Summary: 2026-01-13 (Oturum 3)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. DRY İhlali Analizi & Auto-Population (Phase 8.25) ✅
-**Problem:** Kullanıcı HealthProfileWizard'da hedef kilo ve hız belirliyordu, sonra GoalCreationWizard'da aynı bilgiler tekrar soruluyordu.
+#### 1. Step 3 UX Simplification (Phase 8.26) ✅
+**Problem:** GoalCreationWizard Step 3'te "En İyi Zaman Dilimi" ve "Zorluk Seviyesi" seçimleri vardı. Ancak `goalCalculator.ts` zaten feasibility hesaplıyordu - çakışma riski vardı.
 
-**Expert Council Kararı:** Profil varsa input sorma, otomatik doldur veya READ-ONLY summary göster.
+**Expert Council Kararı (4/4):** Her iki selector da kaldırılmalı:
+- `best_time_of_day`: Hiçbir yerde kullanılmıyordu
+- `difficulty_level`: Sistem zaten `feasibilityScore` hesaplıyordu
 
 **Çözüm:**
-1. `autoPopulated` state eklendi
-2. `handleTemplateSelect` fonksiyonuna auto-population logic eklendi
-3. Weight goals için (lose_weight, gain_muscle) profil verilerinden otomatik hesaplama
-4. READ-ONLY summary UI - profil varsa input YOK
+1. `GoalWizardData` interface'den `best_time_of_day` ve `difficulty_level` kaldırıldı
+2. `TIME_OF_DAY_OPTIONS` ve `DIFFICULTY_OPTIONS` sabitleri kaldırıldı
+3. `Step3When` bileşeni sadeleştirildi - sadece tarih seçimi + GoalInsightCard
+4. "Akıllı Sistem" notu eklendi - otomatik hesaplamayı açıklıyor
+5. `page.tsx` goalPayload güncellendi
 
 **Değiştirilen Dosyalar:**
 
 | Dosya | Değişiklik |
 |-------|------------|
-| `GoalCreationWizard.tsx` | Auto-population logic + READ-ONLY summary UI |
+| `GoalCreationWizard.tsx` | Interface, constants, Step3When UI |
+| `page.tsx` | goalPayload field'ları kaldırıldı |
 
-**Teknik Detaylar:**
-- `weight_kg - target_weight_kg` → hedef değer
-- `goal_pace` → süre hesaplama (slow: 0.3, moderate: 0.5, aggressive: 0.75 kg/hafta)
-- `setAutoPopulated(true)` → READ-ONLY summary göster
-- `!autoPopulated` → editable inputs göster
+**UI İyileştirmeleri:**
+- Step 3 scroll: ~300px → ~100px
+- Karar sayısı: 8 opsiyon → 0
+- Cognitive load: Düşürüldü
 
 ---
 
@@ -112,7 +116,7 @@ Exit code: 0
 
 ---
 
-**Son Güncelleme:** 2026-01-13 11:22 UTC+3
+**Son Güncelleme:** 2026-01-13 11:50 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** Phase 8.25 tamamlandı. Weight goals için profil varsa otomatik değer dolumu, READ-ONLY summary gösteriliyor.
+**Durum:** Phase 8.26 tamamlandı. "En İyi Zaman Dilimi" ve "Zorluk Seviyesi" seçicileri kaldırıldı. Sistem feasibility'yi otomatik hesaplıyor.
 
