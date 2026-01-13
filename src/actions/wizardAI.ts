@@ -155,15 +155,31 @@ async function fetchHealthProfile(userId: string): Promise<HealthProfile | null>
 
 /**
  * Build AI context from wizard data and health profile
+ * IMPORTANT: Wizard goal type takes precedence over healthProfile.primary_goal
+ * This ensures muscle_gain gets surplus, not deficit from a weight_loss profile
  */
 function buildAIContext(
     wizard: WizardContext,
     healthProfile: HealthProfile | null
 ): UserHealthContext {
+    // STEP 1: Always determine goal from wizard data first
+    const wizardGoalType = inferGoalFromWizard(wizard)
+
     // If health profile exists, use it for rich context
     if (healthProfile) {
-        const metrics = calculateHealthMetrics(healthProfile)
         const age = calculateAge(healthProfile.birth_date)
+
+        // STEP 2: Create modified profile with WIZARD goal type, not profile's goal
+        // This ensures calorie calculations match the wizard's goal, not the profile's legacy goal
+        const modifiedProfile: HealthProfile = {
+            ...healthProfile,
+            primary_goal: mapGoalTypeToHealthGoal(wizardGoalType),
+            // Keep pace from profile if available, otherwise moderate
+            goal_pace: healthProfile.goal_pace || 'moderate'
+        }
+
+        // STEP 3: Calculate metrics using the WIZARD goal type
+        const metrics = calculateHealthMetrics(modifiedProfile)
 
         // Calculate duration in days
         let durationDays = 30
@@ -182,12 +198,12 @@ function buildAIContext(
             bmr_kcal: metrics.bmr_kcal,
             tdee_kcal: metrics.tdee_kcal,
             target_daily_kcal: metrics.target_daily_kcal,
-            daily_adjustment: metrics.target_daily_kcal - metrics.tdee_kcal,
-            protein_g: Math.round((metrics.target_daily_kcal * 0.30) / 4),
-            carbs_g: Math.round((metrics.target_daily_kcal * 0.40) / 4),
-            fat_g: Math.round((metrics.target_daily_kcal * 0.30) / 9),
+            daily_adjustment: metrics.daily_adjustment, // Now correctly calculated from wizard goal
+            protein_g: metrics.macros.protein_g,
+            carbs_g: metrics.macros.carbs_g,
+            fat_g: metrics.macros.fat_g,
             water_liters: Math.round(healthProfile.weight_kg * 0.033 * 10) / 10,
-            primary_goal: healthProfile.primary_goal || inferGoalFromWizard(wizard),
+            primary_goal: wizardGoalType, // Use wizard goal, not profile goal
             target_weight_kg: healthProfile.target_weight_kg,
             goal_pace: healthProfile.goal_pace || 'moderate',
             health_conditions: healthProfile.health_conditions || [],
@@ -198,6 +214,11 @@ function buildAIContext(
     }
 
     // Fallback: Create minimal context from wizard data only
+    // Use wizard goal to determine if surplus or deficit
+    const isDeficitGoal = wizardGoalType === 'weight_loss'
+    const isSurplusGoal = wizardGoalType === 'muscle_gain' || wizardGoalType === 'weight_gain'
+    const defaultAdjustment = isDeficitGoal ? -400 : (isSurplusGoal ? 300 : 0)
+
     return {
         age_years: 30, // Default
         biological_sex: 'male',
@@ -206,13 +227,13 @@ function buildAIContext(
         activity_level: 'moderate',
         bmr_kcal: 1800,
         tdee_kcal: 2400,
-        target_daily_kcal: 2000,
-        daily_adjustment: -400,
+        target_daily_kcal: 2400 + defaultAdjustment,
+        daily_adjustment: defaultAdjustment,
         protein_g: 150,
         carbs_g: 200,
         fat_g: 67,
         water_liters: 2.5,
-        primary_goal: inferGoalFromWizard(wizard),
+        primary_goal: wizardGoalType,
         goal_pace: 'moderate',
         health_conditions: [],
         dietary_restrictions: [],
@@ -222,17 +243,71 @@ function buildAIContext(
 }
 
 /**
+ * Map goal type string to PrimaryGoal enum for healthCalculator
+ */
+function mapGoalTypeToHealthGoal(goalType: string): 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance' {
+    switch (goalType) {
+        case 'weight_loss':
+            return 'weight_loss'
+        case 'muscle_gain':
+            return 'muscle_gain'
+        case 'weight_gain':
+            return 'weight_gain'
+        case 'endurance':
+            return 'endurance'
+        // For non-weight goals, use maintenance (no calorie adjustment)
+        case 'drink_water':
+        case 'reduce_sugar':
+        case 'intermittent_fasting':
+        case 'activity':
+        case 'eat_healthy':
+        default:
+            return 'maintenance'
+    }
+}
+
+/**
  * Infer goal type from wizard data
+ * Uses template slug mapping first, then title-based inference
  */
 function inferGoalFromWizard(wizard: WizardContext): string {
     const title = wizard.goal_title.toLowerCase()
     const category = wizard.category_slug?.toLowerCase() || ''
 
+    // Priority 1: Detect from template slug if available (use goal-specific context mapping)
+    // Template slugs like 'drink_water', 'reduce_sugar' should be detected here
+
+    // Priority 2: Title-based detection for specific goal types
+    // Hydration goals
+    if (title.includes('su') || title.includes('water') || title.includes('hidrasyon') || title.includes('litre')) {
+        return 'drink_water'
+    }
+
+    // Sugar reduction goals
+    if (title.includes('şeker') || title.includes('sugar') || title.includes('tatlı')) {
+        return 'reduce_sugar'
+    }
+
+    // Weight goals
     if (title.includes('kilo') && title.includes('ver')) return 'weight_loss'
     if (title.includes('kilo') && title.includes('al')) return 'weight_gain'
-    if (title.includes('kas') || title.includes('muscle')) return 'muscle_gain'
+
+    // Muscle goals
+    if (title.includes('kas') || title.includes('muscle') || title.includes('spor')) return 'muscle_gain'
+
+    // Fasting goals
+    if (title.includes('oruç') || title.includes('fasting') || title.includes('aralıklı')) return 'intermittent_fasting'
+
+    // Activity goals
+    if (title.includes('adım') || title.includes('steps') || title.includes('yürü')) return 'activity'
+
+    // Endurance goals
     if (title.includes('koş') || title.includes('maraton')) return 'endurance'
-    if (category === 'food' || category === 'sport') return 'weight_loss'
+
+    // Priority 3: Category-based fallback (only for truly generic cases)
+    // This is the LAST resort, not the first
+    if (category === 'sport') return 'muscle_gain'
+    if (category === 'food') return 'eat_healthy'  // Changed from weight_loss
 
     return 'maintenance'
 }

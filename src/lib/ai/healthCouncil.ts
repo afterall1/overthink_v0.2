@@ -7,6 +7,8 @@
 
 import { generateCompletion, type ChatMessage } from './aiService'
 import { type HealthCalculations } from '../healthCalculator'
+import { composeSystemPrompt, buildGoalContextMessage } from './prompts'
+import type { GoalSpecificContext, GoalType } from './goalSpecificContexts'
 
 // =====================================================
 // Types
@@ -465,4 +467,291 @@ function getDefaultQuests(context: UserHealthContext): AIGeneratedQuest[] {
     ]
 
     return quests
+}
+
+// =====================================================
+// Goal-Specific Quest Generation (NEW MODULAR SYSTEM)
+// =====================================================
+
+/**
+ * Generate quests using the new modular goal-specific prompt system.
+ * This function should be used for goals with specialized prompts.
+ */
+export async function generateGoalSpecificQuests(
+    context: GoalSpecificContext
+): Promise<AIHealthResponse> {
+    try {
+        // 1. Compose system prompt (base + goal-specific)
+        const systemPrompt = composeSystemPrompt(context.goal_type)
+
+        // 2. Build goal-specific user context message
+        const userMessage = buildGoalContextMessage(context)
+
+        // 3. Prepare messages for AI
+        const messages: ChatMessage[] = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+        ]
+
+        // 4. Call AI with goal-specific prompts
+        const response = await generateCompletion(messages, {
+            temperature: 0.7,
+            maxTokens: 3000
+        })
+
+        if (!response.success) {
+            return {
+                success: false,
+                daily_quests: getGoalSpecificDefaultQuests(context.goal_type),
+                nutrition_plan: getGoalSpecificNutritionPlan(context),
+                warnings: ['AI servisi yanıt veremedi.'],
+                motivational_tip: getGoalSpecificMotivation(context.goal_type),
+                council_notes: '',
+                error: response.error
+            }
+        }
+
+        // Parse JSON response
+        const parsed = parseAIResponse(response.content)
+
+        if (!parsed) {
+            return {
+                success: false,
+                daily_quests: getGoalSpecificDefaultQuests(context.goal_type),
+                nutrition_plan: getGoalSpecificNutritionPlan(context),
+                warnings: ['AI yanıtı işlenemedi, varsayılan görevler oluşturuldu.'],
+                motivational_tip: getGoalSpecificMotivation(context.goal_type),
+                council_notes: '',
+                error: 'Failed to parse AI response'
+            }
+        }
+
+        // Validate quests (reuse existing validation)
+        const validatedQuests = validateGoalSpecificQuests(parsed.daily_quests || [], context.goal_type)
+
+        return {
+            success: true,
+            daily_quests: validatedQuests,
+            nutrition_plan: parsed.nutrition_plan || getGoalSpecificNutritionPlan(context),
+            warnings: parsed.warnings || [],
+            motivational_tip: parsed.motivational_tip || getGoalSpecificMotivation(context.goal_type),
+            council_notes: parsed.council_notes || ''
+        }
+
+    } catch (error) {
+        console.error('[AI Health Council] Goal-specific error:', error)
+        return {
+            success: false,
+            daily_quests: getGoalSpecificDefaultQuests(context.goal_type),
+            nutrition_plan: getGoalSpecificNutritionPlan(context),
+            warnings: ['AI servisi geçici olarak kullanılamıyor.'],
+            motivational_tip: getGoalSpecificMotivation(context.goal_type),
+            council_notes: '',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+// =====================================================
+// Goal-Specific Helpers
+// =====================================================
+
+function validateGoalSpecificQuests(
+    quests: AIGeneratedQuest[],
+    goalType: GoalType
+): AIGeneratedQuest[] {
+    if (!Array.isArray(quests)) return getGoalSpecificDefaultQuests(goalType)
+
+    return quests.map(quest => ({
+        title: String(quest.title || 'Görev').slice(0, 100),
+        description: String(quest.description || '').slice(0, 500),
+        category: validateCategory(quest.category),
+        difficulty: validateDifficulty(quest.difficulty),
+        estimated_minutes: Math.min(Math.max(Number(quest.estimated_minutes) || 15, 5), 120),
+        calorie_impact: Number(quest.calorie_impact) || 0,
+        xp_reward: Math.min(Math.max(Number(quest.xp_reward) || 20, 5), 100),
+        emoji: String(quest.emoji || '✨').slice(0, 4),
+        scientific_rationale: String(quest.scientific_rationale || '').slice(0, 300),
+        is_morning: Boolean(quest.is_morning),
+        is_evening: Boolean(quest.is_evening)
+    }))
+}
+
+function getGoalSpecificDefaultQuests(goalType: GoalType): AIGeneratedQuest[] {
+    switch (goalType) {
+        case 'reduce_sugar':
+            return [
+                {
+                    title: 'Bugün Gazlı İçecek İçme',
+                    description: 'Gazlı içecekler yerine su, maden suyu veya bitki çayı tercih et.',
+                    category: 'habit',
+                    difficulty: 'medium',
+                    estimated_minutes: 0,
+                    calorie_impact: -150,
+                    xp_reward: 30,
+                    emoji: '🚫',
+                    scientific_rationale: 'Bir kutu gazlı içecek ~39g şeker içerir, günlük limitin üzerinde.',
+                    is_morning: true,
+                    is_evening: true
+                },
+                {
+                    title: 'Şeker Etiketlerini Kontrol Et',
+                    description: '3 ürünün besin etiketini oku ve şeker miktarını kontrol et.',
+                    category: 'tracking',
+                    difficulty: 'easy',
+                    estimated_minutes: 10,
+                    calorie_impact: 0,
+                    xp_reward: 20,
+                    emoji: '📖',
+                    scientific_rationale: 'Farkındalık şeker tüketimini azaltmanın ilk adımıdır.',
+                    is_morning: false,
+                    is_evening: false
+                },
+                {
+                    title: 'Tatlı Yerine Meyve Ye',
+                    description: 'Tatlı isteği geldiğinde bir porsiyon taze meyve (elma, çilek, portakal) ye.',
+                    category: 'nutrition',
+                    difficulty: 'easy',
+                    estimated_minutes: 5,
+                    calorie_impact: -100,
+                    xp_reward: 20,
+                    emoji: '🍎',
+                    scientific_rationale: 'Meyvedeki doğal şeker lif ile birlikte gelir ve kan şekerini yavaş yükseltir.',
+                    is_morning: false,
+                    is_evening: false
+                },
+                {
+                    title: 'Kahveni Şekersiz İç',
+                    description: 'Kahve veya çayına şeker eklemeden iç. Tarçın ekleyebilirsin.',
+                    category: 'habit',
+                    difficulty: 'medium',
+                    estimated_minutes: 0,
+                    calorie_impact: -50,
+                    xp_reward: 25,
+                    emoji: '☕',
+                    scientific_rationale: 'Günde 3 şekerli kahve = 30-45g ekstra şeker.',
+                    is_morning: true,
+                    is_evening: false
+                },
+                {
+                    title: 'Gece Atıştırmasına Hayır',
+                    description: 'Akşam yemeğinden sonra tatlı veya atıştırmalık yeme.',
+                    category: 'habit',
+                    difficulty: 'hard',
+                    estimated_minutes: 0,
+                    calorie_impact: -200,
+                    xp_reward: 35,
+                    emoji: '🌙',
+                    scientific_rationale: 'Gece yenen şeker metabolizmayı olumsuz etkiler ve yağ depolanmasını artırır.',
+                    is_morning: false,
+                    is_evening: true
+                }
+            ]
+
+        case 'weight_loss':
+            return [
+                {
+                    title: '30 Dakika Yürüyüş',
+                    description: 'Tempolu bir yürüyüş yap. Nefes alıp verirken konuşabilecek tempoda.',
+                    category: 'exercise',
+                    difficulty: 'easy',
+                    estimated_minutes: 30,
+                    calorie_impact: -150,
+                    xp_reward: 30,
+                    emoji: '🚶',
+                    scientific_rationale: 'Düşük yoğunluklu kardiyo yağ yakımını optimize eder.',
+                    is_morning: false,
+                    is_evening: false
+                },
+                {
+                    title: 'Porsiyon Kontrolü',
+                    description: 'Öğle yemeğinde küçük tabak kullan veya porsiyonu %20 azalt.',
+                    category: 'nutrition',
+                    difficulty: 'medium',
+                    estimated_minutes: 0,
+                    calorie_impact: -100,
+                    xp_reward: 25,
+                    emoji: '🍽️',
+                    scientific_rationale: 'Küçük tabak kullanmak bilinçsiz kalori alımını azaltır.',
+                    is_morning: false,
+                    is_evening: false
+                },
+                {
+                    title: 'Kalori Takibi',
+                    description: 'Bugün yediklerini bir uygulamada veya defterde takip et.',
+                    category: 'tracking',
+                    difficulty: 'medium',
+                    estimated_minutes: 15,
+                    calorie_impact: 0,
+                    xp_reward: 25,
+                    emoji: '📊',
+                    scientific_rationale: 'Kalori takibi farkındalığı artırır ve hedefte kalmayı sağlar.',
+                    is_morning: false,
+                    is_evening: true
+                },
+                {
+                    title: '2.5L Su İç',
+                    description: 'Gün boyunca düzenli aralıklarla su iç.',
+                    category: 'habit',
+                    difficulty: 'easy',
+                    estimated_minutes: 0,
+                    calorie_impact: 0,
+                    xp_reward: 15,
+                    emoji: '💧',
+                    scientific_rationale: 'Su tokluk hissi verir ve metabolizmayı hızlandırır.',
+                    is_morning: true,
+                    is_evening: true
+                }
+            ]
+
+        default:
+            return [
+                {
+                    title: 'Günlük Hedefine Odaklan',
+                    description: 'Bugün hedefine yönelik bir adım at.',
+                    category: 'habit',
+                    difficulty: 'easy',
+                    estimated_minutes: 15,
+                    calorie_impact: 0,
+                    xp_reward: 20,
+                    emoji: '🎯',
+                    scientific_rationale: 'Küçük adımlar büyük değişimlerin temelidir.',
+                    is_morning: true,
+                    is_evening: false
+                }
+            ]
+    }
+}
+
+function getGoalSpecificMotivation(goalType: GoalType): string {
+    switch (goalType) {
+        case 'reduce_sugar':
+            return 'Her şekersiz gün, vücudunun şükran duyduğu bir gün! 🍬❌'
+        case 'weight_loss':
+            return 'Yolculuk devam ediyor, her adım seni hedefe yaklaştırıyor! 💪'
+        case 'muscle_gain':
+            return 'Kaslar mutfakta yapılır, antrenmanda şekillenir! 🏋️'
+        case 'intermittent_fasting':
+            return 'Oruç süren sona erdiğinde gurur duyacaksın! ⏰'
+        case 'drink_water':
+            return 'Su hayattır, bugün vücuduna ihtiyacı olan suyu ver! 💧'
+        case 'activity':
+            return 'Hareket et, hayata enerji kat! 🏃'
+        case 'eat_healthy':
+            return 'Sağlıklı beslenme bir kilo maratonu değil, yaşam tarzı! 🥗'
+        default:
+            return 'Bugün de harika bir gün olacak! ✨'
+    }
+}
+
+function getGoalSpecificNutritionPlan(context: GoalSpecificContext): AINutritionPlan {
+    // Default minimal nutrition plan for non-weight goals
+    return {
+        daily_calorie_target: 0,
+        protein_grams: 0,
+        carbs_grams: 0,
+        fat_grams: 0,
+        meal_suggestions: ['Dengeli beslen', 'Bol sebze tüket', 'Su içmeyi unutma'],
+        hydration_goal_liters: 2.5
+    }
 }

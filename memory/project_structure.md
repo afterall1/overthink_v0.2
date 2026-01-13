@@ -136,6 +136,16 @@ overthink_v0.2/
 │   │   │   │   ├── AIQuestGeneratorModal.tsx # 🆕 AI quest generation modal
 │   │   │   │   └── HealthFAB.tsx            # FAB (artık kullanılmıyor)
 │   │   │   │
+│   │   │   ├── 📁 Questions/      # 🆕 Goal-Specific Questions
+│   │   │   │   ├── index.ts               # Barrel export
+│   │   │   │   ├── QuestionCard.tsx       # Reusable question renderer
+│   │   │   │   ├── SugarQuestions.tsx     # 6 sugar reduction questions
+│   │   │   │   ├── MuscleGainQuestions.tsx # 8 muscle gain questions
+│   │   │   │   ├── HydrationQuestions.tsx  # 6 hydration questions
+│   │   │   │   ├── FastingQuestions.tsx    # 7 fasting questions
+│   │   │   │   ├── ActivityQuestions.tsx   # 6 activity questions
+│   │   │   │   └── HealthyEatingQuestions.tsx # 6 healthy eating questions
+│   │   │   │
 │   │   │   ├── StatusBar.tsx       # Üst progress bar
 │   │   │   ├── LoggerModal.tsx     # FAB + log form modal
 │   │   │   ├── LogDrawer.tsx       # Sol log paneli
@@ -165,7 +175,8 @@ overthink_v0.2/
 │   │       └── index.ts
 │   │
 │   ├── 📁 types/             # TypeScript definitions
-│   │   └── database.types.ts # Supabase tablo tipleri + Quest types + Health Profile
+│   │   ├── database.types.ts     # Supabase tablo tipleri + Quest types + Health Profile
+│   │   └── goalQuestions.types.ts # 🆕 Goal-specific question types (7 goal types)
 │   │
 │   ├── 📁 utils/             # Yardımcı fonksiyonlar
 │   │   └── 📁 supabase/      # Supabase clients
@@ -199,14 +210,26 @@ overthink_v0.2/
 │   │   │
 │   │   └── 📁 ai/            # AI Integration
 │   │       ├── index.ts
-│   │       ├── aiConfig.ts       # Gemini configuration
-│   │       ├── aiService.ts      # AI service layer
+│   │       ├── aiConfig.ts           # Gemini configuration
+│   │       ├── aiService.ts          # AI service layer
 │   │       ├── userDataAggregator.ts # User context builder
-│   │       ├── healthCouncil.ts  # 🆕 AI Expert Council for health quests
-│   │       └── 📁 prompts/       # System prompts
-│   │           ├── council.ts
-│   │           ├── goalInsight.ts
-│   │           └── questSuggestion.ts
+│   │       ├── healthCouncil.ts      # AI Expert Council for health quests
+│   │       ├── goalSpecificContexts.ts # 🆕 Typed goal context interfaces
+│   │       │
+│   │       └── 📁 prompts/           # 🆕 Modular Goal-Specific Prompts
+│   │           ├── index.ts              # Barrel export
+│   │           ├── baseSystemPrompt.ts   # Universal safety rules
+│   │           ├── healthPromptComposer.ts # Prompt composition
+│   │           ├── sugarReductionPrompt.ts # Sugar reduction strategies
+│   │           ├── weightLossPrompt.ts     # Weight loss strategies
+│   │           ├── hydrationPrompt.ts      # 🆕 Hydration strategies
+│   │           ├── muscleGainPrompt.ts     # 🆕 Muscle gain strategies
+│   │           ├── fastingPrompt.ts        # 🆕 Fasting strategies
+│   │           ├── activityPrompt.ts       # 🆕 Activity strategies
+│   │           ├── healthyEatingPrompt.ts  # 🆕 Healthy eating strategies
+│   │           ├── council.ts              # Legacy council prompt
+│   │           ├── lifeCoach.ts            # Life coach prompt
+│   │           └── taskAdvisor.ts          # Task advisor prompt
 │   │
 │   └── middleware.ts         # Next.js middleware (auth)
 │

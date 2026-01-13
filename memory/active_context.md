@@ -10,9 +10,9 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.28: AI-Driven Quest Generation                             ║
+║  PHASE 8.35: Goal-Specific AI Prompt System Complete                ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  Step 4 now uses AI to generate personalized quests                 ║
+║  All 7 goal types have specialized prompts + calorie context fix    ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -59,46 +59,53 @@
 | Phase 8.26: Step 3 UX Simplification | ✅ Tamamlandı | 100% |
 | Phase 8.27: Step 4 UI Skip | ✅ Tamamlandı | 100% |
 | Phase 8.28: AI-Driven Quest Generation | ✅ Tamamlandı | 100% |
-| **Phase 8.29: Health AI Activation** | ✅ Tamamlandı | 100% |
-| **Phase 8.30: Goal-Aligned AI Quests** | ✅ Tamamlandı | 100% |
-| **Phase 8.31: Calorie Impact Display** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.29: Health AI Activation | ✅ Tamamlandı | 100% |
+| Phase 8.30: Goal-Aligned AI Quests | ✅ Tamamlandı | 100% |
+| Phase 8.31: Calorie Impact Display | ✅ Tamamlandı | 100% |
+| Phase 8.32: Goal-Specific Health Context | ✅ Tamamlandı | 100% |
+| Phase 8.33: Modular AI Prompts | ✅ Tamamlandı | 100% |
+| Phase 8.34: Goal Questions Data Collection | ✅ Tamamlandı | 100% |
+| **Phase 8.35: Goal-Specific AI Prompts Complete** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Oturum 4)
+## Session Summary: 2026-01-13 (Oturum 6)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Gemini Model Doğrulama ✅
-- `aiConfig.ts`'de model adı `gemini-2.0-flash` olarak doğrulandı
-- Google Docs'tan model naming patterns araştırıldı
-- API Key yapılandırması (`GOOGLE_AI_API_KEY`) onaylandı
+#### 1. Goal-Specific AI Prompt System (Phase 8.33-8.35) ✅
 
-#### 2. Health AI Activation (Phase 8.29) ✅
-- `AIQuestGeneratorModal.tsx` oluşturuldu
-- `LinkedQuestsPanel.tsx`'e "AI ile Yenile" butonu eklendi
-- `GoalDetail/index.tsx`'e health profile entegrasyonu
+**Yeni Prompt Dosyaları (5 yeni):**
+- `hydrationPrompt.ts` - Su içme stratejileri
+- `muscleGainPrompt.ts` - Protein/antrenman odaklı
+- `fastingPrompt.ts` - Oruç zamanlaması
+- `activityPrompt.ts` - Adım/hareket odaklı
+- `healthyEatingPrompt.ts` - Tam gıda/sebze odaklı
 
-#### 3. Goal-Aligned AI Quests (Phase 8.30) ✅
-- `healthCouncil.ts` AI prompt'una goal-specific stratejiler eklendi
-- 5 hedef tipi için özel görev talimatları:
-  - 📉 weight_loss: Kalori açığı, porsiyon kontrolü
-  - 💪 muscle_gain: Protein + direnç antrenmanı  
-  - 🏃 endurance: Kardio + hidrasyon
-  - ⚖️ maintenance: Dengeli beslenme
-  - 📈 weight_gain: Kalori fazlası stratejileri
+**Tüm 7 hedef tipi için özelleştirilmiş prompt:**
+| Hedef | Prompt | YASAKLAR |
+|-------|--------|----------|
+| reduce_sugar | ✅ | Kalori yok |
+| weight_loss | ✅ | - |
+| drink_water | ✅ | Diyet yok |
+| muscle_gain | ✅ | Kalori açığı yok |
+| intermittent_fasting | ✅ | Yemek içeriği yok |
+| activity | ✅ | Beslenme yok |
+| eat_healthy | ✅ | Kalori yok |
 
-#### 4. Calorie Impact Display (Phase 8.31) ✅
-- Her quest kartına 🔥 kalori etkisi badge'i eklendi
-- Negatif (açık) → Yeşil badge, Pozitif → Mavi badge
-- Summary'de toplam günlük kalori etkisi gösterimi
+#### 2. Goal Questions Data Collection (Phase 8.34) ✅
+- `goalQuestions.types.ts` - 5 soru tipi tanımı
+- `QuestionCard.tsx` - Yeniden kullanılabilir soru UI
+- 6 soru bileşeni (39 soru toplam)
+- `GoalQuestionsStep.tsx` - Dinamik step container
+- `GoalCreationWizard.tsx` - 5-step dinamik akış
 
-#### 5. Performance Investigation ✅
-- Step 2 template loading 40 saniye gecikmesi araştırıldı
-- `GoalCreationWizard.tsx`'e timing log'ları eklendi
-- Sonuç: Gerçek fetch süresi 400ms-2000ms (normal)
-- Gecikme cold start/hot reload kaynaklıydı
+#### 3. Calorie Context Priority Fix ✅
+- `wizardAI.ts` düzeltildi: Wizard hedef tipi artık HealthProfile'dan öncelikli
+- `mapGoalTypeToHealthGoal()` eklendi
+- Muscle gain artık kalori fazlası alıyor (açık değil)
+- Non-weight hedefler maintenance (0 adjustment) alıyor
 
 ---
 
@@ -124,5 +131,5 @@ Exit code: 0
 
 ---
 
-**Son Güncelleme:** 2026-01-13 20:10 UTC+3
-**Phase 8.31 Tamamlandı**
+**Son Güncelleme:** 2026-01-13 22:00 UTC+3
+**Phase 8.35 Tamamlandı**

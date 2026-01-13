@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     X, ChevronRight, ChevronLeft, Check,
     Target, Heart, Calendar, Flag,
-    Lightbulb, Zap, Star, Timer
+    Lightbulb, Zap, Star, Timer, ClipboardList
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
@@ -18,6 +18,10 @@ import {
 } from '@/lib/goalCalculator'
 import { HealthProfileBanner, HealthProfileWizard } from '@/components/hud/Health'
 import useHealthProfile from '@/hooks/useHealthProfile'
+import { getGoalContextType, requiresHealthProfile } from '@/lib/goalContextTypes'
+import GoalQuestionsStep from './GoalQuestionsStep'
+import { goalHasQuestions } from '@/types/goalQuestions.types'
+
 
 // =====================================================
 // Types
@@ -43,6 +47,9 @@ export interface GoalWizardData {
     // Goal Template (optional - if selected, auto-populates other fields)
     goal_template_id: string | null
 
+    // Step 2.5: Goal-Specific Questions Data
+    goal_specific_data: Record<string, unknown>
+
     // Step 4: How (Milestones) - Auto-generated
     milestones: Array<{
         title: string
@@ -65,6 +72,7 @@ export interface GoalWizardData {
         is_evening?: boolean
     }>
 }
+
 
 interface GoalCreationWizardProps {
     isOpen: boolean
@@ -116,6 +124,7 @@ export default function GoalCreationWizard({
 }: GoalCreationWizardProps) {
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null)
     const [errors, setErrors] = useState<Partial<Record<string, string>>>({})
 
     const today = new Date().toISOString().split('T')[0]
@@ -132,6 +141,7 @@ export default function GoalCreationWizard({
         start_date: today,
         end_date: '',
         goal_template_id: null,
+        goal_specific_data: {},
         milestones: [],
         selected_quest_template_ids: []
     })
@@ -140,6 +150,7 @@ export default function GoalCreationWizard({
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1)
+            setSelectedTemplateSlug(null)
             setFormData({
                 motivation: '',
                 identity_statement: '',
@@ -152,12 +163,43 @@ export default function GoalCreationWizard({
                 start_date: today,
                 end_date: '',
                 goal_template_id: null,
+                goal_specific_data: {},
                 milestones: [],
                 selected_quest_template_ids: []
             })
             setErrors({})
         }
     }, [isOpen, today])
+
+    // Dynamic step calculation - 5 steps when template has questions, 4 otherwise
+    const hasQuestionsStep = useMemo(() => {
+        return selectedTemplateSlug ? goalHasQuestions(selectedTemplateSlug) : false
+    }, [selectedTemplateSlug])
+
+    const totalSteps = hasQuestionsStep ? 5 : 4
+
+    // Dynamic STEPS array based on whether we have a questions step
+    const dynamicSteps = useMemo(() => {
+        const baseSteps = [
+            { id: 1, title: 'Neden?', icon: Heart, description: 'Motivasyonun' },
+            { id: 2, title: 'Ne?', icon: Target, description: 'Hedefin' }
+        ]
+
+        if (hasQuestionsStep) {
+            return [
+                ...baseSteps,
+                { id: 3, title: 'Sorular', icon: ClipboardList, description: 'Detaylar' },
+                { id: 4, title: 'Ne Zaman?', icon: Calendar, description: 'Zamanlaman' },
+                { id: 5, title: 'Görevler', icon: Zap, description: 'Günlük rutinler' }
+            ]
+        }
+
+        return [
+            ...baseSteps,
+            { id: 3, title: 'Ne Zaman?', icon: Calendar, description: 'Zamanlaman' },
+            { id: 4, title: 'Görevler', icon: Zap, description: 'Günlük rutinler' }
+        ]
+    }, [hasQuestionsStep])
 
     // Auto-generate milestones when target_value changes
     useEffect(() => {
@@ -212,12 +254,25 @@ export default function GoalCreationWizard({
                 }
                 break
             case 3:
-                if (!formData.start_date) {
-                    newErrors.start_date = 'Başlangıç tarihi gerekli'
+                // Dynamic: If hasQuestionsStep, this is Questions step, otherwise When step
+                if (!hasQuestionsStep) {
+                    if (!formData.start_date) {
+                        newErrors.start_date = 'Başlangıç tarihi gerekli'
+                    }
                 }
+                // Questions step is optional
                 break
             case 4:
-                // Quest selection is optional but encouraged
+                // Dynamic: If hasQuestionsStep, this is When step, otherwise Quests step
+                if (hasQuestionsStep) {
+                    if (!formData.start_date) {
+                        newErrors.start_date = 'Başlangıç tarihi gerekli'
+                    }
+                }
+                // Quests step is optional
+                break
+            case 5:
+                // Only exists when hasQuestionsStep - Quests step, optional
                 break
         }
 
@@ -228,7 +283,7 @@ export default function GoalCreationWizard({
 
     const handleNext = () => {
         if (validateStep(currentStep)) {
-            setCurrentStep(prev => Math.min(prev + 1, 4))
+            setCurrentStep(prev => Math.min(prev + 1, totalSteps))
         }
     }
 
@@ -304,7 +359,7 @@ export default function GoalCreationWizard({
 
                                 {/* Step Indicators */}
                                 <div className="flex items-center gap-2">
-                                    {STEPS.map((step, index) => (
+                                    {dynamicSteps.map((step, index) => (
                                         <div key={step.id} className="flex-1 flex items-center">
                                             <div
                                                 className={clsx(
@@ -322,7 +377,7 @@ export default function GoalCreationWizard({
                                                     <step.icon className="w-4 h-4" />
                                                 )}
                                             </div>
-                                            {index < STEPS.length - 1 && (
+                                            {index < dynamicSteps.length - 1 && (
                                                 <div
                                                     className={clsx(
                                                         'flex-1 h-1 mx-1 rounded-full transition-colors',
@@ -358,16 +413,48 @@ export default function GoalCreationWizard({
                                                 updateField={updateField}
                                                 errors={errors}
                                                 categories={categories}
+                                                onTemplateSelect={(slug) => setSelectedTemplateSlug(slug)}
                                             />
                                         )}
+                                        {/* Dynamic Step 3: Questions (if hasQuestionsStep) or When (if not) */}
                                         {currentStep === 3 && (
-                                            <Step3When
-                                                formData={formData}
-                                                updateField={updateField}
-                                                errors={errors}
-                                            />
+                                            hasQuestionsStep ? (
+                                                <GoalQuestionsStep
+                                                    templateSlug={selectedTemplateSlug ?? undefined}
+                                                    data={formData.goal_specific_data}
+                                                    onChange={(field, value) => {
+                                                        updateField('goal_specific_data', {
+                                                            ...formData.goal_specific_data,
+                                                            [field]: value
+                                                        })
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Step3When
+                                                    formData={formData}
+                                                    updateField={updateField}
+                                                    errors={errors}
+                                                />
+                                            )
                                         )}
+                                        {/* Dynamic Step 4: When (if hasQuestionsStep) or Quests (if not) */}
                                         {currentStep === 4 && (
+                                            hasQuestionsStep ? (
+                                                <Step3When
+                                                    formData={formData}
+                                                    updateField={updateField}
+                                                    errors={errors}
+                                                />
+                                            ) : (
+                                                <Step4AIQuests
+                                                    formData={formData}
+                                                    updateField={updateField}
+                                                    errors={errors}
+                                                />
+                                            )
+                                        )}
+                                        {/* Step 5: Only exists when hasQuestionsStep - Quests */}
+                                        {currentStep === 5 && hasQuestionsStep && (
                                             <Step4AIQuests
                                                 formData={formData}
                                                 updateField={updateField}
@@ -391,7 +478,7 @@ export default function GoalCreationWizard({
                                     </button>
                                 )}
 
-                                {currentStep < 4 ? (
+                                {currentStep < totalSteps ? (
                                     <button
                                         onClick={handleNext}
                                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl 
@@ -440,6 +527,7 @@ interface StepProps {
     updateField: <K extends keyof GoalWizardData>(field: K, value: GoalWizardData[K]) => void
     errors: Partial<Record<string, string>>
     categories?: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]
+    onTemplateSelect?: (slug: string | null) => void
 }
 
 function Step1Why({ formData, updateField }: StepProps) {
@@ -506,7 +594,7 @@ function Step1Why({ formData, updateField }: StepProps) {
     )
 }
 
-function Step2What({ formData, updateField, errors, categories }: StepProps) {
+function Step2What({ formData, updateField, errors, categories, onTemplateSelect }: StepProps) {
     const [goalTemplates, setGoalTemplates] = useState<GoalTemplate[]>([])
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -597,6 +685,11 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
             setExpandedTemplateId(template.id)
             setUseCustom(false)
             setAutoPopulated(false) // Reset auto-populated flag
+
+            // Notify parent of selected template slug for questions step
+            if (onTemplateSelect) {
+                onTemplateSelect(template.slug ?? null)
+            }
 
             // AUTO-POPULATE from Health Profile for weight-based goals
             const isWeightLossTemplate = template.slug?.includes('lose_weight') || template.slug?.includes('kilo_ver')
@@ -1140,19 +1233,24 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                                                             </div>
                                                         )}
 
-                                                        {/* Health Profile Banner inside expanded card for food/sport */}
-                                                        {HEALTH_CATEGORIES.includes(template.category_slug) && (
-                                                            <HealthProfileBanner
-                                                                hasProfile={hasProfile}
-                                                                isLoading={isProfileLoading}
-                                                                metrics={profile ? {
-                                                                    bmr_kcal: profile.bmr_kcal,
-                                                                    tdee_kcal: profile.tdee_kcal,
-                                                                    target_daily_kcal: profile.target_daily_kcal
-                                                                } : undefined}
-                                                                onSetupProfile={() => setIsHealthWizardOpen(true)}
-                                                            />
-                                                        )}
+                                                        {/* Health Profile Banner - Context-aware based on goal type */}
+                                                        {HEALTH_CATEGORIES.includes(template.category_slug) && (() => {
+                                                            const contextType = getGoalContextType(template.slug)
+                                                            const needsCalorieMetrics = requiresHealthProfile(contextType)
+                                                            return (
+                                                                <HealthProfileBanner
+                                                                    displayMode={contextType}
+                                                                    hasProfile={hasProfile}
+                                                                    isLoading={isProfileLoading}
+                                                                    metrics={needsCalorieMetrics && profile ? {
+                                                                        bmr_kcal: profile.bmr_kcal,
+                                                                        tdee_kcal: profile.tdee_kcal,
+                                                                        target_daily_kcal: profile.target_daily_kcal
+                                                                    } : undefined}
+                                                                    onSetupProfile={() => setIsHealthWizardOpen(true)}
+                                                                />
+                                                            )
+                                                        })()}
                                                     </>
                                                 )}
                                             </div>

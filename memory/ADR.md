@@ -1031,6 +1031,54 @@ GoalCreationWizard Step 4'te (Görevler) kullanıcı manuel olarak quest templat
 
 ---
 
+## ADR-019: Goal-Specific AI Prompt Architecture
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+AI quest üretim sistemi, hedef tipinden bağımsız olarak aynı generic prompt'u kullanıyordu. Bu durum şu sorunlara yol açtı:
+- Su içme hedefine diyet görevleri öneriliyordu
+- Kas kazanma hedefine kalori açığı hesaplanıyordu
+- Oruç hedefine yemek tarifleri öneriliyordu
+
+### Karar
+
+**Modüler Prompt Mimarisi** uygulandı:
+1. Her hedef tipi için ayrı prompt dosyası (`hydrationPrompt.ts`, `muscleGainPrompt.ts` vb.)
+2. Her prompt'ta **YASAKLAR** bölümü (o hedef için uygunsuz görevler)
+3. `healthPromptComposer.ts` ile merkezi prompt kompozisyonu
+4. `wizardAI.ts` artık wizard hedef tipini HealthProfile hedefinden öncelikli kullanıyor
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Tek Büyük Prompt** | Basit | Hedef karışıklığı |
+| **Prompt Parametreleri** | Orta karmaşıklık | Sınırlı kişiselleştirme |
+| **Modüler Prompt Dosyaları ✓** | Tam izolasyon, kolay genişleme | Daha fazla dosya |
+
+### Sonuçlar
+
+**Pozitif:**
+- Her hedef tipi kendi bağlamında optimize edilmiş görevler alır
+- YASAKLAR sistemi yanlış önerileri önler
+- Yeni hedef tipleri eklenmesi kolay (yeni dosya + registry kaydı)
+- Kalori hesaplaması wizard hedefine göre doğru çalışır
+
+**Negatif:**
+- 13 prompt dosyası (daha önce 3)
+- Her hedef tipi için context builder gerekli
+
+**Dosyalar:**
+- `src/lib/ai/prompts/*.ts` (13 dosya)
+- `src/lib/ai/goalSpecificContexts.ts`
+- `src/actions/wizardAI.ts` (buildAIContext düzeltildi)
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -1060,6 +1108,7 @@ GoalCreationWizard Step 4'te (Görevler) kullanıcı manuel olarak quest templat
 
 ---
 
-**Son Güncelleme:** 2026-01-13 12:37 UTC+3
-**Toplam ADR:** 18
+**Son Güncelleme:** 2026-01-13 22:00 UTC+3
+**Toplam ADR:** 19
+
 
