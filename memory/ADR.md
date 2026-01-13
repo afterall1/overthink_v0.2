@@ -722,6 +722,56 @@ Quest veya Goal silindiğinde veri tutarsızlığı oluşuyordu:
 
 ---
 
+## ADR-014: Context-Aware Health Profile Integration
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Council
+
+### Bağlam
+
+AI Health Quest System oluşturuldu (BMR/TDEE hesaplama, AI quest üretimi). İlk yaklaşım: Global HealthFAB ekleyerek tüm kullanıcılara göstermekti. Ancak:
+
+- Her kullanıcı sağlık takibi yapmak istemiyor
+- Trade, Dev, Etsy, Gaming kategorilerinde sağlık profili gereksiz
+- Sadece **food** ve **sport** kategorilerinde anlamlı
+
+### Karar
+
+**Context-aware integration:** Sağlık profili sadece food/sport kategorisi hedef oluştururken gösterilecek.
+
+**Uygulama:**
+1. Global HealthFAB kaldırıldı
+2. `useHealthProfile` hook oluşturuldu
+3. `HealthProfileBanner` component oluşturuldu
+4. GoalCreationWizard Step 2'de food/sport template seçildiğinde banner gösteriliyor
+5. Banner'dan HealthProfileWizard açılabiliyor
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Global FAB** | Kolay erişim | Alakasız kullanıcıları rahatsız eder |
+| **Ayarlar sayfası** | Gizli | Keşfedilebilirlik düşük |
+| **Context-aware ✓** | Alakalı zamanda göster | Biraz daha kod |
+
+### Sonuçlar
+
+**Pozitif:**
+- UX iyileştirmesi - alakasız özellikler gizli
+- Kullanıcı yolculuğuna entegre
+- Profil var mı kontrolü ile akıllı banner
+
+**Negatif:**
+- GoalCreationWizard'a ek complexity
+
+**Dosyalar:**
+- `src/hooks/useHealthProfile.ts`
+- `src/components/hud/Health/HealthProfileBanner.tsx`
+- `src/components/hud/Goals/GoalCreationWizard.tsx`
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -751,7 +801,7 @@ Quest veya Goal silindiğinde veri tutarsızlığı oluşuyordu:
 
 ---
 
-**Son Güncelleme:** 2026-01-13 03:56 UTC+3
-**Toplam ADR:** 13
+**Son Güncelleme:** 2026-01-13 10:40 UTC+3
+**Toplam ADR:** 14
 
 

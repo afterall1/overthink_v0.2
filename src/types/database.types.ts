@@ -911,6 +911,86 @@ export type Database = {
                     }
                 ]
             }
+            // =====================================================
+            // AI Health Quest System Tables
+            // =====================================================
+            user_health_profiles: {
+                Row: {
+                    id: string
+                    user_id: string
+                    weight_kg: number
+                    height_cm: number
+                    birth_date: string
+                    biological_sex: 'male' | 'female'
+                    activity_level: 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme'
+                    bmr_kcal: number
+                    tdee_kcal: number
+                    target_daily_kcal: number
+                    sleep_hours_avg: number | null
+                    stress_level: 'low' | 'medium' | 'high'
+                    health_conditions: string[]
+                    dietary_restrictions: string[]
+                    allergies: string[]
+                    primary_goal: 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance'
+                    target_weight_kg: number | null
+                    goal_pace: 'slow' | 'moderate' | 'aggressive'
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    weight_kg: number
+                    height_cm: number
+                    birth_date: string
+                    biological_sex: 'male' | 'female'
+                    activity_level?: 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme'
+                    bmr_kcal?: number
+                    tdee_kcal?: number
+                    target_daily_kcal?: number
+                    sleep_hours_avg?: number | null
+                    stress_level?: 'low' | 'medium' | 'high'
+                    health_conditions?: string[]
+                    dietary_restrictions?: string[]
+                    allergies?: string[]
+                    primary_goal?: 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance'
+                    target_weight_kg?: number | null
+                    goal_pace?: 'slow' | 'moderate' | 'aggressive'
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    weight_kg?: number
+                    height_cm?: number
+                    birth_date?: string
+                    biological_sex?: 'male' | 'female'
+                    activity_level?: 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme'
+                    bmr_kcal?: number
+                    tdee_kcal?: number
+                    target_daily_kcal?: number
+                    sleep_hours_avg?: number | null
+                    stress_level?: 'low' | 'medium' | 'high'
+                    health_conditions?: string[]
+                    dietary_restrictions?: string[]
+                    allergies?: string[]
+                    primary_goal?: 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance'
+                    target_weight_kg?: number | null
+                    goal_pace?: 'slow' | 'moderate' | 'aggressive'
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "user_health_profiles_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: true
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never

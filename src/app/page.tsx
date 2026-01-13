@@ -14,6 +14,7 @@ import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
 import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard } from "@/components/hud/Goals"
 import { DailyQuestsPanel, QuestCreationModal } from "@/components/hud/Quests"
+// Health module moved to GoalCreationWizard for context-aware integration
 import { AnimatePresence } from "framer-motion"
 import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails, DailyQuest, UserXpStats } from '@/types/database.types'
 import { getEventsByDateRange, createEvent, updateEventStatus, updateEvent, deleteEvent } from "@/actions/events"
@@ -84,6 +85,8 @@ export default function Home() {
   const [xpStats, setXpStats] = useState<UserXpStats | null>(null)
   const [isQuestsLoading, setIsQuestsLoading] = useState(false)
   const [isQuestCreationModalOpen, setIsQuestCreationModalOpen] = useState(false)
+
+
 
   const fetchQuests = useCallback(async () => {
     setIsQuestsLoading(true)
@@ -363,7 +366,7 @@ export default function Home() {
           try {
             await deleteGoal(goalId)
             setSelectedGoalId(null) // Clear selection after delete
-            await fetchGoals()
+            await Promise.all([fetchGoals(), fetchQuests()])
           } catch (error) {
             console.error('Failed to delete goal:', error)
             throw error // Re-throw for modal to handle
@@ -544,6 +547,8 @@ export default function Home() {
           setQuests(prev => [...prev, quest])
         }}
       />
+
+
     </main>
   )
 }

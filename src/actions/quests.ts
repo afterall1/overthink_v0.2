@@ -142,21 +142,34 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         const questIds = allQuests.map(q => q.id)
 
         if (questIds.length > 0) {
+            // Fetch completions with timestamp for proper stats display
             const { data: completions } = await supabase
                 .from('quest_completions')
-                .select('quest_id')
+                .select('quest_id, completed_at')
                 .eq('user_id', user.id)
                 .eq('completed_date', today)
                 .in('quest_id', questIds)
 
-            const completedIds = new Set((completions || []).map((c: { quest_id: string }) => c.quest_id))
+            // Build a map of quest_id -> completed_at for quick lookup
+            const completionMap = new Map<string, string>()
+            for (const c of completions || []) {
+                completionMap.set(c.quest_id, c.completed_at)
+            }
 
-            // Update status for completed quests
+            // Update status and completed_at for completed quests
+            // This is critical for GoalDetail stats (XP, heatmap, last activity)
             return {
-                data: allQuests.map(quest => ({
-                    ...quest,
-                    status: completedIds.has(quest.id) ? 'completed' : quest.status
-                })) as DailyQuest[],
+                data: allQuests.map(quest => {
+                    const completedAt = completionMap.get(quest.id)
+                    if (completedAt) {
+                        return {
+                            ...quest,
+                            status: 'completed' as const,
+                            completed_at: completedAt
+                        }
+                    }
+                    return quest
+                }) as DailyQuest[],
                 error: null
             }
         }

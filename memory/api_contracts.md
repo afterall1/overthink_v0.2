@@ -455,5 +455,64 @@ Giriş yapmayan kullanıcılar otomatik olarak `/login` sayfasına yönlendirili
 
 ---
 
-**Son Güncelleme:** 2026-01-12
-**Versiyon:** 1.1.0 (Quest Templates, Authentication Update)
+## 🆕 Actions: AI Health Quests (`src/actions/aiHealthQuests.ts`)
+
+### `upsertHealthProfile(input)`
+Kullanıcının sağlık profilini oluşturur veya günceller. BMR/TDEE otomatik hesaplanır.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `weight_kg` | number | ✅ | Kilo (kg) |
+| `height_cm` | number | ✅ | Boy (cm) |
+| `birth_date` | string | ✅ | YYYY-MM-DD |
+| `biological_sex` | 'male' \| 'female' | ✅ | Biyolojik cinsiyet |
+| `activity_level` | string | ✅ | sedentary/light/moderate/very_active/extreme |
+| `sleep_hours_avg` | number | ❌ | Ortalama uyku saati |
+| `stress_level` | string | ❌ | low/medium/high |
+| `health_conditions` | string[] | ❌ | Sağlık durumları |
+| `dietary_restrictions` | string[] | ❌ | Diyet kısıtlamaları |
+| `primary_goal` | string | ❌ | weight_loss/weight_gain/maintenance/muscle_gain/endurance |
+| `target_weight_kg` | number | ❌ | Hedef kilo |
+| `goal_pace` | string | ❌ | slow/moderate/aggressive |
+
+**Return:** `Promise<{ success: boolean, profile?: HealthProfile, error?: string }>`
+
+---
+
+### `getHealthProfile()`
+Mevcut kullanıcının sağlık profilini getirir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| - | - | - | Parametre yok |
+
+**Return:** `Promise<{ success: boolean, profile?: HealthProfile, error?: string }>`
+
+---
+
+### `generatePersonalizedQuests()`
+AI Expert Council kullanarak kişiselleştirilmiş günlük görevler üretir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| - | - | - | Kullanıcı profilinden otomatik alır |
+
+**Return:** `Promise<{ success: boolean, quests?: AIGeneratedQuest[], nutrition_plan?: NutritionPlan, error?: string }>`
+
+---
+
+### `saveAIGeneratedQuests(quests, goalId?)`
+Üretilen AI görevlerini veritabanına kaydeder.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `quests` | AIGeneratedQuest[] | ✅ | Kaydedilecek görevler |
+| `goalId` | string | ❌ | Bağlanacak hedef ID |
+
+**Return:** `Promise<{ success: boolean, savedCount?: number, error?: string }>`
+
+---
+
+**Son Güncelleme:** 2026-01-13
+**Versiyon:** 1.2.0 (AI Health Quests eklendi)
+

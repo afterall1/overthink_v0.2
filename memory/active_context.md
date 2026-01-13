@@ -10,9 +10,9 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.21: Cascade Delete & Data Integrity                        ║
+║  PHASE 8.23: AI-Powered Health Quest System                        ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  Quest/Goal silme işlemlerinde tam cascade delete ve XP rollback    ║
+║  BMR/TDEE Calculator, AI Expert Council, Health Profile Wizard      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -51,75 +51,63 @@
 | Phase 8.18: Quest Management + Progress Sync | ✅ Tamamlandı | 100% |
 | Phase 8.19: Goal Detail Panel Enhancement | ✅ Tamamlandı | 100% |
 | Phase 8.20: iOS Mobile Foundation | ✅ Tamamlandı | 100% |
-| **Phase 8.21: Cascade Delete & Data Integrity** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.21: Cascade Delete & Data Integrity | ✅ Tamamlandı | 100% |
+| Phase 8.22: Bug Fixes & Data Integrity Refinement | ✅ Tamamlandı | 100% |
+| **Phase 8.23: AI-Powered Health Quest System** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Gece Oturumu VI)
+## Session Summary: 2026-01-13 (Tam Gün)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Goal Cascade Delete ✅
-**`deleteGoal()` fonksiyonu güncellendi:**
-- Goal silindiğinde bağlı tüm quest'ler de siliniyor
-- Quest'lerin tüm `quest_completions` kayıtları siliniyor
-- Kazanılan XP `user_xp_stats`'tan düşülüyor
-- `quests_completed_count` güncelleniyor
+#### 1. AI Health Quest System (Phase 8.23) ✅
+**Amaç:** Kullanıcı sağlık profiline dayalı kişiselleştirilmiş günlük görev ve beslenme planları oluşturmak.
 
-#### 2. Quest Cascade Delete ✅
-**`deleteQuest()` fonksiyonu güncellendi:**
-- Quest silindiğinde tüm `quest_completions` kayıtları siliniyor
-- Kazanılan XP kullanıcı istatistiklerinden düşülüyor
-- Eğer goal'a bağlıysa, goal `current_value` geri alınıyor
-- Progress contribution hesaplaması yapılıyor
+**Oluşturulan Dosyalar:**
 
-#### 3. Orphan Quests Cleanup ✅
-**SQL migration oluşturuldu:**
-- `goal_id IS NULL` olan tüm quest'ler (Genel Görevler) temizlenebilir
-- İlgili `quest_completions` kayıtları da siliniyor
+| Dosya | Açıklama |
+|-------|----------|
+| `supabase/migrations/20260113_user_health_profiles.sql` | Sağlık profili tablosu |
+| `src/lib/healthCalculator.ts` | BMR/TDEE Mifflin-St Jeor formülü |
+| `src/lib/ai/healthCouncil.ts` | AI Expert Council quest üretimi |
+| `src/actions/aiHealthQuests.ts` | Server actions |
+| `src/components/hud/Health/HealthProfileWizard.tsx` | 5 adımlı wizard |
 
----
+#### 2. Context-Aware Health UI Integration (Phase 8.24) ✅
+**Amaç:** Sağlık profili sadece food/sport kategorisi hedeflerinde gösterilmeli.
 
-## Dosya Değişiklikleri (Bu Oturum)
+**Mimari Karar:** Global HealthFAB yerine, GoalCreationWizard'da koşullu inline entegrasyon.
 
-### Güncellemeler
-```
-src/actions/goals.ts
-├── deleteGoal() → Full cascade delete with XP rollback
-└── Security: Ownership verification before delete
+**Oluşturulan Dosyalar:**
 
-src/actions/quests.ts
-├── deleteQuest() → Full cascade delete with XP rollback
-└── Goal progress rollback when linked quest deleted
-```
+| Dosya | Açıklama |
+|-------|----------|
+| `src/hooks/useHealthProfile.ts` | Profil var mı kontrol eden hook |
+| `src/components/hud/Health/HealthProfileBanner.tsx` | Koşullu banner (food/sport) |
+| `src/components/hud/Health/HealthFAB.tsx` | FAB bileşeni (artık kullanılmıyor) |
 
-### Yeni Migrations
-```
-supabase/migrations/
-├── 20260113_fix_quest_progress_contribution.sql  # [PENDING]
-└── 20260113_cleanup_orphan_quests.sql           # [NEW] Genel Görevler temizliği
-```
+**Değiştirilen Dosyalar:**
+
+| Dosya | Değişiklik |
+|-------|-----------|
+| `src/app/page.tsx` | HealthFAB kaldırıldı |
+| `GoalCreationWizard.tsx` | Health imports + banner + wizard modal eklendi |
+| `Health/index.ts` | HealthProfileBanner export eklendi |
 
 ---
 
 ## Bekleyen İşler
 
-### Yüksek Öncelik
-1. [ ] Migration çalıştır: `20260113_fix_quest_progress_contribution.sql`
-2. [ ] Migration çalıştır: `20260113_cleanup_orphan_quests.sql`
-3. [ ] End-to-end test: Quest sil → XP düşüşü gözlemle
-
-### iOS Mobile Phase 2 (Sonraki)
-1. [ ] SwipeableQuest - Swipe to complete/skip
-2. [ ] Pull-to-refresh gesture
-3. [ ] Long press context menu
-4. [ ] Ring closing celebration animation
-
-### Phase 9: OAuth Providers
+### Next Up: Phase 9 OAuth Providers
 1. [ ] Google OAuth
 2. [ ] Apple Sign-In
 3. [ ] `/reset-password` sayfası
+
+### Opsiyonel İyileştirmeler
+1. [ ] AI-generated quest'leri UI'da göster
+2. [ ] Nutrition plan dashboard bileşeni
 
 ---
 
@@ -127,12 +115,12 @@ supabase/migrations/
 ```
 ✅ npm run build - Başarılı
 ✅ TypeScript - Hatasız
-✅ Lint - Temiz
+✅ Generating static pages (9/9)
 Exit code: 0
 ```
 
 ---
 
-**Son Güncelleme:** 2026-01-13 03:56 UTC+3
+**Son Güncelleme:** 2026-01-13 10:40 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** Cascade Delete & Data Integrity tamamlandı. Phase 8.21 %100.
+**Durum:** Phase 8.23-8.24 tamamlandı. Health profile artık food/sport goal oluştururken görünüyor.

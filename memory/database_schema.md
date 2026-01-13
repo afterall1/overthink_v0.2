@@ -533,6 +533,52 @@ Momentum = (
 
 ---
 
-**Son Güncelleme:** 2026-01-13 01:10 UTC+3
-**Versiyon:** 2.3.0 (Momentum Score System eklendi)
+## 🆕 user_health_profiles Tablosu (2026-01-13)
+
+> ⚠️ Migration: `supabase/migrations/20260113_user_health_profiles.sql`
+
+Kullanıcı sağlık profilleri ve BMR/TDEE hesaplamaları.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Profile ID |
+| `user_id` | UUID | FK → users, UNIQUE | Kullanıcı |
+| `weight_kg` | NUMERIC | NOT NULL | Kilo (kg) |
+| `height_cm` | NUMERIC | NOT NULL | Boy (cm) |
+| `birth_date` | DATE | NOT NULL | Doğum tarihi |
+| `biological_sex` | TEXT | CHECK | male/female |
+| `activity_level` | TEXT | CHECK | sedentary/light/moderate/very_active/extreme |
+| `bmr_kcal` | INTEGER | NOT NULL | Bazal Metabolizma (Mifflin-St Jeor) |
+| `tdee_kcal` | INTEGER | NOT NULL | Günlük Harcama |
+| `target_daily_kcal` | INTEGER | NOT NULL | Hedef Kalori |
+| `sleep_hours_avg` | NUMERIC | NULLABLE | Ortalama uyku |
+| `stress_level` | TEXT | CHECK | low/medium/high |
+| `health_conditions` | TEXT[] | DEFAULT '{}' | Sağlık durumları |
+| `dietary_restrictions` | TEXT[] | DEFAULT '{}' | Diyet kısıtlamaları |
+| `allergies` | TEXT[] | DEFAULT '{}' | Alerjiler |
+| `primary_goal` | TEXT | CHECK | weight_loss/weight_gain/maintenance/muscle_gain/endurance |
+| `target_weight_kg` | NUMERIC | NULLABLE | Hedef kilo |
+| `goal_pace` | TEXT | CHECK | slow/moderate/aggressive |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Güncelleme |
+
+### BMR Formülü (Mifflin-St Jeor)
+```
+Erkek:  BMR = (10 × weight_kg) + (6.25 × height_cm) - (5 × age) + 5
+Kadın:  BMR = (10 × weight_kg) + (6.25 × height_cm) - (5 × age) - 161
+```
+
+### TDEE Çarpanları
+| Level | Çarpan | Açıklama |
+|-------|--------|----------|
+| sedentary | 1.2 | Masa başı iş |
+| light | 1.375 | 1-3 gün/hafta |
+| moderate | 1.55 | 3-5 gün/hafta |
+| very_active | 1.725 | 6-7 gün/hafta |
+| extreme | 1.9 | Profesyonel sporcu |
+
+---
+
+**Son Güncelleme:** 2026-01-13 10:15 UTC+3
+**Versiyon:** 2.4.0 (AI Health Quest System eklendi)
 

@@ -10,6 +10,14 @@ import {
 import { clsx } from 'clsx'
 import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
 import { getGoalTemplates, getGoalTemplateCategories } from '@/actions/goals'
+import GoalInsightCard from './GoalInsightCard'
+import {
+    calculateGoal,
+    getCalculationTypeFromTemplateSlug,
+    type GoalCalculation
+} from '@/lib/goalCalculator'
+import { HealthProfileBanner, HealthProfileWizard } from '@/components/hud/Health'
+import useHealthProfile from '@/hooks/useHealthProfile'
 
 // =====================================================
 // Types
@@ -501,6 +509,14 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [useCustom, setUseCustom] = useState(false)
 
+    // Health Profile state for food/sport categories
+    const { hasProfile, profile, isLoading: isProfileLoading, refresh: refreshProfile } = useHealthProfile()
+    const [isHealthWizardOpen, setIsHealthWizardOpen] = useState(false)
+
+    // Health-related categories
+    const HEALTH_CATEGORIES = ['food', 'sport']
+    const isHealthCategory = selectedCategory !== null && HEALTH_CATEGORIES.includes(selectedCategory)
+
     // Goal Template kategorileri
     const GOAL_TEMPLATE_CATEGORIES = [
         { slug: 'food', name: 'Beslenme', emoji: '🍎', color: '#10B981' },
@@ -804,6 +820,30 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                 </div>
             )}
 
+            {/* Health Profile Banner - Only for food/sport categories when template is selected */}
+            {isHealthCategory && formData.goal_template_id && (
+                <HealthProfileBanner
+                    hasProfile={hasProfile}
+                    isLoading={isProfileLoading}
+                    metrics={profile ? {
+                        bmr_kcal: profile.bmr_kcal,
+                        tdee_kcal: profile.tdee_kcal,
+                        target_daily_kcal: profile.target_daily_kcal
+                    } : undefined}
+                    onSetupProfile={() => setIsHealthWizardOpen(true)}
+                />
+            )}
+
+            {/* Health Profile Wizard Modal */}
+            <HealthProfileWizard
+                isOpen={isHealthWizardOpen}
+                onClose={() => setIsHealthWizardOpen(false)}
+                onComplete={async () => {
+                    setIsHealthWizardOpen(false)
+                    await refreshProfile()
+                }}
+            />
+
             {/* Selected Template Info with Target Value Input */}
             {formData.goal_template_id && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
@@ -865,6 +905,48 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
 }
 
 function Step3When({ formData, updateField, errors }: StepProps) {
+    const [calculation, setCalculation] = useState<GoalCalculation | null>(null)
+
+    // Recalculate when dates or target changes
+    useEffect(() => {
+        // Only calculate if we have target value and both dates
+        if (formData.target_value && formData.start_date && formData.end_date) {
+            try {
+                // Determine calculation type from title or template
+                let goalType = getCalculationTypeFromTemplateSlug(formData.title.toLowerCase())
+
+                // If title doesn't match, try to infer from unit/category
+                if (goalType === 'generic') {
+                    const lowerTitle = formData.title.toLowerCase()
+                    const lowerUnit = formData.unit.toLowerCase()
+
+                    if (lowerTitle.includes('kilo') || lowerUnit === 'kg') {
+                        goalType = lowerTitle.includes('al') ? 'weight_gain' : 'weight_loss'
+                    } else if (lowerUnit === 'km' || lowerTitle.includes('koş')) {
+                        goalType = 'running_distance'
+                    } else if (lowerTitle.includes('antrenman') || lowerTitle.includes('gym')) {
+                        goalType = 'strength_training'
+                    }
+                }
+
+                const calc = calculateGoal({
+                    goalType,
+                    targetValue: formData.target_value,
+                    unit: formData.unit,
+                    startDate: formData.start_date,
+                    endDate: formData.end_date,
+                    categorySlug: formData.category_id
+                })
+                setCalculation(calc)
+            } catch (error) {
+                console.error('Calculation error:', error)
+                setCalculation(null)
+            }
+        } else {
+            setCalculation(null)
+        }
+    }, [formData.target_value, formData.unit, formData.title, formData.start_date, formData.end_date, formData.category_id])
+
     return (
         <div className="space-y-5">
             <div className="text-center mb-4">
@@ -897,6 +979,20 @@ function Step3When({ formData, updateField, errors }: StepProps) {
                     />
                 </div>
             </div>
+
+            {/* Intelligent Calculation Card */}
+            {calculation && (
+                <GoalInsightCard calculation={calculation} />
+            )}
+
+            {/* Info hint when no calculation */}
+            {!calculation && formData.target_value && (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                    <p className="text-sm text-slate-500">
+                        📅 Bitiş tarihi seçtiğinde akıllı hesaplama göreceğsin
+                    </p>
+                </div>
+            )}
 
             {/* Time of Day */}
             <div>

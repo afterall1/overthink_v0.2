@@ -129,6 +129,12 @@ overthink_v0.2/
 │   │   │   │   ├── RitualCard.tsx         # Habit stacking
 │   │   │   │   └── PerfectDayBadge.tsx    # Perfect day indicator
 │   │   │   │
+│   │   │   ├── 📁 Health/         # 🆕 Health Quest System UI
+│   │   │   │   ├── index.ts               # Barrel export
+│   │   │   │   ├── HealthProfileWizard.tsx  # 5-step wizard
+│   │   │   │   ├── HealthProfileBanner.tsx  # 🆕 Context-aware banner (food/sport)
+│   │   │   │   └── HealthFAB.tsx            # FAB (artık kullanılmıyor)
+│   │   │   │
 │   │   │   ├── StatusBar.tsx       # Üst progress bar
 │   │   │   ├── LoggerModal.tsx     # FAB + log form modal
 │   │   │   ├── LogDrawer.tsx       # Sol log paneli
@@ -158,7 +164,7 @@ overthink_v0.2/
 │   │       └── index.ts
 │   │
 │   ├── 📁 types/             # TypeScript definitions
-│   │   └── database.types.ts # Supabase tablo tipleri + Quest types
+│   │   └── database.types.ts # Supabase tablo tipleri + Quest types + Health Profile
 │   │
 │   ├── 📁 utils/             # Yardımcı fonksiyonlar
 │   │   └── 📁 supabase/      # Supabase clients
@@ -171,26 +177,30 @@ overthink_v0.2/
 │   │   ├── goals.ts          # CRUD operations for goals
 │   │   ├── logs.ts           # CRUD operations for logs
 │   │   ├── categories.ts     # Fetch categories from Supabase
-│   │   ├── quests.ts         # 🆕 Quest CRUD + XP management
-│   │   └── ai.ts             # 🆕 AI Council server actions
+│   │   ├── quests.ts         # Quest CRUD + XP management
+│   │   ├── ai.ts             # AI Council server actions
+│   │   └── aiHealthQuests.ts # 🆕 Health profile + AI quest generation
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   ├── useIsMobile.ts    # (Scene.tsx içinde şu an)
-│   │   └── useHaptics.ts     # 🆕 iOS haptic feedback hook
+│   │   ├── useHaptics.ts     # iOS haptic feedback hook
+│   │   └── useHealthProfile.ts # 🆕 Health profile check hook
 │   │
 │   ├── 📁 lib/               # Business logic
 │   │   ├── auth.ts           # 🔐 Centralized auth utilities
 │   │   ├── mockEvents.ts     # Demo event data
 │   │   ├── notifications.ts  # Web Push API utilities
 │   │   ├── utils.ts          # Shadcn utility functions
-│   │   ├── questEngine.ts    # 🆕 XP/Level/Streak calculations
-│   │   ├── streakEngine.ts   # 🆕 Advanced streak & health logic
+│   │   ├── questEngine.ts    # XP/Level/Streak calculations
+│   │   ├── streakEngine.ts   # Advanced streak & health logic
+│   │   ├── healthCalculator.ts # 🆕 BMR/TDEE Mifflin-St Jeor formula
 │   │   │
-│   │   └── 📁 ai/            # 🆕 AI Integration
+│   │   └── 📁 ai/            # AI Integration
 │   │       ├── index.ts
 │   │       ├── aiConfig.ts       # Gemini configuration
 │   │       ├── aiService.ts      # AI service layer
 │   │       ├── userDataAggregator.ts # User context builder
+│   │       ├── healthCouncil.ts  # 🆕 AI Expert Council for health quests
 │   │       └── 📁 prompts/       # System prompts
 │   │           ├── council.ts
 │   │           ├── goalInsight.ts
@@ -348,5 +358,5 @@ lib/ai/
 
 ---
 
-**Son Güncelleme:** 2026-01-12 06:45 UTC+3
-**Versiyon:** 2.0.0 (Quest System, AI Council, yeni bileşenler eklendi)
+**Son Güncelleme:** 2026-01-13 10:15 UTC+3
+**Versiyon:** 2.1.0 (AI Health Quest System, Health module eklendi)
