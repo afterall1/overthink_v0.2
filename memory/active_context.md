@@ -10,9 +10,9 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.20: iOS Mobile Foundation (Bottom Sheet + Haptics)         ║
+║  PHASE 8.21: Cascade Delete & Data Integrity                        ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  iOS-native bottom sheet, safe area handling, haptic feedback        ║
+║  Quest/Goal silme işlemlerinde tam cascade delete ve XP rollback    ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -50,78 +50,55 @@
 | Phase 8.17: Progress Command Center | ✅ Tamamlandı | 100% |
 | Phase 8.18: Quest Management + Progress Sync | ✅ Tamamlandı | 100% |
 | Phase 8.19: Goal Detail Panel Enhancement | ✅ Tamamlandı | 100% |
-| **Phase 8.20: iOS Mobile Foundation** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.20: iOS Mobile Foundation | ✅ Tamamlandı | 100% |
+| **Phase 8.21: Cascade Delete & Data Integrity** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Gece Oturumu V)
+## Session Summary: 2026-01-13 (Gece Oturumu VI)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Konsey Toplantısı ✅
-- Quest & Goal sistemleri derinlemesine analiz edildi
-- Goal Detail Panel için 12 iyileştirme önerisi hazırlandı
-- iOS mobil optimizasyon planı oluşturuldu (15 öneri, 4 phase)
+#### 1. Goal Cascade Delete ✅
+**`deleteGoal()` fonksiyonu güncellendi:**
+- Goal silindiğinde bağlı tüm quest'ler de siliniyor
+- Quest'lerin tüm `quest_completions` kayıtları siliniyor
+- Kazanılan XP `user_xp_stats`'tan düşülüyor
+- `quests_completed_count` güncelleniyor
 
-#### 2. Phase 8.19: Goal Detail Panel Enhancement ✅
-**3 yeni component oluşturuldu:**
+#### 2. Quest Cascade Delete ✅
+**`deleteQuest()` fonksiyonu güncellendi:**
+- Quest silindiğinde tüm `quest_completions` kayıtları siliniyor
+- Kazanılan XP kullanıcı istatistiklerinden düşülüyor
+- Eğer goal'a bağlıysa, goal `current_value` geri alınıyor
+- Progress contribution hesaplaması yapılıyor
 
-| Component | Görev |
-|-----------|-------|
-| `StatsGrid.tsx` | XP, tamamlama oranı, en iyi gün, son aktivite, velocity trend |
-| `StreakWarning.tsx` | Streak risk uyarısı (at_risk, broken, frozen) |
-| `ContributionHeatmap.tsx` | GitHub tarzı 30 günlük aktivite grid'i |
-
-#### 3. Phase 8.20: iOS Mobile Foundation ✅
-**iOS-native bottom sheet pattern implementasyonu:**
-
-| Component | Görev |
-|-----------|-------|
-| `layout/BottomSheet.tsx` | 3 detent seviyesi (30%, 55%, 92%), drag gestures |
-| `layout/SheetHeader.tsx` | 44pt touch targets, iOS HIG compliance |
-| `layout/SafeAreaContainer.tsx` | Dynamic Island (59pt) + Home Indicator (34pt) handling |
-| `hooks/useHaptics.ts` | Cross-platform haptic feedback (success, warning, error) |
-
-**GoalDetail Major Refactor:**
-- Centered modal → iOS bottom sheet pattern
-- Tüm butonlara haptic feedback eklendi
-- Safe area insets uygulandı
+#### 3. Orphan Quests Cleanup ✅
+**SQL migration oluşturuldu:**
+- `goal_id IS NULL` olan tüm quest'ler (Genel Görevler) temizlenebilir
+- İlgili `quest_completions` kayıtları da siliniyor
 
 ---
 
 ## Dosya Değişiklikleri (Bu Oturum)
 
-### Yeni Dosyalar
-```
-src/components/hud/Goals/GoalDetail/
-├── StatsGrid.tsx                 # [NEW] Performans istatistikleri
-├── StreakWarning.tsx             # [NEW] Streak risk uyarı kartı
-├── ContributionHeatmap.tsx       # [NEW] 30 gün aktivite heatmap
-│
-└── 📁 layout/                    # [NEW] iOS Layout Components
-    ├── index.ts                  # Barrel export
-    ├── BottomSheet.tsx           # iOS-native detent sheet
-    ├── SheetHeader.tsx           # 44pt touch target header
-    └── SafeAreaContainer.tsx     # Safe area wrapper
-
-src/hooks/
-└── useHaptics.ts                 # [NEW] Haptic feedback hook
-```
-
 ### Güncellemeler
 ```
-src/components/hud/Goals/GoalDetail/index.tsx
-├── Major refactor: Modal → Bottom Sheet
-├── Import: BottomSheet, SheetHeader, useHaptics
-├── Haptic feedback on all interactions
-└── 44pt touch targets applied
+src/actions/goals.ts
+├── deleteGoal() → Full cascade delete with XP rollback
+└── Security: Ownership verification before delete
+
+src/actions/quests.ts
+├── deleteQuest() → Full cascade delete with XP rollback
+└── Goal progress rollback when linked quest deleted
 ```
 
-### Migrations
+### Yeni Migrations
 ```
 supabase/migrations/
-└── 20260113_fix_quest_progress_contribution.sql  # [PENDING] Çalıştırılması gerekiyor
+├── 20260113_fix_quest_progress_contribution.sql  # [PENDING]
+└── 20260113_cleanup_orphan_quests.sql           # [NEW] Genel Görevler temizliği
 ```
 
 ---
@@ -130,8 +107,8 @@ supabase/migrations/
 
 ### Yüksek Öncelik
 1. [ ] Migration çalıştır: `20260113_fix_quest_progress_contribution.sql`
-2. [ ] End-to-end test: Quest tamamla → Goal progress artışı gözlemle
-3. [ ] iOS Safari PWA testi
+2. [ ] Migration çalıştır: `20260113_cleanup_orphan_quests.sql`
+3. [ ] End-to-end test: Quest sil → XP düşüşü gözlemle
 
 ### iOS Mobile Phase 2 (Sonraki)
 1. [ ] SwipeableQuest - Swipe to complete/skip
@@ -156,6 +133,6 @@ Exit code: 0
 
 ---
 
-**Son Güncelleme:** 2026-01-13 03:45 UTC+3
+**Son Güncelleme:** 2026-01-13 03:56 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** iOS Mobile Foundation tamamlandı. Phase 8.20 %100.
+**Durum:** Cascade Delete & Data Integrity tamamlandı. Phase 8.21 %100.

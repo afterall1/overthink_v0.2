@@ -35,7 +35,8 @@ overthink_v0.2/
 │       ├── 20260112_quest_templates.sql     # Quest Templates (124 şablon)
 │       ├── 20260112_goal_templates.sql      # Goal Templates (44 şablon)
 │       ├── 20260113_momentum_score_system.sql # Momentum Score System
-│       └── 20260113_fix_quest_progress_contribution.sql # 🆕 Progress fix
+│       ├── 20260113_fix_quest_progress_contribution.sql # Progress fix
+│       └── 20260113_cleanup_orphan_quests.sql # 🆕 Orphan quest temizliği
 │
 ├── 📁 src/                   # Kaynak kod
 │   │

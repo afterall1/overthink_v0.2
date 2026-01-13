@@ -318,20 +318,138 @@ export async function updateGoal(goalId: string, goalData: GoalUpdate): Promise<
 }
 
 /**
- * Delete a goal (cascades to milestones and entries)
+ * Delete a goal (cascades to milestones, entries, linked quests and their completions)
+ * 
+ * This function:
+ * 1. Gets all daily_quests linked to this goal
+ * 2. Gets all quest_completions for those quests
+ * 3. Subtracts all earned XP from user_xp_stats
+ * 4. Deletes all quest_completions
+ * 5. Deletes all linked quests
+ * 6. Deletes the goal itself (milestones and entries cascade via FK)
  */
 export async function deleteGoal(goalId: string): Promise<boolean> {
-    const { client } = await getAuthenticatedClient()
+    const { user } = await getAuthenticatedClient()
+    const adminClient = createAdminClient()
 
-    const { error } = await client
+    // Security: Verify user owns this goal before proceeding
+    const { data: goal, error: fetchError } = await adminClient
+        .from('goals')
+        .select('id, user_id')
+        .eq('id', goalId)
+        .single()
+
+    if (fetchError || !goal) {
+        console.error('[ERROR deleteGoal] Goal not found:', fetchError)
+        throw new Error('Goal not found')
+    }
+
+    if (goal.user_id !== user.id) {
+        console.error('[ERROR deleteGoal] Unauthorized access attempt')
+        throw new Error('Unauthorized: You do not own this goal')
+    }
+
+    // Step 1: Get all quests linked to this goal
+    const { data: linkedQuests, error: questsFetchError } = await adminClient
+        .from('daily_quests')
+        .select('id')
+        .eq('goal_id', goalId)
+        .eq('user_id', user.id)
+
+    if (questsFetchError) {
+        console.error('[ERROR deleteGoal] Failed to fetch linked quests:', questsFetchError)
+        throw new Error(`Failed to fetch linked quests: ${questsFetchError.message}`)
+    }
+
+    const questIds = (linkedQuests || []).map(q => q.id)
+    let totalXpToSubtract = 0
+    let totalCompletionsDeleted = 0
+
+    // Step 2: Get all completions for these quests and calculate XP to subtract
+    if (questIds.length > 0) {
+        const { data: completions, error: completionsFetchError } = await adminClient
+            .from('quest_completions')
+            .select('id, xp_earned')
+            .in('quest_id', questIds)
+            .eq('user_id', user.id)
+
+        if (completionsFetchError) {
+            console.error('[ERROR deleteGoal] Failed to fetch completions:', completionsFetchError)
+            throw new Error(`Failed to fetch completions: ${completionsFetchError.message}`)
+        }
+
+        totalCompletionsDeleted = completions?.length ?? 0
+        totalXpToSubtract = (completions || []).reduce((sum, c) => sum + (c.xp_earned || 0), 0)
+
+        console.log(`[DEBUG deleteGoal] Found ${totalCompletionsDeleted} completions with total ${totalXpToSubtract} XP for goal ${goalId}`)
+
+        // Step 3: Subtract XP from user stats
+        if (totalXpToSubtract > 0) {
+            const { data: currentStats } = await adminClient
+                .from('user_xp_stats')
+                .select('total_xp, xp_today, xp_this_week, xp_this_month, quests_completed_count')
+                .eq('user_id', user.id)
+                .single()
+
+            if (currentStats) {
+                await adminClient
+                    .from('user_xp_stats')
+                    .update({
+                        total_xp: Math.max(0, (currentStats.total_xp || 0) - totalXpToSubtract),
+                        xp_today: Math.max(0, (currentStats.xp_today || 0) - totalXpToSubtract),
+                        xp_this_week: Math.max(0, (currentStats.xp_this_week || 0) - totalXpToSubtract),
+                        xp_this_month: Math.max(0, (currentStats.xp_this_month || 0) - totalXpToSubtract),
+                        quests_completed_count: Math.max(0, (currentStats.quests_completed_count || 0) - totalCompletionsDeleted)
+                    })
+                    .eq('user_id', user.id)
+
+                console.log(`[DEBUG deleteGoal] Subtracted ${totalXpToSubtract} XP and ${totalCompletionsDeleted} completions from user stats`)
+            }
+        }
+
+        // Step 4: Delete all quest_completions for these quests
+        if (totalCompletionsDeleted > 0) {
+            const { error: deleteCompletionsError } = await adminClient
+                .from('quest_completions')
+                .delete()
+                .in('quest_id', questIds)
+                .eq('user_id', user.id)
+
+            if (deleteCompletionsError) {
+                console.error('[ERROR deleteGoal] Failed to delete completions:', deleteCompletionsError)
+                throw new Error(`Failed to delete completions: ${deleteCompletionsError.message}`)
+            }
+        }
+
+        // Step 5: Delete all linked quests
+        const { error: questDeleteError } = await adminClient
+            .from('daily_quests')
+            .delete()
+            .eq('goal_id', goalId)
+            .eq('user_id', user.id)
+
+        if (questDeleteError) {
+            console.error('[ERROR deleteGoal] Failed to delete linked quests:', questDeleteError)
+            throw new Error(`Failed to delete linked quests: ${questDeleteError.message}`)
+        }
+    }
+
+    console.log(`[DEBUG deleteGoal] Deleted ${questIds.length} quest(s) and ${totalCompletionsDeleted} completion(s) for goal ${goalId}`)
+
+    // Step 6: Delete the goal (milestones and entries cascade via FK constraints)
+    const { error: goalDeleteError } = await adminClient
         .from('goals')
         .delete()
         .eq('id', goalId)
+        .eq('user_id', user.id)
 
-    if (error) {
-        console.error('Error deleting goal:', error)
-        throw new Error(`Failed to delete goal: ${error.message}`)
+    if (goalDeleteError) {
+        console.error('[ERROR deleteGoal] Failed to delete goal:', goalDeleteError)
+        throw new Error(`Failed to delete goal: ${goalDeleteError.message}`)
     }
+
+    console.log(`[DEBUG deleteGoal] Successfully deleted goal ${goalId} with ${questIds.length} quest(s), ${totalCompletionsDeleted} completion(s), and ${totalXpToSubtract} XP rollback`)
+    revalidatePath('/')
 
     return true
 }

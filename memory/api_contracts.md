@@ -216,6 +216,23 @@ Quest atlar.
 
 ---
 
+### `deleteQuest(questId)`
+Quest ve ilişkili tüm verileri siler (CASCADE DELETE).
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `questId` | string | ✅ |
+
+**Return:** `Promise<ActionResult<void>>`
+
+**Cascade Akışı:**
+1. Quest'e ait tüm `quest_completions` kayıtları silinir
+2. Kazanılan XP `user_xp_stats`'tan düşülür
+3. Eğer goal'a bağlıysa, goal `current_value` geri alınır
+4. Quest silinir
+
+---
+
 ### `undoQuestCompletion(questId, completionDate?)`
 Quest tamamlamasını geri alır.
 

@@ -235,22 +235,114 @@ export async function updateQuest(
 }
 
 /**
- * Delete a quest
+ * Delete a quest and cascade delete all related data
+ * 
+ * This function:
+ * 1. Gets all quest_completions for this quest
+ * 2. Subtracts earned XP from user_xp_stats for each completion
+ * 3. Rollbacks goal progress if quest was linked to a goal
+ * 4. Deletes all quest_completions records
+ * 5. Deletes the quest itself
  */
 export async function deleteQuest(questId: string): Promise<ActionResult<void>> {
     try {
         const { user } = await getAuthenticatedClient()
         const supabase = createAdminClient()
 
-        const { error } = await supabase
+        // Step 1: Get the quest to check ownership and get goal_id
+        const { data: quest, error: questFetchError } = await supabase
+            .from('daily_quests')
+            .select('id, user_id, goal_id, progress_contribution')
+            .eq('id', questId)
+            .eq('user_id', user.id)
+            .single()
+
+        if (questFetchError || !quest) {
+            return { data: null, error: 'Quest bulunamadı veya erişim izniniz yok' }
+        }
+
+        // Step 2: Get all completions for this quest to calculate XP and progress to rollback
+        const { data: completions, error: completionsError } = await supabase
+            .from('quest_completions')
+            .select('id, xp_earned, goal_id')
+            .eq('quest_id', questId)
+            .eq('user_id', user.id)
+
+        if (completionsError) {
+            console.error('[ERROR deleteQuest] Failed to fetch completions:', completionsError)
+            return { data: null, error: completionsError.message }
+        }
+
+        const completionCount = completions?.length ?? 0
+        const totalXpToSubtract = (completions || []).reduce((sum, c) => sum + (c.xp_earned || 0), 0)
+
+        console.log(`[DEBUG deleteQuest] Quest ${questId} has ${completionCount} completions with total ${totalXpToSubtract} XP`)
+
+        // Step 3: Subtract XP from user_xp_stats if any completions exist
+        if (totalXpToSubtract > 0) {
+            await updateUserXpStats(user.id, -totalXpToSubtract)
+            console.log(`[DEBUG deleteQuest] Subtracted ${totalXpToSubtract} XP from user ${user.id}`)
+        }
+
+        // Step 4: Rollback goal progress if quest was linked to a goal
+        if (quest.goal_id && completionCount > 0) {
+            // Calculate total progress contribution to subtract
+            const progressPerCompletion = quest.progress_contribution ?? 1
+            const totalProgressToSubtract = progressPerCompletion * completionCount
+
+            // Get current goal value
+            const { data: goal, error: goalError } = await supabase
+                .from('goals')
+                .select('current_value, user_id')
+                .eq('id', quest.goal_id)
+                .single()
+
+            if (!goalError && goal && goal.user_id === user.id) {
+                const currentValue = goal.current_value ?? 0
+                const newValue = Math.max(0, currentValue - totalProgressToSubtract)
+
+                await supabase
+                    .from('goals')
+                    .update({
+                        current_value: newValue,
+                        is_completed: false, // Reset completion status if progress reduced
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', quest.goal_id)
+
+                console.log(`[DEBUG deleteQuest] Rolled back goal ${quest.goal_id} progress: ${currentValue} -> ${newValue} (-${totalProgressToSubtract})`)
+            }
+        }
+
+        // Step 5: Delete all quest_completions for this quest
+        if (completionCount > 0) {
+            const { error: deleteCompletionsError } = await supabase
+                .from('quest_completions')
+                .delete()
+                .eq('quest_id', questId)
+                .eq('user_id', user.id)
+
+            if (deleteCompletionsError) {
+                console.error('[ERROR deleteQuest] Failed to delete completions:', deleteCompletionsError)
+                return { data: null, error: deleteCompletionsError.message }
+            }
+
+            console.log(`[DEBUG deleteQuest] Deleted ${completionCount} completion record(s)`)
+        }
+
+        // Step 6: Delete the quest
+        const { error: deleteQuestError } = await supabase
             .from('daily_quests')
             .delete()
             .eq('id', questId)
             .eq('user_id', user.id)
 
-        if (error) {
-            return { data: null, error: error.message }
+        if (deleteQuestError) {
+            console.error('[ERROR deleteQuest] Failed to delete quest:', deleteQuestError)
+            return { data: null, error: deleteQuestError.message }
         }
+
+        console.log(`[DEBUG deleteQuest] Successfully deleted quest ${questId} with ${completionCount} completions and ${totalXpToSubtract} XP rollback`)
 
         revalidatePath('/')
         return { data: undefined, error: null }
@@ -259,6 +351,7 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
             return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
         }
         const message = error instanceof Error ? error.message : 'Quest silinirken hata oluştu'
+        console.error('[ERROR deleteQuest] Unexpected error:', message)
         return { data: null, error: message }
     }
 }

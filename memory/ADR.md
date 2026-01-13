@@ -658,6 +658,70 @@ src/hooks/useHaptics.ts   # Cross-platform haptics
 
 ---
 
+## ADR-013: Cascade Delete with XP Rollback
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Quest veya Goal silindiğinde veri tutarsızlığı oluşuyordu:
+- Quest silinince `quest_completions` kayıtları yetim kalıyordu
+- Kazanılan XP geri alınmıyordu
+- Goal silinince bağlı quest'ler silinmiyordu
+- Goal progress rollback yapılmıyordu
+
+### Karar
+
+**Full Cascade Delete + XP Rollback** sistemi uygulandı:
+
+**deleteQuest():**
+1. Tüm `quest_completions` kayıtlarını getir
+2. Toplam XP hesapla ve `user_xp_stats`'tan düş
+3. Eğer goal'a bağlıysa, `progress_contribution × completion_count` kadar goal progress'i geri al
+4. `quest_completions` kayıtlarını sil
+5. Quest'i sil
+
+**deleteGoal():**
+1. Bağlı tüm quest ID'lerini getir
+2. Bu quest'lerin tüm `quest_completions` kayıtlarını getir
+3. Toplam XP ve completion count hesapla
+4. `user_xp_stats`'tan XP ve count düş
+5. Tüm completions'ları sil
+6. Tüm quest'leri sil
+7. Goal'u sil
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Soft Delete** | Veri korunur | Karmaşık, storage maliyeti |
+| **DB Triggers** | Otomatik | Debug zorluğu |
+| **App-level Cascade ✓** | Tam kontrol, XP rollback | Daha fazla kod |
+
+### Sonuçlar
+
+**Pozitif:**
+- Veri tutarlılığı garanti
+- XP istatistikleri her zaman doğru
+- Goal progress senkronize
+- Orphan kayıt oluşmaz
+
+**Negatif:**
+- Silme işlemi daha yavaş (multiple queries)
+- Transaction rollback yok (Supabase JS limitation)
+
+**Mitigation:**
+- Admin client kullanımı ile RLS bypass
+- Detaylı debug logs
+
+**Dosyalar:**
+- `src/actions/quests.ts` → `deleteQuest()`
+- `src/actions/goals.ts` → `deleteGoal()`
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -687,6 +751,7 @@ src/hooks/useHaptics.ts   # Cross-platform haptics
 
 ---
 
-**Son Güncelleme:** 2026-01-13 03:45 UTC+3
-**Toplam ADR:** 12
+**Son Güncelleme:** 2026-01-13 03:56 UTC+3
+**Toplam ADR:** 13
+
 
