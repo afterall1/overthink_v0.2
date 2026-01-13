@@ -15,7 +15,8 @@ import type {
     GoalEntry,
     GoalTemplate,
     GoalTemplateWithQuests,
-    QuestTemplate
+    QuestTemplate,
+    DailyQuest
 } from '@/types/database.types'
 import { createQuestsFromTemplates } from './quests'
 
@@ -1048,3 +1049,224 @@ export async function createGoalFromTemplate(
         return { data: null, error: message }
     }
 }
+
+// =====================================================
+// GOAL PROGRESS HISTORY (Timeline + Stats)
+// =====================================================
+
+/**
+ * Timeline event types for goal progress visualization
+ */
+export interface ProgressTimelineEvent {
+    id: string
+    type: 'quest_completion' | 'progress_log' | 'milestone_reached'
+    title: string
+    emoji: string
+    value: number | null
+    xpEarned: number | null
+    timestamp: Date
+    metadata?: {
+        questId?: string
+        streakCount?: number
+        notes?: string
+        difficulty?: 'easy' | 'medium' | 'hard'
+    }
+}
+
+/**
+ * Goal progress stats summary
+ */
+export interface GoalProgressStats {
+    totalXpEarned: number
+    questsCompleted: number
+    totalProgressLogged: number
+    activeDays: number
+}
+
+/**
+ * Get comprehensive progress history for a goal
+ * Includes timeline events, linked quests, and summary stats
+ */
+export async function getGoalProgressHistory(goalId: string): Promise<ActionResult<{
+    timeline: ProgressTimelineEvent[]
+    linkedQuests: DailyQuest[]
+    stats: GoalProgressStats
+}>> {
+    try {
+        const { user } = await getAuthenticatedClient()
+        const adminClient = createAdminClient()
+
+        // Verify goal ownership
+        const { data: goal, error: goalError } = await adminClient
+            .from('goals')
+            .select('id, user_id, title')
+            .eq('id', goalId)
+            .single()
+
+        if (goalError || !goal) {
+            return { data: null, error: 'Hedef bulunamadı' }
+        }
+
+        if (goal.user_id !== user.id) {
+            return { data: null, error: 'Bu hedefe erişim yetkiniz yok' }
+        }
+
+        // Fetch all data in parallel
+        const [questsResult, completionsResult, entriesResult, milestonesResult] = await Promise.all([
+            // 1. Linked quests (active + completed)
+            adminClient
+                .from('daily_quests')
+                .select('*')
+                .eq('goal_id', goalId)
+                .eq('user_id', user.id)
+                .order('sort_order', { ascending: true }),
+
+            // 2. Quest completions for this goal
+            adminClient
+                .from('quest_completions')
+                .select(`
+                    id,
+                    quest_id,
+                    completed_date,
+                    completed_at,
+                    xp_earned,
+                    base_xp,
+                    streak_bonus_xp,
+                    streak_count,
+                    notes,
+                    daily_quests!inner (title, emoji, difficulty)
+                `)
+                .eq('goal_id', goalId)
+                .eq('user_id', user.id)
+                .order('completed_at', { ascending: false })
+                .limit(50),
+
+            // 3. Progress log entries
+            adminClient
+                .from('goal_entries')
+                .select('*')
+                .eq('goal_id', goalId)
+                .order('logged_at', { ascending: false })
+                .limit(50),
+
+            // 4. Milestones (for milestone_reached events)
+            adminClient
+                .from('goal_milestones')
+                .select('*')
+                .eq('goal_id', goalId)
+                .eq('is_completed', true)
+                .order('completed_at', { ascending: false })
+        ])
+
+        // Handle potential schema cache errors gracefully
+        const linkedQuests = questsResult.data || []
+        const completions = completionsResult.error?.message?.includes('schema cache')
+            ? []
+            : completionsResult.data || []
+        const entries = entriesResult.error?.message?.includes('schema cache')
+            ? []
+            : entriesResult.data || []
+        const completedMilestones = milestonesResult.error?.message?.includes('schema cache')
+            ? []
+            : milestonesResult.data || []
+
+        // Build timeline events
+        const timeline: ProgressTimelineEvent[] = []
+
+        // Add quest completion events
+        for (const completion of completions) {
+            const questInfo = completion.daily_quests as unknown as {
+                title: string
+                emoji: string
+                difficulty: 'easy' | 'medium' | 'hard'
+            } | null
+
+            timeline.push({
+                id: completion.id,
+                type: 'quest_completion',
+                title: questInfo?.title || 'Görev tamamlandı',
+                emoji: questInfo?.emoji || '✅',
+                value: null,
+                xpEarned: completion.xp_earned,
+                timestamp: new Date(completion.completed_at),
+                metadata: {
+                    questId: completion.quest_id,
+                    streakCount: completion.streak_count,
+                    notes: completion.notes || undefined,
+                    difficulty: questInfo?.difficulty
+                }
+            })
+        }
+
+        // Add progress log events
+        for (const entry of entries) {
+            timeline.push({
+                id: entry.id,
+                type: 'progress_log',
+                title: `+${entry.value} ilerleme kaydedildi`,
+                emoji: '📊',
+                value: entry.value,
+                xpEarned: null,
+                timestamp: new Date(entry.logged_at),
+                metadata: {
+                    notes: entry.notes || undefined
+                }
+            })
+        }
+
+        // Add milestone events
+        for (const milestone of completedMilestones) {
+            if (milestone.completed_at) {
+                timeline.push({
+                    id: milestone.id,
+                    type: 'milestone_reached',
+                    title: milestone.title,
+                    emoji: '🏆',
+                    value: milestone.target_value,
+                    xpEarned: null,
+                    timestamp: new Date(milestone.completed_at),
+                    metadata: {}
+                })
+            }
+        }
+
+        // Sort timeline by timestamp (newest first)
+        timeline.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+        // Calculate stats
+        const totalXpEarned = completions.reduce((sum, c) => sum + (c.xp_earned || 0), 0)
+        const questsCompleted = completions.length
+        const totalProgressLogged = entries.reduce((sum, e) => sum + (e.value || 0), 0)
+
+        // Calculate unique active days
+        const uniqueDays = new Set<string>()
+        for (const c of completions) {
+            uniqueDays.add(c.completed_date)
+        }
+        for (const e of entries) {
+            uniqueDays.add(new Date(e.logged_at).toISOString().split('T')[0])
+        }
+        const activeDays = uniqueDays.size
+
+        return {
+            data: {
+                timeline,
+                linkedQuests: linkedQuests as DailyQuest[],
+                stats: {
+                    totalXpEarned,
+                    questsCompleted,
+                    totalProgressLogged,
+                    activeDays
+                }
+            },
+            error: null
+        }
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            return { data: null, error: 'Kimlik doğrulama gerekli. Lütfen giriş yapın.' }
+        }
+        const message = error instanceof Error ? error.message : 'İlerleme geçmişi yüklenirken hata oluştu'
+        return { data: null, error: message }
+    }
+}
+

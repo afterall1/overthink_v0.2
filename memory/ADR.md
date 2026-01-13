@@ -547,6 +547,117 @@ Her görev `contribution_type` ile işaretlenir: `'direct'` veya `'momentum'`
 
 ---
 
+## ADR-011: Quest-to-Goal Progress Sync Simplification
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Quest tamamlandığında goal progress'i güncellenmiyor. 6 görev tamamlanmış olmasına rağmen goal progress 0% gösteriyor.
+
+**Tespit Edilen 3 Bug:**
+1. `createQuestFromTemplate` fonksiyonu `progress_contribution` değerini template'ten kopyalamıyordu
+2. `completeQuest` fonksiyonu sadece `contribution_type === 'direct'` kontrolü yapıyordu (bu sütun hiç kullanılmıyordu)
+3. Recurring quest'ler `scheduled_date === today` filtresinden geçemiyordu
+
+### Karar
+
+**Basitleştirme yaklaşımı:**
+
+1. **Her quest completion = Her zaman progress eklenir**
+   - `contribution_type` kontrolü kaldırıldı
+   - Default `progress_contribution = 1` (template'te yoksa)
+
+2. **Template'ten progress_contribution kopyalanır**
+   - `createQuestFromTemplate` L888'de eklendi
+
+3. **Recurring quest filter düzeltmesi**
+   - `is_recurring || scheduled_date === today`
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| Contribution type ile devam | Granüler kontrol | Karmaşıklık, bug kaynağı |
+| **Her completion = progress ✓** | Basit, tahmin edilebilir | Çok hassas kontrol yok |
+| Sadece manual progress | Kullanıcı kontrolü | Quest-goal bağlantısı kopuk |
+
+### Sonuçlar
+
+**Pozitif:**
+- Her quest tamamlandığında goal progress artıyor
+- Kullanıcı net bir ilerleme görüyor
+- Kod daha basit ve tahmin edilebilir
+
+**Negatif:**
+- `contribution_type = 'momentum'` artık anlamsız (kaldırılabilir)
+- Mevcut quest'lerin `progress_contribution` değeri NULL ise default 1 kullanılıyor
+
+**Mitigation:**
+- `20260113_fix_quest_progress_contribution.sql` migration ile mevcut quest'ler düzeltildi
+- Linked Quests panelinde "Hedefe Katkı Sağladı" rozeti ile şeffaflık
+
+---
+
+## ADR-012: iOS Mobile Foundation (Bottom Sheet Pattern)
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+LifeNexus iOS App Store'da yayınlanacak. Mevcut Goal Detail Panel web-oriented centered modal kullanıyordu. iOS kullanıcıları için native hissiyat kritik önem taşıyor.
+
+**Tespit Edilen Sorunlar:**
+- Safe area insets (Dynamic Island, Home Indicator) yoksayılıyordu
+- Touch targets < 44pt (iOS HIG ihlali)
+- Haptic feedback yoktu
+- Gesture navigation (pull-to-dismiss) eksikti
+
+### Karar
+
+**iOS-native Bottom Sheet Pattern** implementasyonu:
+1. 3 detent seviyesi: collapsed (30%), medium (55%), expanded (92%)
+2. CSS `env(safe-area-inset-*)` ile Dynamic Island ve Home Indicator desteği
+3. Tüm butonlar min 44pt touch target
+4. Web Vibration API ile cross-platform haptic feedback
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Centered Modal** | Basit | iOS'ta doğal değil |
+| **Full-screen Modal** | Basit | Context kaybı |
+| **Native Capacitor Sheet** | Tam native | Ekstra dependency |
+| **Custom Bottom Sheet ✓** | iOS feel + Web uyumlu | Custom geliştirme |
+
+### Sonuçlar
+
+**Pozitif:**
+- iOS HIG %95+ uyumluluk
+- Apple Maps, Find My, Stocks ile tutarlı UX
+- Haptic feedback ile premium hissiyat
+- PWA ve Native build'da çalışır
+
+**Negatif:**
+- Custom component maintenance
+- Web'de haptic feedback sınırlı
+
+**Dosyalar:**
+```
+src/components/hud/Goals/GoalDetail/layout/
+├── BottomSheet.tsx       # Detent-based sheet
+├── SheetHeader.tsx       # 44pt touch targets
+└── SafeAreaContainer.tsx # Safe area wrapper
+
+src/hooks/useHaptics.ts   # Cross-platform haptics
+```
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -576,7 +687,6 @@ Her görev `contribution_type` ile işaretlenir: `'direct'` veya `'momentum'`
 
 ---
 
-**Son Güncelleme:** 2026-01-13 01:10 UTC+3
-**Toplam ADR:** 10
-
+**Son Güncelleme:** 2026-01-13 03:45 UTC+3
+**Toplam ADR:** 12
 

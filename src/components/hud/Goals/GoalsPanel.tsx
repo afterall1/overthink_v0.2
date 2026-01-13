@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, Target, CheckCircle2, ListTodo, TrendingUp, Calendar } from 'lucide-react'
 import GoalCard from './GoalCard'
-import GoalDetailModal from './GoalDetailModal' // [NEW] Import Modal
+import GoalDetail from './GoalDetail' // [NEW] World-class redesign
 import type { GoalWithDetails, Category, GoalPeriod } from '@/types/database.types'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import type { DailyQuest } from '@/types/database.types'
 
 interface GoalsPanelProps {
     isOpen: boolean
     onClose: () => void
     goals: GoalWithDetails[]
+    quests: DailyQuest[] // [NEW] All quests for filtering
     categories: Pick<Category, 'id' | 'name' | 'slug' | 'color_code' | 'icon_slug'>[]
     onCreateClick: () => void
     selectedGoalId: string | null // [NEW] Controlled state
@@ -21,6 +23,10 @@ interface GoalsPanelProps {
     onEditGoal?: (goal: GoalWithDetails) => void // [NEW] Edit handler
     onToggleMilestone: (milestoneId: string) => void
     onLogProgress: (goalId: string, value: number, notes?: string) => Promise<void>
+    // Quest management callbacks
+    onCompleteQuest: (questId: string) => Promise<void>
+    onSkipQuest: (questId: string) => Promise<void>
+    onDeleteQuest?: (questId: string) => Promise<void>
     isLoading?: boolean
 }
 
@@ -35,6 +41,7 @@ export default function GoalsPanel({
     isOpen,
     onClose,
     goals,
+    quests,
     categories,
     onCreateClick,
     selectedGoalId,
@@ -43,6 +50,9 @@ export default function GoalsPanel({
     onEditGoal,
     onToggleMilestone,
     onLogProgress,
+    onCompleteQuest,
+    onSkipQuest,
+    onDeleteQuest,
     isLoading = false
 }: GoalsPanelProps) {
     // Filter State
@@ -50,6 +60,11 @@ export default function GoalsPanel({
 
     // Find the full goal object from ID
     const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
+
+    // Filter quests linked to the selected goal
+    const linkedQuests = selectedGoalId
+        ? quests.filter(q => q.goal_id === selectedGoalId)
+        : []
 
     const activeGoals = goals.filter(g => !g.is_completed)
     const completedGoals = goals.filter(g => g.is_completed)
@@ -217,14 +232,18 @@ export default function GoalsPanel({
 
             {/* THE COMMAND CENTER MODAL */}
             {/* Rendered outside the panel AnimatePresence, so it can overlay everything */}
-            <GoalDetailModal
+            <GoalDetail
                 isOpen={!!selectedGoal}
                 onClose={() => onGoalSelect(null)}
                 goal={selectedGoal}
+                linkedQuests={linkedQuests}
                 onUpdateProgress={handleUpdateProgress}
                 onToggleMilestone={onToggleMilestone}
                 onEdit={onEditGoal}
                 onDelete={onDeleteGoal}
+                onCompleteQuest={onCompleteQuest}
+                onSkipQuest={onSkipQuest}
+                onDeleteQuest={onDeleteQuest}
                 isLoading={isLoading}
             />
         </>

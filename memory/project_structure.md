@@ -33,7 +33,9 @@ overthink_v0.2/
 │   └── 📁 migrations/
 │       ├── 20260112_quest_system.sql        # Quest System tabloları
 │       ├── 20260112_quest_templates.sql     # Quest Templates (124 şablon)
-│       └── 20260113_momentum_score_system.sql # 🆕 Momentum Score System
+│       ├── 20260112_goal_templates.sql      # Goal Templates (44 şablon)
+│       ├── 20260113_momentum_score_system.sql # Momentum Score System
+│       └── 20260113_fix_quest_progress_contribution.sql # 🆕 Progress fix
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
@@ -84,7 +86,7 @@ overthink_v0.2/
 │   │   │   │   ├── GoalsPanel.tsx
 │   │   │   │   ├── GoalsStrip.tsx        # Ana ekran hedef şeridi
 │   │   │   │   ├── GoalCard.tsx          # Dikey kart tasarımı
-│   │   │   │   ├── GoalDetailModal.tsx   # 🆕 Command Center (Redesigned)
+│   │   │   │   ├── GoalDetailModal.tsx   # Legacy (deprecated)
 │   │   │   │   ├── GoalModal.tsx
 │   │   │   │   ├── GoalCreationWizard.tsx
 │   │   │   │   ├── GoalCelebration.tsx
@@ -92,9 +94,29 @@ overthink_v0.2/
 │   │   │   │   ├── GoalHealthIndicator.tsx
 │   │   │   │   ├── StreakBadge.tsx
 │   │   │   │   ├── VelocityMeter.tsx
-│   │   │   │   ├── MomentumGauge.tsx     # 🆕 Dual progress gauge
+│   │   │   │   ├── MomentumGauge.tsx     # Dual progress gauge
 │   │   │   │   ├── MilestoneList.tsx
-│   │   │   │   └── ProgressRing.tsx
+│   │   │   │   ├── ProgressRing.tsx
+│   │   │   │   │
+│   │   │   │   └── 📁 GoalDetail/   # 🆕 Modular GoalDetail
+│   │   │   │       ├── index.tsx        # Main orchestrator (iOS Bottom Sheet)
+│   │   │   │       ├── types.ts         # Shared types, constants
+│   │   │   │       │
+│   │   │   │       ├── 📁 layout/       # 🆕 iOS Layout Components
+│   │   │   │       │   ├── index.ts         # Barrel export
+│   │   │   │       │   ├── BottomSheet.tsx  # iOS-native detent sheet
+│   │   │   │       │   ├── SheetHeader.tsx  # 44pt touch target header
+│   │   │   │       │   └── SafeAreaContainer.tsx  # Safe area wrapper
+│   │   │   │       │
+│   │   │   │       ├── HeroSection.tsx      # Apple dual-ring hero
+│   │   │   │       ├── StatsGrid.tsx        # 🆕 XP, completion rate, velocity
+│   │   │   │       ├── StreakWarning.tsx    # 🆕 Streak risk alerts
+│   │   │   │       ├── ContributionHeatmap.tsx # 🆕 30-day activity grid
+│   │   │   │       ├── LinkedQuestsPanel.tsx   # Quest actions
+│   │   │   │       ├── JourneyPath.tsx      # SVG milestone path
+│   │   │   │       ├── ProgressTimeline.tsx # Activity feed
+│   │   │   │       ├── AIInsightCard.tsx    # Dynamic AI insight
+│   │   │   │       └── ProgressLogger.tsx   # Progress input
 │   │   │   │
 │   │   │   ├── 📁 Quests/         # 🆕 Quest System UI
 │   │   │   │   ├── index.ts
@@ -152,7 +174,8 @@ overthink_v0.2/
 │   │   └── ai.ts             # 🆕 AI Council server actions
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
-│   │   └── useIsMobile.ts    # (Scene.tsx içinde şu an)
+│   │   ├── useIsMobile.ts    # (Scene.tsx içinde şu an)
+│   │   └── useHaptics.ts     # 🆕 iOS haptic feedback hook
 │   │
 │   ├── 📁 lib/               # Business logic
 │   │   ├── auth.ts           # 🔐 Centralized auth utilities

@@ -354,6 +354,7 @@ export default function Home() {
         isOpen={isGoalsOpen}
         onClose={() => setIsGoalsOpen(false)}
         goals={goals}
+        quests={quests}
         categories={categories}
         onCreateClick={() => setIsGoalWizardOpen(true)}
         selectedGoalId={selectedGoalId}
@@ -388,6 +389,35 @@ export default function Home() {
             await fetchGoals()
           } catch (error) {
             console.error('Failed to log progress:', error)
+          }
+        }}
+        onCompleteQuest={async (questId) => {
+          try {
+            await completeQuest(questId)
+            // Refresh both quests and goals (progress may have changed)
+            await Promise.all([fetchQuests(), fetchGoals()])
+          } catch (error) {
+            console.error('Failed to complete quest:', error)
+            throw error
+          }
+        }}
+        onSkipQuest={async (questId) => {
+          try {
+            await skipQuest(questId)
+            await fetchQuests()
+          } catch (error) {
+            console.error('Failed to skip quest:', error)
+            throw error
+          }
+        }}
+        onDeleteQuest={async (questId) => {
+          try {
+            const { deleteQuest } = await import('@/actions/quests')
+            await deleteQuest(questId)
+            await fetchQuests()
+          } catch (error) {
+            console.error('Failed to delete quest:', error)
+            throw error
           }
         }}
         isLoading={isGoalsLoading}

@@ -406,8 +406,8 @@ export async function completeQuest(
 
         if (quest.goal_id) {
             // Get progress contribution from the quest (set from template)
-            const progressContribution = quest.progress_contribution ?? 0
-            const contributionType = (quest as DailyQuest & { contribution_type?: string }).contribution_type || 'direct'
+            // Default to 1 if not set
+            const progressContribution = quest.progress_contribution ?? 1
 
             // Get goal data
             const { data: goal } = await supabase
@@ -417,33 +417,30 @@ export async function completeQuest(
                 .single()
 
             if (goal) {
-                // Calculate new current_value (only for direct contribution)
-                let newValue = goal.current_value ?? 0
-                if (contributionType === 'direct' && progressContribution > 0) {
-                    newValue += progressContribution
-                }
+                // Calculate new current_value - ALWAYS add progress contribution on completion
+                let newValue = (goal.current_value ?? 0) + progressContribution
                 const isNowCompleted = goal.target_value ? newValue >= goal.target_value : false
 
                 // Calculate streak
-                let newStreak = goal.streak_count ?? 0
+                let newGoalStreak = goal.streak_count ?? 0
                 const lastActivity = goal.last_activity_date
                 const yesterday = new Date()
                 yesterday.setDate(yesterday.getDate() - 1)
                 const yesterdayStr = yesterday.toISOString().split('T')[0]
 
                 if (!lastActivity || lastActivity === yesterdayStr) {
-                    newStreak += 1
+                    newGoalStreak += 1
                 } else if (lastActivity !== today) {
-                    newStreak = 1 // Reset streak if gap
+                    newGoalStreak = 1 // Reset streak if gap
                 }
                 // If activity is same day, streak stays the same
 
                 // Streak multiplier
                 const streakMultiplier =
-                    newStreak >= 21 ? 2.0 :
-                        newStreak >= 14 ? 1.6 :
-                            newStreak >= 7 ? 1.4 :
-                                newStreak >= 3 ? 1.2 : 1.0
+                    newGoalStreak >= 21 ? 2.0 :
+                        newGoalStreak >= 14 ? 1.6 :
+                            newGoalStreak >= 7 ? 1.4 :
+                                newGoalStreak >= 3 ? 1.2 : 1.0
 
                 // Habit maturity
                 const maturityDays = (goal.habit_maturity_days ?? 0) + (lastActivity !== today ? 1 : 0)
@@ -452,15 +449,19 @@ export async function completeQuest(
                         maturityDays >= 14 ? 75 :
                             maturityDays >= 7 ? 50 : 25
 
-                // Get daily completion rate for this goal
+                // Get daily completion rate for this goal (including recurring quests)
                 const { data: goalQuestsToday } = await supabase
                     .from('daily_quests')
-                    .select('id, status')
+                    .select('id, status, is_recurring, scheduled_date')
                     .eq('goal_id', quest.goal_id)
-                    .eq('scheduled_date', today)
 
-                const goalTotal = goalQuestsToday?.length ?? 0
-                const goalCompleted = goalQuestsToday?.filter(q => q.status === 'completed').length ?? 0
+                // Filter to today's quests: either scheduled for today OR recurring
+                const todayQuests = (goalQuestsToday || []).filter(q =>
+                    q.is_recurring || q.scheduled_date === today
+                )
+
+                const goalTotal = todayQuests.length
+                const goalCompleted = todayQuests.filter(q => q.status === 'completed').length
                 const completionRate = goalTotal > 0 ? goalCompleted / goalTotal : 0
 
                 // Early bird bonus (before 9 AM)
@@ -475,20 +476,24 @@ export async function completeQuest(
                 ))
 
                 // Update goal with all momentum data
-                await supabase
+                const { error: updateError } = await supabase
                     .from('goals')
                     .update({
                         current_value: newValue,
                         is_completed: isNowCompleted,
                         last_activity_date: today,
-                        streak_count: newStreak,
-                        longest_streak: Math.max(newStreak, goal.longest_streak ?? 0),
+                        streak_count: newGoalStreak,
+                        longest_streak: Math.max(newGoalStreak, goal.longest_streak ?? 0),
                         momentum_score: momentum,
                         habit_maturity_days: maturityDays
                     })
                     .eq('id', quest.goal_id)
 
-                momentumData = { momentum, streak: newStreak, maturityDays }
+                if (updateError && process.env.NODE_ENV === 'development') {
+                    console.error('Goal update error:', updateError)
+                }
+
+                momentumData = { momentum, streak: newGoalStreak, maturityDays }
             }
         }
 
@@ -885,7 +890,11 @@ export async function createQuestFromTemplate(
                 ?? typedTemplate.recurrence_pattern
                 ?? (typedTemplate.is_recurring_default ? 'daily' : null),
             scheduled_date: customizations?.scheduled_date ?? getTodayDateString(),
-            status: 'pending'
+            status: 'pending',
+            // CRITICAL FIX: Copy progress_contribution from template for goal progress sync
+            progress_contribution: customizations?.progress_contribution
+                ?? (typedTemplate as unknown as { progress_contribution?: number }).progress_contribution
+                ?? 1 // Default to 1 if not specified
         }
 
         const { data, error } = await supabase

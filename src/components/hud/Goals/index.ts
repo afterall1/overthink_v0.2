@@ -15,3 +15,5 @@ export { default as VelocityMeter } from './VelocityMeter'
 export { default as MomentumGauge, MomentumBadge, MomentumChange } from './MomentumGauge'
 // Dopamine-boosting celebrations
 export { default as ConfettiCelebration, useConfetti } from './ConfettiCelebration'
+// GoalDetail Module (World-Class Redesign)
+export { default as GoalDetail } from './GoalDetail'
