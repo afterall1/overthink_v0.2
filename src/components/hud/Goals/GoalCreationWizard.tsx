@@ -190,6 +190,12 @@ export default function GoalCreationWizard({
     const validateStep = (step: number): boolean => {
         const newErrors: Record<string, string> = {}
 
+        // Templates that require user input for target value
+        const REQUIRES_INPUT_SLUGS = [
+            'lose_weight', 'gain_muscle', 'lose_fat', 'profit_target',
+            'monthly_revenue', 'run_marathon', 'build_strength'
+        ]
+
         switch (step) {
             case 1:
                 // Motivation is optional but encouraged
@@ -197,6 +203,14 @@ export default function GoalCreationWizard({
             case 2:
                 if (!formData.title.trim()) {
                     newErrors.title = 'Hedef başlığı gerekli'
+                }
+                // Check if template requires target_value input
+                if (formData.goal_template_id) {
+                    const titleLower = formData.title.toLowerCase()
+                    const requiresInput = REQUIRES_INPUT_SLUGS.some(s => titleLower.includes(s) || s.includes(titleLower))
+                    if (requiresInput && !formData.target_value) {
+                        newErrors.target_value = 'Bu hedef için değer belirtmelisiniz'
+                    }
                 }
                 break
             case 3:
@@ -215,6 +229,7 @@ export default function GoalCreationWizard({
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
+
 
     const handleNext = () => {
         if (validateStep(currentStep)) {
@@ -508,6 +523,9 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [useCustom, setUseCustom] = useState(false)
+    const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null)
+    const [autoPopulated, setAutoPopulated] = useState(false)
+
 
     // Health Profile state for food/sport categories
     const { hasProfile, profile, isLoading: isProfileLoading, refresh: refreshProfile } = useHealthProfile()
@@ -516,6 +534,21 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
     // Health-related categories
     const HEALTH_CATEGORIES = ['food', 'sport']
     const isHealthCategory = selectedCategory !== null && HEALTH_CATEGORIES.includes(selectedCategory)
+
+    // Templates that require user input (target value is personal)
+    const REQUIRES_USER_INPUT_SLUGS = [
+        'lose_weight', 'gain_muscle', 'lose_fat', 'profit_target',
+        'monthly_revenue', 'run_marathon', 'build_strength'
+    ]
+
+    // Quick duration options
+    const DURATION_OPTIONS = [
+        { days: 30, label: '30 gün', emoji: '⚡' },
+        { days: 60, label: '60 gün', emoji: '💪' },
+        { days: 90, label: '90 gün', emoji: '🔥' },
+        { days: 0, label: 'Özel', emoji: '📅' }
+    ]
+
 
     // Goal Template kategorileri
     const GOAL_TEMPLATE_CATEGORIES = [
@@ -545,22 +578,105 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
         fetchTemplates()
     }, [selectedCategory])
 
-    // Handle template selection
+    // Handle template selection - now also expands the card
     const handleTemplateSelect = (template: GoalTemplate) => {
-        updateField('goal_template_id', template.id)
-        updateField('title', template.title)
-        updateField('description', template.description ?? '')
-        updateField('target_value', template.default_target_value ?? undefined)
-        updateField('unit', template.metric_unit)
-        updateField('period', template.default_period)
-        setUseCustom(false)
+        const isAlreadySelected = formData.goal_template_id === template.id
+
+        if (isAlreadySelected) {
+            // Toggle expand/collapse if already selected
+            setExpandedTemplateId(prev => prev === template.id ? null : template.id)
+        } else {
+            // Select and expand
+            updateField('goal_template_id', template.id)
+            updateField('title', template.title)
+            updateField('description', template.description ?? '')
+            updateField('unit', template.metric_unit)
+            updateField('period', template.default_period)
+            setExpandedTemplateId(template.id)
+            setUseCustom(false)
+            setAutoPopulated(false) // Reset auto-populated flag
+
+            // AUTO-POPULATE from Health Profile for weight-based goals
+            const isWeightLossTemplate = template.slug?.includes('lose_weight') || template.slug?.includes('kilo_ver')
+            const isWeightGainTemplate = template.slug?.includes('gain_muscle') || template.slug?.includes('kilo_al')
+
+            if (hasProfile && profile && (isWeightLossTemplate || isWeightGainTemplate)) {
+                const currentWeight = profile.weight_kg
+                const targetWeight = profile.target_weight_kg
+
+                if (currentWeight && targetWeight) {
+                    // Calculate weight difference
+                    const weightDiff = isWeightLossTemplate
+                        ? currentWeight - targetWeight  // Weight to lose
+                        : targetWeight - currentWeight  // Weight to gain
+
+                    if (weightDiff > 0) {
+                        // Set target value from profile
+                        updateField('target_value', weightDiff)
+
+                        // Calculate duration based on goal_pace
+                        const weeklyRate = profile.goal_pace === 'slow' ? 0.3
+                            : profile.goal_pace === 'aggressive' ? 0.75
+                                : 0.5 // default: moderate
+                        const estimatedWeeks = Math.ceil(weightDiff / weeklyRate)
+                        const estimatedDays = estimatedWeeks * 7
+
+                        // Set end date
+                        const startDate = new Date(formData.start_date || new Date())
+                        const endDate = new Date(startDate)
+                        endDate.setDate(endDate.getDate() + estimatedDays)
+                        updateField('end_date', endDate.toISOString().split('T')[0])
+
+                        setAutoPopulated(true)
+                    }
+                }
+            }
+
+            // Fallback: If not auto-populated, use template defaults
+            if (!hasProfile || !profile?.target_weight_kg) {
+                updateField('target_value', template.default_target_value ?? undefined)
+
+                // Auto-set end date based on template default_duration_days
+                if (template.default_duration_days) {
+                    const startDate = new Date(formData.start_date || new Date())
+                    const endDate = new Date(startDate)
+                    endDate.setDate(endDate.getDate() + template.default_duration_days)
+                    updateField('end_date', endDate.toISOString().split('T')[0])
+                }
+            }
+        }
+    }
+
+
+    // Set duration from quick chips
+    const setDuration = (days: number) => {
+        if (days === 0) return // Custom - user picks in Step 3
+        const startDate = new Date(formData.start_date || new Date())
+        const endDate = new Date(startDate)
+        endDate.setDate(endDate.getDate() + days)
+        updateField('end_date', endDate.toISOString().split('T')[0])
+    }
+
+    // Calculate days between dates
+    const getDurationDays = (): number => {
+        if (!formData.start_date || !formData.end_date) return 0
+        const start = new Date(formData.start_date)
+        const end = new Date(formData.end_date)
+        return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+    }
+
+    // Check if template requires user input
+    const templateRequiresInput = (slug: string): boolean => {
+        return REQUIRES_USER_INPUT_SLUGS.some(s => slug.includes(s) || s.includes(slug))
     }
 
     // Switch to custom mode
     const handleSwitchToCustom = () => {
         setUseCustom(true)
         updateField('goal_template_id', null)
+        setExpandedTemplateId(null)
     }
+
 
     // If custom mode, show manual inputs
     if (useCustom) {
@@ -764,74 +880,288 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[340px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                     {goalTemplates.map((template) => {
                         const isSelected = formData.goal_template_id === template.id
+                        const isExpanded = expandedTemplateId === template.id && isSelected
                         const catInfo = GOAL_TEMPLATE_CATEGORIES.find(c => c.slug === template.category_slug)
                         const categoryColor = catInfo?.color ?? '#6B7280'
+                        const needsInput = templateRequiresInput(template.slug)
+                        const durationDays = getDurationDays()
 
                         return (
-                            <button
+                            <motion.div
                                 key={template.id}
-                                type="button"
-                                onClick={() => handleTemplateSelect(template)}
+                                layout
                                 className={clsx(
-                                    'p-4 rounded-xl text-left transition-all border-2',
+                                    'rounded-xl transition-all border-2 overflow-hidden',
                                     isSelected
-                                        ? 'border-blue-500 bg-blue-50 shadow-lg'
+                                        ? 'border-blue-500 bg-blue-50/50 shadow-lg'
                                         : 'border-transparent bg-slate-50 hover:bg-slate-100 hover:border-slate-200'
                                 )}
                             >
-                                <div className="flex items-start gap-3">
-                                    <div
-                                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
-                                        style={{ backgroundColor: `${categoryColor}20` }}
-                                    >
-                                        {template.emoji}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-slate-800 truncate">
-                                            {template.title}
-                                        </h4>
-                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                                            {template.description ?? `${template.default_target_value ?? '?'} ${template.metric_unit} hedefi`}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span
-                                                className="px-2 py-0.5 rounded-full text-xs font-medium"
-                                                style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
-                                            >
-                                                {catInfo?.name ?? template.category_slug}
-                                            </span>
-                                            <span className="text-xs text-slate-400">
-                                                {template.difficulty === 'easy' ? '🌱' : template.difficulty === 'medium' ? '💪' : '🔥'}
-                                            </span>
+                                {/* Template Header - Clickable */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleTemplateSelect(template)}
+                                    className="w-full p-4 text-left"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div
+                                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
+                                            style={{ backgroundColor: `${categoryColor}20` }}
+                                        >
+                                            {template.emoji}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-slate-800 truncate">
+                                                {template.title}
+                                            </h4>
+                                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                                {template.description ?? `${template.default_target_value ?? '?'} ${template.metric_unit} hedefi`}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span
+                                                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                                                    style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
+                                                >
+                                                    {catInfo?.name ?? template.category_slug}
+                                                </span>
+                                                <span className="text-xs text-slate-400">
+                                                    {template.difficulty === 'easy' ? '🌱' : template.difficulty === 'medium' ? '💪' : '🔥'}
+                                                </span>
+                                                {needsInput && (
+                                                    <span className="text-xs text-amber-600 font-medium">
+                                                        ✏️ Kişiselleştir
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {isSelected && (
+                                                <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                                                    <Check className="w-4 h-4 text-white" />
+                                                </div>
+                                            )}
+                                            <ChevronRight
+                                                className={clsx(
+                                                    'w-5 h-5 text-slate-400 transition-transform',
+                                                    isExpanded && 'rotate-90'
+                                                )}
+                                            />
                                         </div>
                                     </div>
-                                    {isSelected && (
-                                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-4 h-4 text-white" />
-                                        </div>
+                                </button>
+
+                                {/* Expandable Customization Panel */}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="px-4 pb-4 pt-0 space-y-4 border-t border-blue-100">
+                                                {/* CASE 1: Auto-populated from Health Profile - READ-ONLY SUMMARY */}
+                                                {autoPopulated && hasProfile && profile && (
+                                                    <div className="pt-4 space-y-3">
+                                                        <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+                                                                    <Check className="w-5 h-5 text-white" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-emerald-800">
+                                                                        Sağlık Profilinden Otomatik Ayarlandı
+                                                                    </p>
+                                                                    <p className="text-xs text-emerald-600">
+                                                                        Hedefin zaten tanımlı, ekstra giriş gerekmez.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Read-only metrics */}
+                                                            <div className="grid grid-cols-2 gap-3 mt-4">
+                                                                <div className="p-3 rounded-lg bg-white/70">
+                                                                    <p className="text-xs text-slate-500">Mevcut Kilo</p>
+                                                                    <p className="text-lg font-bold text-slate-800">{profile.weight_kg} kg</p>
+                                                                </div>
+                                                                <div className="p-3 rounded-lg bg-white/70">
+                                                                    <p className="text-xs text-slate-500">Hedef Kilo</p>
+                                                                    <p className="text-lg font-bold text-emerald-700">{profile.target_weight_kg} kg</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-3 p-3 rounded-lg bg-white/70">
+                                                                <p className="text-xs text-slate-500">Hedef</p>
+                                                                <p className="text-xl font-bold text-teal-700">
+                                                                    {formData.target_value} kg {template.slug?.includes('lose') ? 'kayıp' : 'artış'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-white/70">
+                                                                <div>
+                                                                    <p className="text-xs text-slate-500">Tahmini Süre</p>
+                                                                    <p className="text-lg font-bold text-slate-800">{durationDays} gün</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-xs text-slate-500">Hız</p>
+                                                                    <p className="text-sm font-medium text-slate-600">
+                                                                        {profile.goal_pace === 'slow' ? '🐢 Yavaş (~0.3 kg/hafta)' :
+                                                                            profile.goal_pace === 'aggressive' ? '🚀 Hızlı (~0.75 kg/hafta)' :
+                                                                                '🐇 Orta (~0.5 kg/hafta)'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Instant Calculation Preview */}
+                                                        {formData.target_value && durationDays > 0 && (
+                                                            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                                                                <p className="text-xs text-slate-600 mb-1">
+                                                                    📊 <strong>Günlük Hesaplama:</strong>
+                                                                </p>
+                                                                <div className="text-sm text-blue-700 font-medium space-y-1">
+                                                                    <p>
+                                                                        {formData.target_value} kg × 7,700 kcal = <strong>{(formData.target_value * 7700).toLocaleString()}</strong> kcal toplam açık
+                                                                    </p>
+                                                                    <p>
+                                                                        Günlük: <strong>~{Math.round((formData.target_value * 7700) / durationDays).toLocaleString()}</strong> kcal açık
+                                                                    </p>
+                                                                    <p className="text-xs text-slate-500 mt-1">
+                                                                        {Math.round((formData.target_value * 7700) / durationDays) <= 500 && '✅ Güvenli ve sürdürülebilir'}
+                                                                        {Math.round((formData.target_value * 7700) / durationDays) > 500 && Math.round((formData.target_value * 7700) / durationDays) <= 750 && '⚠️ Orta zorluk'}
+                                                                        {Math.round((formData.target_value * 7700) / durationDays) > 750 && Math.round((formData.target_value * 7700) / durationDays) <= 1000 && '🔥 Agresif hedef'}
+                                                                        {Math.round((formData.target_value * 7700) / durationDays) > 1000 && '❌ Çok agresif - süreyi uzat'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* CASE 2: No profile OR non-weight goal - Show editable inputs */}
+                                                {!autoPopulated && (
+                                                    <>
+                                                        {/* Target Value Input */}
+                                                        <div className="pt-4">
+                                                            <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                                                                <Target className="w-4 h-4 text-blue-600" />
+                                                                Hedef Değeri {needsInput && <span className="text-red-500">*</span>}
+                                                            </label>
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={formData.target_value ?? ''}
+                                                                    onChange={(e) => {
+                                                                        updateField('target_value', e.target.value ? Number(e.target.value) : undefined)
+                                                                    }}
+                                                                    placeholder={needsInput ? 'Bu alan zorunlu' : 'Hedef değer'}
+                                                                    className={clsx(
+                                                                        'flex-1 px-4 py-2.5 rounded-xl bg-white border text-slate-800 text-lg font-semibold',
+                                                                        'focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-300',
+                                                                        needsInput && !formData.target_value ? 'border-amber-300' : 'border-slate-200'
+                                                                    )}
+                                                                />
+                                                                <span className="px-3 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-medium min-w-[60px] text-center">
+                                                                    {formData.unit}
+                                                                </span>
+                                                            </div>
+                                                            {errors.target_value && (
+                                                                <p className="text-xs text-red-500 mt-1">{errors.target_value}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Quick Duration Chips */}
+                                                        <div>
+                                                            <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                                                                <Clock className="w-4 h-4 text-blue-600" />
+                                                                Süre
+                                                            </label>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {DURATION_OPTIONS.map((option) => {
+                                                                    const isActive = option.days > 0 && durationDays === option.days
+                                                                    return (
+                                                                        <button
+                                                                            key={option.days}
+                                                                            type="button"
+                                                                            onClick={() => setDuration(option.days)}
+                                                                            className={clsx(
+                                                                                'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                                                                                isActive
+                                                                                    ? 'bg-blue-500 text-white shadow-md'
+                                                                                    : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300'
+                                                                            )}
+                                                                        >
+                                                                            {option.emoji} {option.label}
+                                                                        </button>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                            {durationDays > 0 && (
+                                                                <p className="text-xs text-slate-500 mt-2">
+                                                                    📅 {formData.start_date} → {formData.end_date} ({durationDays} gün)
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Instant Calculation Preview */}
+                                                        {formData.target_value && durationDays > 0 && (formData.unit === 'kg' || formData.unit === '%') && (
+                                                            <div className="p-3 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-100">
+                                                                <p className="text-xs text-slate-600 mb-1">
+                                                                    📊 <strong>Hesaplama:</strong>
+                                                                </p>
+                                                                {formData.unit === 'kg' && (
+                                                                    <div className="text-sm text-teal-700 font-medium space-y-1">
+                                                                        <p>
+                                                                            {formData.target_value} kg × 7,700 kcal = <strong>{(formData.target_value * 7700).toLocaleString()}</strong> kcal toplam açık
+                                                                        </p>
+                                                                        <p>
+                                                                            Günlük: <strong>~{Math.round((formData.target_value * 7700) / durationDays).toLocaleString()}</strong> kcal açık
+                                                                        </p>
+                                                                        <p className="text-xs text-slate-500 mt-1">
+                                                                            {Math.round((formData.target_value * 7700) / durationDays) <= 500 && '✅ Güvenli ve sürdürülebilir'}
+                                                                            {Math.round((formData.target_value * 7700) / durationDays) > 500 && Math.round((formData.target_value * 7700) / durationDays) <= 750 && '⚠️ Orta zorluk'}
+                                                                            {Math.round((formData.target_value * 7700) / durationDays) > 750 && Math.round((formData.target_value * 7700) / durationDays) <= 1000 && '🔥 Agresif hedef'}
+                                                                            {Math.round((formData.target_value * 7700) / durationDays) > 1000 && '❌ Çok agresif - süreyi uzat'}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                                {formData.unit === '%' && (
+                                                                    <p className="text-sm text-teal-700 font-medium">
+                                                                        %{formData.target_value} azaltma için ~{Math.round(formData.target_value * 0.7 * 7700).toLocaleString()} kcal yakım gerekli
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Health Profile Banner inside expanded card for food/sport */}
+                                                        {HEALTH_CATEGORIES.includes(template.category_slug) && (
+                                                            <HealthProfileBanner
+                                                                hasProfile={hasProfile}
+                                                                isLoading={isProfileLoading}
+                                                                metrics={profile ? {
+                                                                    bmr_kcal: profile.bmr_kcal,
+                                                                    tdee_kcal: profile.tdee_kcal,
+                                                                    target_daily_kcal: profile.target_daily_kcal
+                                                                } : undefined}
+                                                                onSetupProfile={() => setIsHealthWizardOpen(true)}
+                                                            />
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+
+                                        </motion.div>
                                     )}
-                                </div>
-                            </button>
+                                </AnimatePresence>
+                            </motion.div>
                         )
                     })}
                 </div>
-            )}
-
-            {/* Health Profile Banner - Only for food/sport categories when template is selected */}
-            {isHealthCategory && formData.goal_template_id && (
-                <HealthProfileBanner
-                    hasProfile={hasProfile}
-                    isLoading={isProfileLoading}
-                    metrics={profile ? {
-                        bmr_kcal: profile.bmr_kcal,
-                        tdee_kcal: profile.tdee_kcal,
-                        target_daily_kcal: profile.target_daily_kcal
-                    } : undefined}
-                    onSetupProfile={() => setIsHealthWizardOpen(true)}
-                />
             )}
 
             {/* Health Profile Wizard Modal */}
@@ -843,66 +1173,10 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
                     await refreshProfile()
                 }}
             />
-
-            {/* Selected Template Info with Target Value Input */}
-            {formData.goal_template_id && (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                    <p className="text-sm text-blue-800 mb-3">
-                        ✅ <strong>{formData.title}</strong> seçildi.
-                    </p>
-
-                    {/* Target Value Input */}
-                    <div className="mt-3 space-y-2">
-                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                            <Target className="w-4 h-4 text-blue-600" />
-                            Hedef Değerini Belirle
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="number"
-                                min="1"
-                                value={formData.target_value ?? ''}
-                                onChange={(e) => updateField('target_value', e.target.value ? Number(e.target.value) : undefined)}
-                                placeholder="Hedef değer"
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 
-                                         text-slate-800 text-lg font-semibold
-                                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-300"
-                            />
-                            <span className="px-3 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-medium">
-                                {formData.unit}
-                            </span>
-                        </div>
-
-                        {/* Calculation Preview for calorie-based goals */}
-                        {formData.target_value && (formData.unit === '%' || formData.unit === 'kg') && (
-                            <div className="mt-3 p-3 rounded-xl bg-white/80 border border-blue-100">
-                                <p className="text-xs text-slate-600">
-                                    📊 <strong>Hesaplama:</strong>
-                                </p>
-                                {formData.unit === '%' && (
-                                    <p className="text-sm text-teal-700 font-medium mt-1">
-                                        %{formData.target_value} yağ azaltma = ~{Math.round(formData.target_value * 0.7 * 7700).toLocaleString()} kcal yakım
-                                        <span className="text-xs text-slate-500 block mt-0.5">
-                                            (70kg referans, 1kg yağ = 7,700 kcal)
-                                        </span>
-                                    </p>
-                                )}
-                                {formData.unit === 'kg' && formData.title?.toLowerCase().includes('kilo') && (
-                                    <p className="text-sm text-teal-700 font-medium mt-1">
-                                        {formData.target_value} kg = ~{(formData.target_value * 7700).toLocaleString()} kcal açık gerekli
-                                        <span className="text-xs text-slate-500 block mt-0.5">
-                                            (1kg = 7,700 kcal)
-                                        </span>
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
+
 
 function Step3When({ formData, updateField, errors }: StepProps) {
     const [calculation, setCalculation] = useState<GoalCalculation | null>(null)

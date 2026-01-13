@@ -10,9 +10,9 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.23: AI-Powered Health Quest System                        ║
+║  PHASE 8.25: Goal Creation Auto-Population from Health Profile       ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  BMR/TDEE Calculator, AI Expert Council, Health Profile Wizard      ║
+║  DRY violation fixed - No redundant input for weight goals           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -53,48 +53,39 @@
 | Phase 8.20: iOS Mobile Foundation | ✅ Tamamlandı | 100% |
 | Phase 8.21: Cascade Delete & Data Integrity | ✅ Tamamlandı | 100% |
 | Phase 8.22: Bug Fixes & Data Integrity Refinement | ✅ Tamamlandı | 100% |
-| **Phase 8.23: AI-Powered Health Quest System** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.23: AI-Powered Health Quest System | ✅ Tamamlandı | 100% |
+| Phase 8.24: Context-Aware Health UI Integration | ✅ Tamamlandı | 100% |
+| **Phase 8.25: Goal Creation Auto-Population** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Tam Gün)
+## Session Summary: 2026-01-13 (Oturum 2)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. AI Health Quest System (Phase 8.23) ✅
-**Amaç:** Kullanıcı sağlık profiline dayalı kişiselleştirilmiş günlük görev ve beslenme planları oluşturmak.
+#### 1. DRY İhlali Analizi & Auto-Population (Phase 8.25) ✅
+**Problem:** Kullanıcı HealthProfileWizard'da hedef kilo ve hız belirliyordu, sonra GoalCreationWizard'da aynı bilgiler tekrar soruluyordu.
 
-**Oluşturulan Dosyalar:**
+**Expert Council Kararı:** Profil varsa input sorma, otomatik doldur veya READ-ONLY summary göster.
 
-| Dosya | Açıklama |
-|-------|----------|
-| `supabase/migrations/20260113_user_health_profiles.sql` | Sağlık profili tablosu |
-| `src/lib/healthCalculator.ts` | BMR/TDEE Mifflin-St Jeor formülü |
-| `src/lib/ai/healthCouncil.ts` | AI Expert Council quest üretimi |
-| `src/actions/aiHealthQuests.ts` | Server actions |
-| `src/components/hud/Health/HealthProfileWizard.tsx` | 5 adımlı wizard |
-
-#### 2. Context-Aware Health UI Integration (Phase 8.24) ✅
-**Amaç:** Sağlık profili sadece food/sport kategorisi hedeflerinde gösterilmeli.
-
-**Mimari Karar:** Global HealthFAB yerine, GoalCreationWizard'da koşullu inline entegrasyon.
-
-**Oluşturulan Dosyalar:**
-
-| Dosya | Açıklama |
-|-------|----------|
-| `src/hooks/useHealthProfile.ts` | Profil var mı kontrol eden hook |
-| `src/components/hud/Health/HealthProfileBanner.tsx` | Koşullu banner (food/sport) |
-| `src/components/hud/Health/HealthFAB.tsx` | FAB bileşeni (artık kullanılmıyor) |
+**Çözüm:**
+1. `autoPopulated` state eklendi
+2. `handleTemplateSelect` fonksiyonuna auto-population logic eklendi
+3. Weight goals için (lose_weight, gain_muscle) profil verilerinden otomatik hesaplama
+4. READ-ONLY summary UI - profil varsa input YOK
 
 **Değiştirilen Dosyalar:**
 
 | Dosya | Değişiklik |
-|-------|-----------|
-| `src/app/page.tsx` | HealthFAB kaldırıldı |
-| `GoalCreationWizard.tsx` | Health imports + banner + wizard modal eklendi |
-| `Health/index.ts` | HealthProfileBanner export eklendi |
+|-------|------------|
+| `GoalCreationWizard.tsx` | Auto-population logic + READ-ONLY summary UI |
+
+**Teknik Detaylar:**
+- `weight_kg - target_weight_kg` → hedef değer
+- `goal_pace` → süre hesaplama (slow: 0.3, moderate: 0.5, aggressive: 0.75 kg/hafta)
+- `setAutoPopulated(true)` → READ-ONLY summary göster
+- `!autoPopulated` → editable inputs göster
 
 ---
 
@@ -121,6 +112,7 @@ Exit code: 0
 
 ---
 
-**Son Güncelleme:** 2026-01-13 10:40 UTC+3
+**Son Güncelleme:** 2026-01-13 11:22 UTC+3
 **Güncelleyen:** AI Assistant
-**Durum:** Phase 8.23-8.24 tamamlandı. Health profile artık food/sport goal oluştururken görünüyor.
+**Durum:** Phase 8.25 tamamlandı. Weight goals için profil varsa otomatik değer dolumu, READ-ONLY summary gösteriliyor.
+

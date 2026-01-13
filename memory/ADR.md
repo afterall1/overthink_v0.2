@@ -801,7 +801,96 @@ AI Health Quest System oluşturuldu (BMR/TDEE hesaplama, AI quest üretimi). İl
 
 ---
 
-**Son Güncelleme:** 2026-01-13 10:40 UTC+3
-**Toplam ADR:** 14
+## ADR-015: Goal Creation Auto-Population from Health Profile
 
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Council (Expert Panel)
+
+### Bağlam
+
+HealthProfileWizard'da kullanıcı şunları giriyor:
+- `weight_kg`: Mevcut kilo (örn: 97 kg)
+- `target_weight_kg`: Hedef kilo (örn: 76 kg)
+- `goal_pace`: Hız (slow: 0.3, moderate: 0.5, aggressive: 0.75 kg/hafta)
+
+GoalCreationWizard'da "Kilo Vermek" template'i seçildiğinde:
+- `target_value`: Kaç kg vermek istiyorsun? (YENİDEN SORIUYOR)
+- `duration`: Süre seç (YENİDEN SORIUYOR)
+
+**Problem:** DRY (Don't Repeat Yourself) ihlali. Aynı veri iki kez toplanıyor.
+
+### Karar
+
+**Sağlık profilinden otomatik değer dolumu + READ-ONLY summary:**
+
+1. Weight-based template seçildiğinde (`lose_weight`, `gain_muscle`):
+   - Profil varsa → otomatik hesapla
+   - `target_value = weight_kg - target_weight_kg`
+   - `duration = (weightDiff / weeklyRate) * 7`
+   
+2. UI değişikliği:
+   - `autoPopulated = true` → READ-ONLY summary göster (input YOK)
+   - `autoPopulated = false` → editable inputs göster
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Inputları göster, override izni ver** | Esneklik | Hala DRY ihlali, kafa karıştırıcı |
+| **Disabled input + pre-fill** | Görsel tutarlılık | "Neden değiştiremiyorum?" frustrasyonu |
+| **READ-ONLY summary ✓** | Temiz UX, tek kaynak | Profil değişikliği gerekirse ayrı flow |
+| **Profili yoksay, manuel sor** | Basit kod | Kullanıcı aynı şeyi iki kez girer |
+
+### Sonuçlar
+
+**Pozitif:**
+- DRY prensibi korunuyor
+- `user_health_profiles` tek kaynak (Single Source of Truth)
+- Kullanıcı aynı bilgiyi tekrar girmek zorunda değil
+- Goal creation süreci hızlanıyor
+
+**Negatif:**
+- Farklı bir hedef oluşturmak isterse profili güncellemeli
+- Non-weight goals için logic farklı
+
+**Dosyalar:**
+- `src/components/hud/Goals/GoalCreationWizard.tsx`
+  - `autoPopulated` state
+  - `handleTemplateSelect` → auto-population logic
+  - Conditional rendering: READ-ONLY summary vs editable inputs
+
+---
+
+## Template: Yeni ADR
+
+```markdown
+## ADR-XXX: [Başlık]
+
+**Tarih:** YYYY-MM-DD  
+**Durum:** 🟡 Tartışılıyor | ✅ Kabul Edildi | ❌ Reddedildi  
+**Karar Vericiler:** [İsimler]
+
+### Bağlam
+[Problem veya ihtiyaç]
+
+### Karar
+[Alınan karar]
+
+### Alternatifler
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| A | ... | ... |
+| B ✓ | ... | ... |
+
+### Sonuçlar
+**Pozitif:** ...
+**Negatif:** ...
+**Mitigation:** ...
+```
+
+---
+
+**Son Güncelleme:** 2026-01-13 11:22 UTC+3
+**Toplam ADR:** 15
 
