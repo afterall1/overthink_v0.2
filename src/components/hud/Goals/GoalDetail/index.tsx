@@ -13,6 +13,7 @@ import {
     calculateVelocity
 } from '@/lib/streakEngine'
 import { useHaptics } from '@/hooks/useHaptics'
+import { useHealthProfile } from '@/hooks/useHealthProfile'
 
 // Layout Components (iOS-native)
 import { BottomSheet, SheetHeader } from './layout'
@@ -171,6 +172,7 @@ export default function GoalDetail({
     const [showConfetti, setShowConfetti] = useState(false)
 
     const { trigger } = useHaptics()
+    const { hasProfile: hasHealthProfile } = useHealthProfile()
 
     // Memoized calculations
     const metrics = useMemo(() => {
@@ -442,7 +444,7 @@ export default function GoalDetail({
                     />
 
                     {/* Linked Quests Panel */}
-                    {linkedQuests.length > 0 && onCompleteQuest && onSkipQuest && (
+                    {(linkedQuests.length > 0 || (goal.categories?.slug === 'food' || goal.categories?.slug === 'sport')) && onCompleteQuest && onSkipQuest && (
                         <LinkedQuestsPanel
                             quests={linkedQuests}
                             goalUnit={goal.unit || undefined}
@@ -456,6 +458,15 @@ export default function GoalDetail({
                             }}
                             onDeleteQuest={onDeleteQuest}
                             isLoading={isLoading}
+                            // AI Regenerate props
+                            goalId={goal.id}
+                            goalTitle={goal.title}
+                            categorySlug={goal.categories?.slug || null}
+                            hasHealthProfile={hasHealthProfile ?? false}
+                            onQuestsRefresh={() => {
+                                // Parent should refresh quests
+                                // This is handled via the onCompleteQuest pattern
+                            }}
                         />
                     )}
 

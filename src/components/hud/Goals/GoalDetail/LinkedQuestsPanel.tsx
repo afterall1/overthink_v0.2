@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2, Clock, Zap, Sparkles, Play, SkipForward, Trash2, MoreVertical } from 'lucide-react'
+import { CheckCircle2, Clock, Zap, Sparkles, SkipForward, Trash2, MoreVertical, Brain, RefreshCw } from 'lucide-react'
 import type { DailyQuest } from '@/types/database.types'
+import AIQuestGeneratorModal from '../../Health/AIQuestGeneratorModal'
 
 // =====================================================
 // Props Interface
@@ -16,6 +17,12 @@ interface LinkedQuestsPanelProps {
     onSkipQuest: (questId: string) => Promise<void>
     onDeleteQuest?: (questId: string) => Promise<void>
     isLoading?: boolean
+    // AI Regenerate props
+    goalId?: string
+    goalTitle?: string
+    categorySlug?: string | null
+    hasHealthProfile?: boolean
+    onQuestsRefresh?: () => void
 }
 
 // =====================================================
@@ -321,117 +328,181 @@ export default function LinkedQuestsPanel({
     onCompleteQuest,
     onSkipQuest,
     onDeleteQuest,
-    isLoading
+    isLoading,
+    goalId,
+    goalTitle,
+    categorySlug,
+    hasHealthProfile,
+    onQuestsRefresh
 }: LinkedQuestsPanelProps) {
+    const [showAIModal, setShowAIModal] = useState(false)
+
     // Separate active and completed quests
     const activeQuests = quests.filter(q => q.status === 'pending')
     const completedQuests = quests.filter(q => q.status === 'completed')
     const skippedQuests = quests.filter(q => q.status === 'skipped')
 
-    if (quests.length === 0) {
+    // Check if AI regenerate is available (health category + profile exists)
+    const isHealthCategory = categorySlug === 'food' || categorySlug === 'sport'
+    const canRegenerateAI = isHealthCategory && hasHealthProfile && goalId && goalTitle
+
+    if (quests.length === 0 && !canRegenerateAI) {
         return null
     }
 
     return (
-        <div className="bg-white/40 backdrop-blur-sm rounded-2xl border border-slate-100/50 p-5">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Bağlı Görevler</h3>
-                <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
-                        {quests.length} Görev
-                    </span>
-                    {completedQuests.length > 0 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                            {completedQuests.length} Tamamlandı
+        <>
+            <div className="bg-white/40 backdrop-blur-sm rounded-2xl border border-slate-100/50 p-5">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Bağlı Görevler</h3>
+                    <div className="flex items-center gap-2">
+                        {/* AI Regenerate Button */}
+                        {canRegenerateAI && (
+                            <button
+                                onClick={() => setShowAIModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold 
+                                     bg-gradient-to-r from-violet-500 to-purple-600 text-white 
+                                     shadow-md shadow-violet-500/30 hover:shadow-lg hover:scale-[1.02] 
+                                     active:scale-[0.98] transition-all"
+                            >
+                                <Brain className="w-3.5 h-3.5" />
+                                AI ile Yenile
+                            </button>
+                        )}
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                            {quests.length} Görev
                         </span>
+                        {completedQuests.length > 0 && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                {completedQuests.length} Tamamlandı
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Progress indicator */}
+                {completedQuests.length > 0 && (
+                    <div className="mb-4 p-3 bg-emerald-50/80 rounded-xl border border-emerald-100">
+                        <p className="text-sm text-emerald-700">
+                            <span className="font-bold">{completedQuests.length}</span> görev tamamlandı ve hedefe katkı sağladı.
+                        </p>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    {/* Active Quests Section */}
+                    {activeQuests.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-amber-600 mb-2 flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                Bekleyen ({activeQuests.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {activeQuests.map((quest, index) => (
+                                    <QuestCard
+                                        key={quest.id}
+                                        quest={quest}
+                                        index={index}
+                                        onComplete={onCompleteQuest}
+                                        onSkip={onSkipQuest}
+                                        onDelete={onDeleteQuest}
+                                        isLoading={isLoading}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Completed Quests Section */}
+                    {completedQuests.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-emerald-600 mb-2 flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Tamamlandı ({completedQuests.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {completedQuests.map((quest, index) => (
+                                    <QuestCard
+                                        key={quest.id}
+                                        quest={quest}
+                                        index={index}
+                                        onComplete={onCompleteQuest}
+                                        onSkip={onSkipQuest}
+                                        onDelete={onDeleteQuest}
+                                        isLoading={isLoading}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Skipped Quests (collapsed) */}
+                    {skippedQuests.length > 0 && (
+                        <div className="opacity-60">
+                            <h4 className="text-sm font-medium text-slate-400 mb-2">
+                                Atlanan ({skippedQuests.length})
+                            </h4>
+                            <div className="space-y-2">
+                                {skippedQuests.slice(0, 2).map((quest, index) => (
+                                    <QuestCard
+                                        key={quest.id}
+                                        quest={quest}
+                                        index={index}
+                                        onComplete={onCompleteQuest}
+                                        onSkip={onSkipQuest}
+                                        onDelete={onDeleteQuest}
+                                        isLoading={isLoading}
+                                    />
+                                ))}
+                                {skippedQuests.length > 2 && (
+                                    <p className="text-xs text-slate-400 text-center py-2">
+                                        +{skippedQuests.length - 2} daha
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
+
+                {/* Empty State with AI Suggestion */}
+                {quests.length === 0 && canRegenerateAI && (
+                    <div className="text-center py-6">
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 
+                                  flex items-center justify-center">
+                            <Sparkles className="w-8 h-8 text-violet-600" />
+                        </div>
+                        <p className="text-sm text-slate-500 mb-3">
+                            Bu hedef için henüz görev yok.
+                        </p>
+                        <button
+                            onClick={() => setShowAIModal(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl 
+                                 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-bold
+                                 shadow-lg shadow-violet-500/30 hover:shadow-xl hover:scale-[1.02] 
+                                 active:scale-[0.98] transition-all"
+                        >
+                            <Brain className="w-4 h-4" />
+                            AI ile Görev Üret
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Progress indicator */}
-            {completedQuests.length > 0 && (
-                <div className="mb-4 p-3 bg-emerald-50/80 rounded-xl border border-emerald-100">
-                    <p className="text-sm text-emerald-700">
-                        <span className="font-bold">{completedQuests.length}</span> görev tamamlandı ve hedefe katkı sağladı.
-                    </p>
-                </div>
+            {/* AI Quest Generator Modal */}
+            {canRegenerateAI && (
+                <AIQuestGeneratorModal
+                    isOpen={showAIModal}
+                    onClose={() => setShowAIModal(false)}
+                    goalId={goalId}
+                    goalTitle={goalTitle}
+                    categorySlug={categorySlug}
+                    onQuestsSaved={() => {
+                        setShowAIModal(false)
+                        onQuestsRefresh?.()
+                    }}
+                />
             )}
-
-            <div className="space-y-4">
-                {/* Active Quests Section */}
-                {activeQuests.length > 0 && (
-                    <div>
-                        <h4 className="text-sm font-semibold text-amber-600 mb-2 flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            Bekleyen ({activeQuests.length})
-                        </h4>
-                        <div className="space-y-2">
-                            {activeQuests.map((quest, index) => (
-                                <QuestCard
-                                    key={quest.id}
-                                    quest={quest}
-                                    index={index}
-                                    onComplete={onCompleteQuest}
-                                    onSkip={onSkipQuest}
-                                    onDelete={onDeleteQuest}
-                                    isLoading={isLoading}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Completed Quests Section */}
-                {completedQuests.length > 0 && (
-                    <div>
-                        <h4 className="text-sm font-semibold text-emerald-600 mb-2 flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Tamamlandı ({completedQuests.length})
-                        </h4>
-                        <div className="space-y-2">
-                            {completedQuests.map((quest, index) => (
-                                <QuestCard
-                                    key={quest.id}
-                                    quest={quest}
-                                    index={index}
-                                    onComplete={onCompleteQuest}
-                                    onSkip={onSkipQuest}
-                                    onDelete={onDeleteQuest}
-                                    isLoading={isLoading}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Skipped Quests (collapsed) */}
-                {skippedQuests.length > 0 && (
-                    <div className="opacity-60">
-                        <h4 className="text-sm font-medium text-slate-400 mb-2">
-                            Atlanan ({skippedQuests.length})
-                        </h4>
-                        <div className="space-y-2">
-                            {skippedQuests.slice(0, 2).map((quest, index) => (
-                                <QuestCard
-                                    key={quest.id}
-                                    quest={quest}
-                                    index={index}
-                                    onComplete={onCompleteQuest}
-                                    onSkip={onSkipQuest}
-                                    onDelete={onDeleteQuest}
-                                    isLoading={isLoading}
-                                />
-                            ))}
-                            {skippedQuests.length > 2 && (
-                                <p className="text-xs text-slate-400 text-center py-2">
-                                    +{skippedQuests.length - 2} daha
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+        </>
     )
 }

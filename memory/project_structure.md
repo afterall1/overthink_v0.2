@@ -133,6 +133,7 @@ overthink_v0.2/
 │   │   │   │   ├── index.ts               # Barrel export
 │   │   │   │   ├── HealthProfileWizard.tsx  # 5-step wizard
 │   │   │   │   ├── HealthProfileBanner.tsx  # 🆕 Context-aware banner (food/sport)
+│   │   │   │   ├── AIQuestGeneratorModal.tsx # 🆕 AI quest generation modal
 │   │   │   │   └── HealthFAB.tsx            # FAB (artık kullanılmıyor)
 │   │   │   │
 │   │   │   ├── StatusBar.tsx       # Üst progress bar

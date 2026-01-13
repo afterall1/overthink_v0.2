@@ -4,16 +4,16 @@
 
 /**
  * AI model and request configuration
- * Using Google Gemini 3 Pro (released November 2025)
+ * Using Google Gemini 2.0 Flash (stable, fast, reliable)
  */
 export const AI_CONFIG = {
-    /** Gemini model to use */
-    model: 'gemini-3-pro-preview' as const,
-
-    /** Alternative models:
-     * 'gemini-3-flash-preview' - Faster responses
-     * 'gemini-2.5-pro' - More economical
+    /** Gemini model to use
+     * Options:
+     * - 'gemini-2.0-flash' - Fast and reliable (RECOMMENDED)
+     * - 'gemini-2.5-pro' - More powerful, slower
+     * - 'gemini-2.5-flash' - Balanced speed/quality
      */
+    model: 'gemini-2.0-flash' as const,
 
     /** Maximum tokens in response */
     maxTokens: 2048,

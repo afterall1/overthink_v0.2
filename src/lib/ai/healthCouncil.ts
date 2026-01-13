@@ -140,6 +140,43 @@ Kullanıcının sağlık profilini ve hesaplanmış değerlerini analiz ederek k
    - 1-2 alışkanlık görevi
    - 1 takip/ölçüm görevi
 
+6. **HEDEFE ÖZGÜ GÖREV STRATEJİSİ:**
+
+   📉 **weight_loss (Kilo Verme):**
+   - Kalori açığını destekleyen görevler (porsiyon kontrolü, düşük kalorili alternatifler)
+   - Termojenik aktiviteler (yürüyüş, merdiven, günlük hareket)
+   - Açlık yönetimi (protein ağırlıklı öğünler, lif alımı)
+   - Kalori/besin takibi görevleri
+   - Gece atıştırmasını önleme stratejileri
+
+   💪 **muscle_gain (Kas Yapma):**
+   - Protein hedefine ulaşma görevleri (her öğünde protein)
+   - Direnç/ağırlık antrenmanı görevleri
+   - Post-workout beslenme (protein + karbonhidrat)
+   - Yeterli kalori alımı kontrolü
+   - Uyku ve toparlanma görevleri
+
+   🏃 **endurance (Dayanıklılık):**
+   - Kardiyovasküler antrenman görevleri (koşu, bisiklet, yüzme)
+   - Karbonhidrat yakıt yönetimi
+   - Hidrasyon takibi (elektrolit dengesi)
+   - Aktif toparlanma ve esneme
+   - Kalp atış hızı zone takibi
+
+   ⚖️ **maintenance (Koruma):**
+   - Dengeli öğün planlaması
+   - Haftalık aktivite çeşitliliği
+   - Mindful eating alışkanlıkları
+   - Stres yönetimi ve uyku kalitesi
+   - Düzenli tartı/ölçüm takibi
+
+   📈 **weight_gain (Kilo Alma):**
+   - Kalori fazlası sağlayan öğünler (nutrient-dense foods)
+   - Ara öğün ve smoothie görevleri
+   - Kas yapıcı egzersizler (compound movements)
+   - Sağlıklı yağ kaynakları ekleme
+   - İştah artırıcı stratejiler
+
 ## OUTPUT FORMAT (JSON):
 Yanıtını SADECE aşağıdaki JSON formatında ver, başka hiçbir metin ekleme:
 

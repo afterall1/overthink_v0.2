@@ -551,16 +551,30 @@ function Step2What({ formData, updateField, errors, categories }: StepProps) {
     // Fetch goal templates
     useEffect(() => {
         async function fetchTemplates() {
+            const startTime = performance.now()
+            console.log('[Step2] Starting template fetch...', { selectedCategory })
+
             setIsLoading(true)
             try {
+                const fetchStart = performance.now()
                 const result = await getGoalTemplates(selectedCategory ?? undefined)
+                const fetchEnd = performance.now()
+
+                console.log('[Step2] Template fetch completed', {
+                    duration: `${(fetchEnd - fetchStart).toFixed(0)}ms`,
+                    templateCount: result.data?.length ?? 0,
+                    error: result.error ?? null
+                })
+
                 if (result.data) {
                     setGoalTemplates(result.data)
                 }
-            } catch {
-                console.error('Failed to fetch goal templates')
+            } catch (error) {
+                console.error('[Step2] Failed to fetch goal templates:', error)
             } finally {
                 setIsLoading(false)
+                const totalTime = performance.now() - startTime
+                console.log('[Step2] Total loading time:', `${totalTime.toFixed(0)}ms`)
             }
         }
         fetchTemplates()
@@ -1449,6 +1463,7 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
     }
 
     const totalXP = aiQuests.reduce((sum, q) => sum + q.xp_reward, 0)
+    const totalCalorieImpact = aiQuests.reduce((sum, q) => sum + (q.calorie_impact || 0), 0)
 
     return (
         <div className="space-y-5">
@@ -1564,7 +1579,7 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                                             {quest.description}
                                         </p>
 
-                                        <div className="flex items-center gap-3 mt-2">
+                                        <div className="flex items-center gap-3 mt-2 flex-wrap">
                                             {quest.estimated_minutes > 0 && (
                                                 <span className="text-[10px] text-slate-400 flex items-center gap-1">
                                                     <Timer className="w-3 h-3" />
@@ -1574,6 +1589,16 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                                             <span className="text-xs font-bold text-amber-600">
                                                 +{quest.xp_reward} XP
                                             </span>
+                                            {quest.calorie_impact !== 0 && quest.calorie_impact !== undefined && (
+                                                <span className={clsx(
+                                                    'text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5',
+                                                    quest.calorie_impact < 0
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : 'bg-blue-100 text-blue-700'
+                                                )}>
+                                                    🔥 {quest.calorie_impact > 0 ? '+' : ''}{quest.calorie_impact} kcal
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1603,18 +1628,41 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                         animate={{ opacity: 1, y: 0 }}
                         className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200"
                     >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Check className="w-5 h-5 text-violet-600" />
-                                <span className="font-semibold text-violet-800">
-                                    {aiQuests.length} görev hazır
-                                </span>
+                        <div className="flex flex-col gap-3">
+                            {/* Top row - Quest count and regenerate */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Check className="w-5 h-5 text-violet-600" />
+                                    <span className="font-semibold text-violet-800">
+                                        {aiQuests.length} görev hazır
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
+
+                            {/* Stats row - XP and Calorie Impact */}
+                            <div className="flex items-center gap-3 flex-wrap">
                                 <div className="flex items-center gap-1 text-amber-600 font-bold">
                                     <Zap className="w-4 h-4" />
                                     <span>+{totalXP} XP/gün</span>
                                 </div>
+                                {totalCalorieImpact !== 0 && (
+                                    <div className={clsx(
+                                        'flex items-center gap-1 font-bold px-2 py-1 rounded-lg',
+                                        totalCalorieImpact < 0
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-blue-100 text-blue-700'
+                                    )}>
+                                        🔥
+                                        <span>
+                                            {totalCalorieImpact > 0 ? '+' : ''}{totalCalorieImpact} kcal/gün
+                                        </span>
+                                        {totalCalorieImpact < 0 && (
+                                            <span className="text-[10px] opacity-75 ml-1">
+                                                (açık)
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                                 <button
                                     type="button"
                                     onClick={handleRegenerate}

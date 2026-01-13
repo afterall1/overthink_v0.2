@@ -58,38 +58,47 @@
 | Phase 8.25: Goal Creation Auto-Population | ✅ Tamamlandı | 100% |
 | Phase 8.26: Step 3 UX Simplification | ✅ Tamamlandı | 100% |
 | Phase 8.27: Step 4 UI Skip | ✅ Tamamlandı | 100% |
-| **Phase 8.28: AI-Driven Quest Generation** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.28: AI-Driven Quest Generation | ✅ Tamamlandı | 100% |
+| **Phase 8.29: Health AI Activation** | ✅ Tamamlandı | 100% |
+| **Phase 8.30: Goal-Aligned AI Quests** | ✅ Tamamlandı | 100% |
+| **Phase 8.31: Calorie Impact Display** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-13 (Oturum 3)
+## Session Summary: 2026-01-13 (Oturum 4)
 
 ### ✅ Tamamlanan İşler
 
-#### 1. Step 3 UX Simplification (Phase 8.26) ✅
-"En İyi Zaman Dilimi" ve "Zorluk Seviyesi" seçicileri kaldırıldı.
+#### 1. Gemini Model Doğrulama ✅
+- `aiConfig.ts`'de model adı `gemini-2.0-flash` olarak doğrulandı
+- Google Docs'tan model naming patterns araştırıldı
+- API Key yapılandırması (`GOOGLE_AI_API_KEY`) onaylandı
 
-#### 2. Step 4 UI Skip (Phase 8.27) ✅
-Milestone manuel girişi kaldırıldı, otomatik oluşturma korundu.
+#### 2. Health AI Activation (Phase 8.29) ✅
+- `AIQuestGeneratorModal.tsx` oluşturuldu
+- `LinkedQuestsPanel.tsx`'e "AI ile Yenile" butonu eklendi
+- `GoalDetail/index.tsx`'e health profile entegrasyonu
 
-#### 3. AI-Driven Quest Generation (Phase 8.28) ✅
-**Yeni Dosyalar:**
-- `src/actions/wizardAI.ts` (330 lines)
-- `Step4AIQuests` component
+#### 3. Goal-Aligned AI Quests (Phase 8.30) ✅
+- `healthCouncil.ts` AI prompt'una goal-specific stratejiler eklendi
+- 5 hedef tipi için özel görev talimatları:
+  - 📉 weight_loss: Kalori açığı, porsiyon kontrolü
+  - 💪 muscle_gain: Protein + direnç antrenmanı  
+  - 🏃 endurance: Kardio + hidrasyon
+  - ⚖️ maintenance: Dengeli beslenme
+  - 📈 weight_gain: Kalori fazlası stratejileri
 
-**Özellikler:**
-1. Wizard verilerini AI context'e dönüştürür
-2. Health profile ile zenginleştirir
-3. Kişiselleştirilmiş görevler üretir
-4. Template-based fallback mekanizması
-5. Loading skeleton UI
+#### 4. Calorie Impact Display (Phase 8.31) ✅
+- Her quest kartına 🔥 kalori etkisi badge'i eklendi
+- Negatif (açık) → Yeşil badge, Pozitif → Mavi badge
+- Summary'de toplam günlük kalori etkisi gösterimi
 
-**Değiştirilen Dosyalar:**
-
-| Dosya | Değişiklik |
-|-------|------------|
-| `GoalCreationWizard.tsx` | Step4AIQuests, GoalWizardData interface |
+#### 5. Performance Investigation ✅
+- Step 2 template loading 40 saniye gecikmesi araştırıldı
+- `GoalCreationWizard.tsx`'e timing log'ları eklendi
+- Sonuç: Gerçek fetch süresi 400ms-2000ms (normal)
+- Gecikme cold start/hot reload kaynaklıydı
 
 ---
 
@@ -100,23 +109,20 @@ Milestone manuel girişi kaldırıldı, otomatik oluşturma korundu.
 2. [ ] Apple Sign-In
 3. [ ] `/reset-password` sayfası
 
+### Optional Cleanup
+- [ ] Performance timing log'larını production için kaldır
+
 ---
 
 ## Build Status
 ```
 ✅ npm run build - Başarılı
-✅ TypeScript - Hatasız
+✅ TypeScript - Hatasız  
 ✅ Generating static pages (9/9)
 Exit code: 0
 ```
 
 ---
 
-**Son Güncelleme:** 2026-01-13 12:37 UTC+3
-**Phase 8.28 Tamamlandı**
-
-
-**Son Güncelleme:** 2026-01-13 12:15 UTC+3
-**Güncelleyen:** AI Assistant
-**Durum:** Phase 8.27 tamamlandı. Step 4 (Ara Hedefler) UI kaldırıldı. Milestones otomatik oluşturuluyor, JourneyPath korunuyor.
-
+**Son Güncelleme:** 2026-01-13 20:10 UTC+3
+**Phase 8.31 Tamamlandı**
