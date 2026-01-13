@@ -43,14 +43,27 @@ export interface GoalWizardData {
     // Goal Template (optional - if selected, auto-populates other fields)
     goal_template_id: string | null
 
-    // Step 4: How (Milestones)
+    // Step 4: How (Milestones) - Auto-generated
     milestones: Array<{
         title: string
         target_value: number
     }>
 
-    // Step 5: Quests (Daily Tasks)
+    // Step 4: Quests (AI-Generated or Selected)
     selected_quest_template_ids: string[]
+    ai_generated_quests?: Array<{
+        title: string
+        description: string
+        category: 'nutrition' | 'exercise' | 'habit' | 'tracking' | 'recovery'
+        difficulty: 'easy' | 'medium' | 'hard'
+        estimated_minutes: number
+        calorie_impact: number
+        xp_reward: number
+        emoji: string
+        scientific_rationale: string
+        is_morning?: boolean
+        is_evening?: boolean
+    }>
 }
 
 interface GoalCreationWizardProps {
@@ -68,9 +81,11 @@ const STEPS = [
     { id: 1, title: 'Neden?', icon: Heart, description: 'Motivasyonun' },
     { id: 2, title: 'Ne?', icon: Target, description: 'Hedefin' },
     { id: 3, title: 'Ne Zaman?', icon: Calendar, description: 'Zamanlaman' },
-    { id: 4, title: 'Nasıl?', icon: Flag, description: 'Ara hedefler' },
-    { id: 5, title: 'Görevler', icon: Zap, description: 'Günlük rutinler' }
+    { id: 4, title: 'Görevler', icon: Zap, description: 'Günlük rutinler' }
 ] as const
+
+// Step 4 (Milestones/Ara Hedefler) removed from wizard UI
+// Milestones are auto-generated via useEffect when target_value is set
 
 const PERIOD_OPTIONS: { value: GoalPeriod; label: string; emoji: string; color: string }[] = [
     { value: 'daily', label: 'Günlük', emoji: '🌅', color: '#10B981' },
@@ -202,9 +217,6 @@ export default function GoalCreationWizard({
                 }
                 break
             case 4:
-                // Milestones are optional
-                break
-            case 5:
                 // Quest selection is optional but encouraged
                 break
         }
@@ -216,7 +228,7 @@ export default function GoalCreationWizard({
 
     const handleNext = () => {
         if (validateStep(currentStep)) {
-            setCurrentStep(prev => Math.min(prev + 1, 5))
+            setCurrentStep(prev => Math.min(prev + 1, 4))
         }
     }
 
@@ -242,8 +254,8 @@ export default function GoalCreationWizard({
         onClose()
     }
 
-    // Progress percentage
-    const progress = (currentStep / 5) * 100
+    // Progress percentage (4 steps total now)
+    const progress = (currentStep / 4) * 100
 
     return (
         <AnimatePresence>
@@ -356,14 +368,7 @@ export default function GoalCreationWizard({
                                             />
                                         )}
                                         {currentStep === 4 && (
-                                            <Step4How
-                                                formData={formData}
-                                                updateField={updateField}
-                                                errors={errors}
-                                            />
-                                        )}
-                                        {currentStep === 5 && (
-                                            <Step5Quests
+                                            <Step4AIQuests
                                                 formData={formData}
                                                 updateField={updateField}
                                                 errors={errors}
@@ -386,7 +391,7 @@ export default function GoalCreationWizard({
                                     </button>
                                 )}
 
-                                {currentStep < 5 ? (
+                                {currentStep < 4 ? (
                                     <button
                                         onClick={handleNext}
                                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl 
@@ -1344,280 +1349,290 @@ function Step4How({ formData, updateField }: StepProps) {
 }
 
 // =====================================================
-// Step 5: Quest Selection
+// Step 4: AI-Powered Quest Generation
 // =====================================================
 
-interface Step5QuestsProps extends StepProps {
-    // Extended props for quest templates
+interface Step4AIQuestsProps extends StepProps {
+    // Extended props for AI quest generation
 }
 
-const QUEST_CATEGORIES = [
-    { slug: 'trade' as CategorySlug, name: 'Trading', emoji: '📈', color: '#F59E0B' },
-    { slug: 'food' as CategorySlug, name: 'Beslenme', emoji: '🍎', color: '#10B981' },
-    { slug: 'sport' as CategorySlug, name: 'Spor', emoji: '💪', color: '#EF4444' },
-    { slug: 'dev' as CategorySlug, name: 'Yazılım', emoji: '💻', color: '#8B5CF6' },
-    { slug: 'etsy' as CategorySlug, name: 'Etsy', emoji: '🎨', color: '#EC4899' },
-    { slug: 'gaming' as CategorySlug, name: 'Gaming', emoji: '🎮', color: '#06B6D4' }
-]
+// AI-Generated Quest type (matches wizardAI.ts)
+interface AIQuest {
+    title: string
+    description: string
+    category: 'nutrition' | 'exercise' | 'habit' | 'tracking' | 'recovery'
+    difficulty: 'easy' | 'medium' | 'hard'
+    estimated_minutes: number
+    calorie_impact: number
+    xp_reward: number
+    emoji: string
+    scientific_rationale: string
+    is_morning?: boolean
+    is_evening?: boolean
+}
 
-function Step5Quests({ formData, updateField }: Step5QuestsProps) {
-    const [templates, setTemplates] = useState<QuestTemplate[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [isGoalSpecific, setIsGoalSpecific] = useState(false)
+function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
+    const [aiQuests, setAiQuests] = useState<AIQuest[]>([])
+    const [isGenerating, setIsGenerating] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [fallbackUsed, setFallbackUsed] = useState(false)
+    const [hasGenerated, setHasGenerated] = useState(false)
 
-    // Fetch goal-specific quests when goal_template_id is available
-    useEffect(() => {
-        const fetchTemplates = async () => {
-            setIsLoading(true)
-            setIsGoalSpecific(false)
-
-            console.log('[Step5Quests] Starting fetch, goal_template_id:', formData.goal_template_id)
-
-            try {
-                const { getQuestTemplates } = await import('@/actions/quests')
-
-                // Priority 1: Fetch quests linked to the selected goal template
-                if (formData.goal_template_id) {
-                    console.log('[Step5Quests] Fetching goal-specific quests for:', formData.goal_template_id)
-                    const result = await getQuestTemplates(undefined, formData.goal_template_id)
-                    console.log('[Step5Quests] Goal-specific result:', result.data?.length ?? 0, 'quests found')
-
-                    if (result.data && result.data.length > 0) {
-                        setTemplates(result.data)
-                        setIsGoalSpecific(true)
-                        setIsLoading(false)
-                        console.log('[Step5Quests] Using goal-specific quests')
-                        return
-                    } else {
-                        console.warn('[Step5Quests] No goal-specific quests found, falling back to all')
-                    }
-                }
-
-                // Fallback: If no goal-specific quests, show all (migration not run yet)
-                console.log('[Step5Quests] Fetching all quests as fallback')
-                const result = await getQuestTemplates()
-                console.log('[Step5Quests] Fallback result:', result.data?.length ?? 0, 'quests found')
-                if (result.data) {
-                    setTemplates(result.data)
-                }
-            } catch (error) {
-                console.error('[Step5Quests] Failed to fetch templates:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        fetchTemplates()
-    }, [formData.goal_template_id])
-
-    // Filter only applies when showing all quests (not goal-specific)
-    const filteredTemplates = templates.filter(t => {
-        // When showing goal-specific quests, skip category filter
-        const matchesCategory = isGoalSpecific || !selectedCategory || t.category_slug === selectedCategory
-        const matchesSearch = !searchQuery ||
-            t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesCategory && matchesSearch
-    })
-
-    const toggleTemplate = (templateId: string) => {
-        const current = formData.selected_quest_template_ids
-        if (current.includes(templateId)) {
-            updateField('selected_quest_template_ids', current.filter(id => id !== templateId))
-        } else {
-            updateField('selected_quest_template_ids', [...current, templateId])
-        }
+    // Get selected category from form data
+    const getSelectedCategorySlug = (): string | null => {
+        if (!formData.category_id) return null
+        // Extract category slug from the selected category
+        const titleLower = formData.title.toLowerCase()
+        if (titleLower.includes('kilo') || titleLower.includes('beslenme')) return 'food'
+        if (titleLower.includes('koş') || titleLower.includes('spor') || titleLower.includes('egzersiz')) return 'sport'
+        return null
     }
 
-    const totalXP = templates
-        .filter(t => formData.selected_quest_template_ids.includes(t.id))
-        .reduce((sum, t) => sum + t.xp_reward, 0)
+    // Generate AI quests on mount
+    useEffect(() => {
+        if (hasGenerated) return
 
-    const selectedCount = formData.selected_quest_template_ids.length
+        const generateQuests = async () => {
+            setIsGenerating(true)
+            setError(null)
+
+            try {
+                const { generateWizardQuests } = await import('@/actions/wizardAI')
+
+                const context = {
+                    motivation: formData.motivation,
+                    identity_statement: formData.identity_statement,
+                    goal_title: formData.title,
+                    goal_description: formData.description,
+                    target_value: formData.target_value ?? null,
+                    unit: formData.unit,
+                    period: formData.period,
+                    category_slug: getSelectedCategorySlug(),
+                    goal_template_id: formData.goal_template_id,
+                    start_date: formData.start_date,
+                    end_date: formData.end_date || null
+                }
+
+                const result = await generateWizardQuests(context)
+
+                if (result.success && result.quests && result.quests.length > 0) {
+                    setAiQuests(result.quests)
+                    updateField('ai_generated_quests', result.quests)
+                    setFallbackUsed(result.fallback_used || false)
+                } else {
+                    setError(result.error || 'Görevler oluşturulamadı')
+                    // Show empty state - user can still proceed
+                }
+            } catch (err) {
+                console.error('[Step4AIQuests] Error:', err)
+                setError('AI servisi geçici olarak kullanılamıyor')
+            } finally {
+                setIsGenerating(false)
+                setHasGenerated(true)
+            }
+        }
+
+        generateQuests()
+    }, [formData.goal_template_id, formData.title, hasGenerated])
+
+    // Regenerate quests
+    const handleRegenerate = () => {
+        setHasGenerated(false)
+    }
+
+    // Toggle quest selection
+    const toggleQuest = (index: number) => {
+        const current = [...aiQuests]
+        current.splice(index, 1)
+        setAiQuests(current)
+        updateField('ai_generated_quests', current)
+    }
+
+    const totalXP = aiQuests.reduce((sum, q) => sum + q.xp_reward, 0)
 
     return (
         <div className="space-y-5">
             <div className="text-center mb-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 
-                              flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 
+                              flex items-center justify-center shadow-lg shadow-violet-500/30">
                     <Zap className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-800">Günlük Görevlerini Seç</h3>
-                <p className="text-sm text-slate-500 mt-1">Bu hedefe ulaşmak için günlük rutinler</p>
+                <h3 className="text-xl font-bold text-slate-800">Akıllı Görev Önerileri</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                    Hedefine özel AI tarafından oluşturuldu
+                </p>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Görev ara..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 
-                             text-sm text-slate-700 placeholder:text-slate-400
-                             focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-300"
-                />
-                <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            </div>
-
-            {/* Goal-Specific Indicator */}
-            {isGoalSpecific && (
-                <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                    <p className="text-sm text-emerald-700 font-medium flex items-center gap-2">
-                        <Check className="w-4 h-4" />
-                        <strong>{formData.title}</strong> hedefine özel görevler gösteriliyor
-                    </p>
-                </div>
-            )}
-
-            {/* Category Filter - Only show when NOT in goal-specific mode */}
-            {!isGoalSpecific && (
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setSelectedCategory(null)}
-                        className={clsx(
-                            'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                            !selectedCategory
-                                ? 'bg-slate-800 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        )}
-                    >
-                        Tümü
-                    </button>
-                    {QUEST_CATEGORIES.map(cat => (
-                        <button
-                            key={cat.slug}
-                            type="button"
-                            onClick={() => setSelectedCategory(cat.slug)}
-                            className={clsx(
-                                'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                                selectedCategory === cat.slug
-                                    ? 'text-white'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            )}
-                            style={{
-                                backgroundColor: selectedCategory === cat.slug ? cat.color : undefined
-                            }}
-                        >
-                            {cat.emoji} {cat.name}
-                        </button>
+            {/* Loading State */}
+            {isGenerating && (
+                <div className="space-y-3">
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200">
+                        <div className="flex items-center justify-center gap-3">
+                            <div className="w-5 h-5 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+                            <span className="text-sm text-violet-700 font-medium">
+                                AI görevlerini oluşturuyor...
+                            </span>
+                        </div>
+                    </div>
+                    {/* Skeleton cards */}
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="p-3 rounded-xl bg-slate-50 animate-pulse">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-slate-200" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-slate-200 rounded w-3/4" />
+                                    <div className="h-3 bg-slate-200 rounded w-1/2" />
+                                </div>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
 
-            {/* Templates List */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-                    </div>
-                ) : filteredTemplates.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                        <p>Bu kategoride şablon bulunamadı</p>
-                    </div>
-                ) : (
-                    filteredTemplates.map((template, index) => {
-                        const isSelected = formData.selected_quest_template_ids.includes(template.id)
-                        const isRecommended = index < 3
-
-                        return (
-                            <motion.button
-                                key={template.id}
-                                type="button"
-                                onClick={() => toggleTemplate(template.id)}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.03 }}
-                                className={clsx(
-                                    'w-full p-3 rounded-xl text-left transition-all flex items-center gap-3',
-                                    isSelected
-                                        ? 'bg-violet-100 ring-2 ring-violet-500'
-                                        : 'bg-slate-50 hover:bg-slate-100'
-                                )}
-                            >
-                                <div className={clsx(
-                                    'w-5 h-5 rounded-md flex items-center justify-center transition-all flex-shrink-0',
-                                    isSelected
-                                        ? 'bg-violet-600 text-white'
-                                        : 'border-2 border-slate-300'
-                                )}>
-                                    {isSelected && <Check className="w-3 h-3" />}
-                                </div>
-
-                                <span className="text-xl flex-shrink-0">{template.emoji}</span>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium text-slate-700 truncate">
-                                            {template.title}
-                                        </span>
-                                        {isRecommended && (
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
-                                                ⭐ ÖNERİLEN
-                                            </span>
-                                        )}
-                                    </div>
-                                    {template.description && (
-                                        <p className="text-xs text-slate-500 truncate">{template.description}</p>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={clsx(
-                                        'px-2 py-0.5 rounded text-xs font-bold',
-                                        template.difficulty === 'easy' && 'bg-emerald-100 text-emerald-700',
-                                        template.difficulty === 'medium' && 'bg-blue-100 text-blue-700',
-                                        template.difficulty === 'hard' && 'bg-red-100 text-red-700'
-                                    )}>
-                                        {template.difficulty === 'easy' && '🌱'}
-                                        {template.difficulty === 'medium' && '💪'}
-                                        {template.difficulty === 'hard' && '🔥'}
-                                    </span>
-                                    {template.contribution_display && (
-                                        <span className="text-[10px] font-semibold text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">
-                                            {template.contribution_display}
-                                        </span>
-                                    )}
-                                    <span className="text-xs font-bold text-amber-600">
-                                        +{template.xp_reward} XP
-                                    </span>
-                                </div>
-                            </motion.button>
-                        )
-                    })
-                )}
-            </div>
-
-            {/* Selection Summary */}
-            {selectedCount > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200"
-                >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Check className="w-5 h-5 text-violet-600" />
-                            <span className="font-semibold text-violet-800">
-                                {selectedCount} görev seçildi
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-amber-600 font-bold">
-                            <Zap className="w-4 h-4" />
-                            <span>+{totalXP} XP/gün</span>
-                        </div>
-                    </div>
-                </motion.div>
+            {/* Error State */}
+            {!isGenerating && error && aiQuests.length === 0 && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200">
+                    <p className="text-sm text-red-700">{error}</p>
+                    <button
+                        type="button"
+                        onClick={handleRegenerate}
+                        className="mt-2 text-sm text-red-600 underline font-medium"
+                    >
+                        Tekrar dene
+                    </button>
+                </div>
             )}
 
-            {/* Tip */}
-            {selectedCount === 0 && (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
-                    <p className="text-sm text-amber-800">
-                        💡 <strong>İpucu:</strong> Günlük görevler hedefine ulaşmak için motivasyonunu artırır.
-                        En az 1-2 görev seçmeni öneririz.
+            {/* AI Generated Badge */}
+            {!isGenerating && aiQuests.length > 0 && (
+                <>
+                    <div className={clsx(
+                        "p-3 rounded-xl border",
+                        fallbackUsed
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-gradient-to-r from-violet-50 to-purple-50 border-violet-200"
+                    )}>
+                        <p className={clsx(
+                            "text-sm font-medium flex items-center gap-2",
+                            fallbackUsed ? "text-amber-700" : "text-violet-700"
+                        )}>
+                            {fallbackUsed ? (
+                                <>
+                                    <Star className="w-4 h-4" />
+                                    <strong>{formData.title}</strong> için önerilen görevler
+                                </>
+                            ) : (
+                                <>
+                                    <Lightbulb className="w-4 h-4" />
+                                    <strong>AI</strong> tarafından senin için oluşturuldu
+                                </>
+                            )}
+                        </p>
+                    </div>
+
+                    {/* Quest Cards */}
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {aiQuests.map((quest, index) => (
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="p-3 rounded-xl bg-white border border-slate-200 shadow-sm"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">{quest.emoji}</span>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-slate-800">
+                                                {quest.title}
+                                            </span>
+                                            <span className={clsx(
+                                                'px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                                quest.difficulty === 'easy' && 'bg-emerald-100 text-emerald-700',
+                                                quest.difficulty === 'medium' && 'bg-blue-100 text-blue-700',
+                                                quest.difficulty === 'hard' && 'bg-red-100 text-red-700'
+                                            )}>
+                                                {quest.difficulty === 'easy' && '🌱 Kolay'}
+                                                {quest.difficulty === 'medium' && '💪 Orta'}
+                                                {quest.difficulty === 'hard' && '🔥 Zor'}
+                                            </span>
+                                        </div>
+
+                                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                            {quest.description}
+                                        </p>
+
+                                        <div className="flex items-center gap-3 mt-2">
+                                            {quest.estimated_minutes > 0 && (
+                                                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                    <Timer className="w-3 h-3" />
+                                                    {quest.estimated_minutes} dk
+                                                </span>
+                                            )}
+                                            <span className="text-xs font-bold text-amber-600">
+                                                +{quest.xp_reward} XP
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleQuest(index)}
+                                        className="p-1 rounded hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors"
+                                        title="Görevi kaldır"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {/* Scientific rationale on hover/tap */}
+                                {quest.scientific_rationale && (
+                                    <p className="text-[10px] text-violet-600 mt-2 px-2 py-1 bg-violet-50 rounded">
+                                        💡 {quest.scientific_rationale}
+                                    </p>
+                                )}
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* Summary */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Check className="w-5 h-5 text-violet-600" />
+                                <span className="font-semibold text-violet-800">
+                                    {aiQuests.length} görev hazır
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 text-amber-600 font-bold">
+                                    <Zap className="w-4 h-4" />
+                                    <span>+{totalXP} XP/gün</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleRegenerate}
+                                    className="text-xs text-violet-600 underline ml-2"
+                                >
+                                    Yenile
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+
+            {/* Empty state - can still proceed */}
+            {!isGenerating && aiQuests.length === 0 && !error && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                    <p className="text-sm text-slate-600">
+                        Hedef oluşturulduktan sonra görevler ekleyebilirsin.
                     </p>
                 </div>
             )}

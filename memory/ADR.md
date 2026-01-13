@@ -921,6 +921,116 @@ GoalCreationWizard Step 3/5'te iki selector vardı:
 
 ---
 
+## ADR-017: Step 4 UI Skip - Auto-Generated Milestones
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Expert Council (3/4 Onay)
+
+### Bağlam
+
+GoalCreationWizard Step 4/5'te (Ara Hedefler) kullanıcı manuel milestone girişi yapıyordu:
+- "Ara hedef adı" text input
+- Target value number input
+- "+ Ara Hedef Ekle" butonu
+
+**Sorun:** `useEffect` zaten `target_value` değiştiğinde %25, %50, %75 milestone'ları **otomatik oluşturuyordu**. Manuel input gereksiz ve kafa karıştırıcıydı.
+
+### Karar
+
+**Step 4 UI'ı wizard'dan atlandı, milestone backend sistemi korundu:**
+
+1. STEPS array 5 → 4 adıma indirildi
+2. `Step4How` artık render edilmiyor
+3. `useEffect` ile otomatik milestone oluşturma korunuyor
+4. `goal_milestones` DB tablosu korunuyor
+5. `JourneyPath.tsx` görselleştirmesi korunuyor
+6. XP sistemi korunuyor
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Tamamen kaldır** | Basit | ~400 satır kod, DB migration, XP bozulur |
+| **Opsiyonel accordion** | Güç kullanıcılar için | Karmaşık UI |
+| **UI atla, backend koru ✓** | Hızlı, sade | İleri düzey özelleştirme yok |
+
+### Sonuçlar
+
+**Pozitif:**
+- Wizard adım sayısı: 5 → 4
+- Cognitive load azaldı
+- JourneyPath görselleştirmesi korunuyor
+- XP sistemi çalışmaya devam ediyor
+- DB migration gereksiz
+
+**Negatif:**
+- Kullanıcılar milestone'ları özelleştiremiyor (gelecekte "Düzenle" eklenebilir)
+
+**Dosyalar:**
+- `src/components/hud/Goals/GoalCreationWizard.tsx`
+  - STEPS array (4 adım)
+  - Navigation logic (max 4)
+  - Progress calculation (/4)
+  - Step rendering (skip Step4How)
+
+---
+
+## ADR-018: AI-Driven Quest Generation in Goal Wizard
+
+**Tarih:** 2026-01-13  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Expert Council Önerisi, Kullanıcı Onayı
+
+### Bağlam
+
+GoalCreationWizard Step 4'te (Görevler) kullanıcı manuel olarak quest template'lerden seçim yapıyordu. Bu yaklaşımın sorunları:
+1. Kullanıcı hangi görevlerin hedefe uygun olduğunu bilmiyor
+2. Template'ler genel, kişiselleştirilmiş değil
+3. Önceki wizard adımlarındaki veriler (motivasyon, hedef, timeline) kullanılmıyor
+
+### Karar
+
+**Step 4'ü AI-driven otomatik quest generation sistemiyle değiştirdik:**
+
+1. `src/actions/wizardAI.ts` oluşturuldu (330 satır)
+2. `Step4AIQuests` component oluşturuldu (290 satır)
+3. Wizard verileri AI context'e dönüştürülüyor
+4. AI başarısız olursa template fallback
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Manual selection (mevcut)** | Basit | Kişiselleştirilmiş değil |
+| **AI önerili + manual** | Hibrit | Karmaşık UI |
+| **Tam AI-driven ✓** | Kişisel, akıllı | API latency (~3sn) |
+
+### Sonuçlar
+
+**Pozitif:**
+- Wizard input'ları (motivation, goal, timeline) kullanılıyor
+- Health profile ile zenginleştirilmiş context
+- Bilimsel gerekçeli görevler
+- "Yenile" ile farklı öneriler
+
+**Negatif:**
+- AI latency (2-5 saniye)
+- API maliyeti
+
+**Mitigation:**
+- Loading skeleton UI
+- Template-based fallback
+- Generic quests son çare
+
+**Dosyalar:**
+- `src/actions/wizardAI.ts` (YENİ)
+- `src/components/hud/Goals/GoalCreationWizard.tsx`
+  - `Step4AIQuests` component
+  - `GoalWizardData.ai_generated_quests` field
+
+---
+
 ## Template: Yeni ADR
 
 ```markdown
@@ -950,6 +1060,6 @@ GoalCreationWizard Step 3/5'te iki selector vardı:
 
 ---
 
-**Son Güncelleme:** 2026-01-13 11:55 UTC+3
-**Toplam ADR:** 16
+**Son Güncelleme:** 2026-01-13 12:37 UTC+3
+**Toplam ADR:** 18
 

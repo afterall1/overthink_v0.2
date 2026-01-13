@@ -513,6 +513,48 @@ AI Expert Council kullanarak kişiselleştirilmiş günlük görevler üretir.
 
 ---
 
+## 🆕 Actions: Wizard AI (`src/actions/wizardAI.ts`)
+
+Goal Creation Wizard için AI-driven quest generation.
+
+### `generateWizardQuests(context)`
+Wizard verilerinden AI ile kişiselleştirilmiş görevler üretir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `context.motivation` | string | ✅ | Step 1 motivasyon |
+| `context.identity_statement` | string | ✅ | Kimlik ifadesi |
+| `context.goal_title` | string | ✅ | Hedef başlığı |
+| `context.goal_description` | string | ✅ | Açıklama |
+| `context.target_value` | number | ❌ | Hedef değer |
+| `context.unit` | string | ✅ | Birim |
+| `context.period` | string | ✅ | Periyod |
+| `context.category_slug` | string | ❌ | Kategori |
+| `context.goal_template_id` | string | ❌ | Şablon ID |
+| `context.start_date` | string | ✅ | Başlangıç |
+| `context.end_date` | string | ❌ | Bitiş |
+
+**Return:** `Promise<WizardQuestsResult>`
+
+```typescript
+interface WizardQuestsResult {
+    success: boolean
+    quests?: AIGeneratedQuest[]
+    nutrition_plan?: NutritionPlan
+    warnings?: string[]
+    motivational_tip?: string
+    error?: string
+    fallback_used?: boolean
+}
+```
+
+> **Özellikler:**
+> 1. Health profile ile context zenginleştirir
+> 2. AI başarısız olursa template-based fallback
+> 3. Generic quests son çare
+
+---
+
 **Son Güncelleme:** 2026-01-13
-**Versiyon:** 1.2.0 (AI Health Quests eklendi)
+**Versiyon:** 1.3.0 (Wizard AI eklendi)
 

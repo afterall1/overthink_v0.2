@@ -179,7 +179,8 @@ overthink_v0.2/
 │   │   ├── categories.ts     # Fetch categories from Supabase
 │   │   ├── quests.ts         # Quest CRUD + XP management
 │   │   ├── ai.ts             # AI Council server actions
-│   │   └── aiHealthQuests.ts # 🆕 Health profile + AI quest generation
+│   │   ├── aiHealthQuests.ts # Health profile + AI quest generation
+│   │   └── wizardAI.ts       # 🆕 Goal Wizard AI quest generation
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   ├── useIsMobile.ts    # (Scene.tsx içinde şu an)
