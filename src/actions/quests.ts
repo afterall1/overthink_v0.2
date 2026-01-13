@@ -153,7 +153,9 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
             // Build a map of quest_id -> completed_at for quick lookup
             const completionMap = new Map<string, string>()
             for (const c of completions || []) {
-                completionMap.set(c.quest_id, c.completed_at)
+                if (c.completed_at) {
+                    completionMap.set(c.quest_id, c.completed_at)
+                }
             }
 
             // Update status and completed_at for completed quests
@@ -988,7 +990,7 @@ export async function createQuestFromTemplate(
             title: customizations?.title ?? typedTemplate.title,
             description: customizations?.description ?? typedTemplate.description,
             emoji: customizations?.emoji ?? typedTemplate.emoji,
-            xp_reward: customizations?.xp_reward ?? typedTemplate.xp_reward,
+            xp_reward: customizations?.xp_reward ?? typedTemplate.xp_reward ?? 10,
             difficulty: customizations?.difficulty ?? typedTemplate.difficulty,
             is_recurring: customizations?.is_recurring ?? typedTemplate.is_recurring_default,
             // FIX: If template is recurring but has no pattern, default to 'daily'

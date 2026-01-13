@@ -133,7 +133,21 @@ export default function Home() {
         getLogsByDateRange(start, end)
       ])
 
-      setDayEvents(events)
+      // Map events to ensure category has all required fields
+      const mappedEvents: EventWithCategory[] = events.map(event => ({
+        ...event,
+        categories: event.categories ? {
+          id: event.categories.id,
+          name: event.categories.name,
+          slug: event.categories.slug,
+          color_code: event.categories.color_code,
+          icon_slug: event.categories.icon_slug,
+          created_at: new Date().toISOString(),
+          description: null
+        } : null
+      }))
+
+      setDayEvents(mappedEvents)
       setDayLogs(logs.map(transformLogForDrawer))
     } catch (error) {
       console.error("Failed to fetch data", error)

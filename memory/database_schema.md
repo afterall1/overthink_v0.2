@@ -351,6 +351,28 @@ Kullanıcı XP istatistikleri ve seviye bilgisi.
 | `last_activity_date` | DATE | NULLABLE | Son aktivite |
 | `last_perfect_day` | DATE | NULLABLE | Son perfect day |
 
+### 11. quest_goal_contributions 🆕
+
+Phase 8.36 Goal Synergy System - Bir quest'in birden fazla hedefe katkı sağlamasını sağlayan junction tablosu.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Contribution ID |
+| `quest_id` | UUID | FK → daily_quests, NOT NULL | Quest |
+| `goal_id` | UUID | FK → goals, NOT NULL | Hedef |
+| `user_id` | UUID | FK → users, NOT NULL | Kullanıcı |
+| `contribution_weight` | DECIMAL(3,2) | DEFAULT 1.0 | Katkı ağırlığı (0-1) |
+| `synergy_type` | TEXT | CHECK ('SYNERGISTIC','COMPLEMENTARY','PARALLEL') | Sinerji tipi |
+| `is_primary` | BOOLEAN | DEFAULT FALSE | Ana hedef mi |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+
+**Indexes:**
+- `quest_goal_contributions_quest_id_idx` (B-tree)
+- `quest_goal_contributions_goal_id_idx` (B-tree)
+- `quest_goal_contributions_user_id_idx` (B-tree)
+
+**Unique Constraint:** `(quest_id, goal_id)` - Aynı quest-goal çifti tek olabilir
+
 ---
 
 ## RLS Politikaları
@@ -579,6 +601,56 @@ Kadın:  BMR = (10 × weight_kg) + (6.25 × height_cm) - (5 × age) - 161
 
 ---
 
-**Son Güncelleme:** 2026-01-13 10:15 UTC+3
-**Versiyon:** 2.4.0 (AI Health Quest System eklendi)
+## 🆕 quest_goal_contributions Tablosu (2026-01-13)
+
+> ⚠️ Migration: `supabase/migrations/20260113_goal_synergy_system.sql`
+
+Multi-goal quest attribution sistemi. Bir görevin birden fazla hedefe katkı sağlamasını sağlar.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Contribution ID |
+| `quest_id` | UUID | FK → daily_quests, NOT NULL | Görev |
+| `goal_id` | UUID | FK → goals, NOT NULL | Hedef |
+| `user_id` | UUID | FK → users, NOT NULL | Kullanıcı |
+| `contribution_weight` | NUMERIC | DEFAULT 1.0, CHECK (0-2.0) | Katkı çarpanı |
+| `contribution_type` | TEXT | CHECK | direct/momentum/synergy |
+| `synergy_type` | TEXT | CHECK | SYNERGISTIC/COMPLEMENTARY/PARALLEL |
+| `is_primary` | BOOLEAN | DEFAULT FALSE | Birincil hedef mi? |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Güncelleme |
+
+**UNIQUE Constraint:** `(quest_id, goal_id)` - Aynı görev-hedef çifti tekrarlanamaz
+
+### Synergy Types
+| Tip | Açıklama | Quest Paylaşım Oranı |
+|-----|----------|---------------------|
+| `SYNERGISTIC` | Aynı yöne giden (lose_weight + lose_fat) | 80-90% |
+| `COMPLEMENTARY` | Destekleyen (weight_loss + eat_healthy) | 40-70% |
+| `PARALLEL` | Bağımsız ama uyumlu | 10-30% |
+
+### Helper View: quest_with_goals
+Quest'leri tüm bağlı hedeflerle birlikte getirir.
+
+### Helper Function: get_quest_goals(quest_uuid)
+Bir quest'in katkı sağladığı tüm hedefleri döndürür.
+
+### Helper Function: update_goals_from_quest_completion(quest_id, user_id, progress)
+Quest tamamlandığında TÜM bağlı hedefleri otomatik günceller.
+
+---
+
+## goals Tablosu Güncellemesi (2026-01-13)
+
+Aşağıdaki sütunlar eklendi:
+
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `synergy_group_id` | UUID | Sinerji grubu ID |
+| `synergy_type` | TEXT | SYNERGISTIC/COMPLEMENTARY/PARALLEL/CONFLICTING/INDEPENDENT |
+
+---
+
+**Son Güncelleme:** 2026-01-13 22:32 UTC+3
+**Versiyon:** 2.5.0 (Goal Synergy System eklendi)
 

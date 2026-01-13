@@ -3,6 +3,7 @@
 // =====================================================
 // Health Prompt Composer
 // Combines base and goal-specific prompts
+// With Synergy Context for multi-goal quest generation
 // =====================================================
 
 import { BASE_SYSTEM_PROMPT } from './baseSystemPrompt'
@@ -13,6 +14,11 @@ import { MUSCLE_GAIN_PROMPT, buildMuscleGainContextMessage } from './muscleGainP
 import { FASTING_PROMPT, buildFastingContextMessage } from './fastingPrompt'
 import { ACTIVITY_PROMPT, buildActivityContextMessage } from './activityPrompt'
 import { HEALTHY_EATING_PROMPT, buildHealthyEatingContextMessage } from './healthyEatingPrompt'
+import {
+    buildSynergyContext,
+    formatSynergyContextForPrompt,
+    type SynergyContext
+} from '../synergyContextBuilder'
 
 import type {
     GoalSpecificContext,
@@ -139,3 +145,33 @@ ${context.allergies.length > 0 ? `- Alerjiler: ${context.allergies.join(', ')}` 
 Lütfen bu kullanıcı için kişiselleştirilmiş günlük görevler oluştur.
 `
 }
+
+// =====================================================
+// Synergy-Aware Context Building (NEW)
+// =====================================================
+
+/**
+ * Build goal context message with synergy awareness
+ * Combines regular context with existing quest info and synergistic goals
+ */
+export async function buildGoalContextMessageWithSynergy(
+    context: GoalSpecificContext,
+    userId: string,
+    goalSlug: string,
+    goalTitle: string
+): Promise<string> {
+    // Build base context
+    const baseContext = buildGoalContextMessage(context)
+
+    // Build synergy context
+    const synergyContext = await buildSynergyContext(userId, goalSlug, goalTitle)
+    const synergySection = formatSynergyContextForPrompt(synergyContext)
+
+    // Combine both contexts
+    return `${baseContext}\n\n${synergySection}`
+}
+
+// Re-export synergy context types for convenience
+export { buildSynergyContext, formatSynergyContextForPrompt }
+export type { SynergyContext }
+

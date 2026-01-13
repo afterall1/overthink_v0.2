@@ -681,7 +681,7 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
             updateField('title', template.title)
             updateField('description', template.description ?? '')
             updateField('unit', template.metric_unit)
-            updateField('period', template.default_period)
+            updateField('period', (template.default_period ?? 'monthly') as GoalPeriod)
             setExpandedTemplateId(template.id)
             setUseCustom(false)
             setAutoPopulated(false) // Reset auto-populated flag

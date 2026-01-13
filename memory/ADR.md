@@ -1079,36 +1079,56 @@ AI quest üretim sistemi, hedef tipinden bağımsız olarak aynı generic prompt
 
 ---
 
-## Template: Yeni ADR
+## ADR-020: Goal Synergy Intelligence System
 
-```markdown
-## ADR-XXX: [Başlık]
-
-**Tarih:** YYYY-MM-DD  
-**Durum:** 🟡 Tartışılıyor | ✅ Kabul Edildi | ❌ Reddedildi  
-**Karar Vericiler:** [İsimler]
+**Tarih:** 2026-01-14  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
 
 ### Bağlam
-[Problem veya ihtiyaç]
+
+Kullanıcılar birden fazla aktif hedefe sahip olabilir ve bu hedefler arasında ilişkiler vardır:
+- **Sinerjik:** Kilo verme + Yağ yakma (aynı görevler her ikisine katkı sağlar)
+- **Tamamlayıcı:** Kas kazanma + Protein hedefi
+- **Çatışmalı:** Kilo verme + Kas kazanma (çelişen stratejiler)
+
+Mevcut sistemde bir quest yalnızca tek bir hedefe bağlıydı.
 
 ### Karar
-[Alınan karar]
+
+**Goal Synergy Intelligence System** implementasyonu:
+1. Junction table (`quest_goal_contributions`) ile çoklu hedef bağlantısı
+2. AI context injection ile mevcut görev tekrarlarını önleme
+3. UI'da sinerji uyarıları ve multi-goal badgeleri
 
 ### Alternatifler
+
 | Seçenek | Artıları | Eksileri |
 |---------|----------|----------|
-| A | ... | ... |
-| B ✓ | ... | ... |
+| **Tek Hedef Bağlantısı** | Basit | Sinerji fırsatı kaçar |
+| **Manuel Multi-Goal** | Kullanıcı kontrolü | UX karmaşık |
+| **Akıllı Sinerji ✓** | Otomatik, verimli | Implementasyon complex |
 
 ### Sonuçlar
-**Pozitif:** ...
-**Negatif:** ...
-**Mitigation:** ...
-```
+
+**Pozitif:**
+- Kullanıcı tek görevle birden fazla hedefe katkı sağlar
+- AI tekrar eden görevler üretmez
+- Çatışan hedefler için uyarı verilir
+
+**Negatif:**
+- Database karmaşıklığı artışı
+- UI badge'leri extra render
+
+**Dosyalar:**
+- `src/lib/ai/synergyMatrix.ts` (997 satır)
+- `src/lib/ai/goalSynergyEngine.ts` (649 satır)
+- `src/lib/ai/synergyContextBuilder.ts` (318 satır)
+- `src/components/hud/Goals/SynergyWarningModal.tsx` (307 satır)
 
 ---
 
-**Son Güncelleme:** 2026-01-13 22:00 UTC+3
-**Toplam ADR:** 19
+**Son Güncelleme:** 2026-01-14 00:30 UTC+3
+**Toplam ADR:** 20
 
 

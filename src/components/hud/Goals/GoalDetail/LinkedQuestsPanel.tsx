@@ -66,7 +66,7 @@ function QuestCard({
     const isCompleted = quest.status === 'completed'
     const isSkipped = quest.status === 'skipped'
     const isPending = quest.status === 'pending'
-    const difficultyStyle = getDifficultyStyle(quest.difficulty)
+    const difficultyStyle = getDifficultyStyle(quest.difficulty ?? 'medium')
 
     const handleComplete = async (e: React.MouseEvent) => {
         e.stopPropagation()

@@ -555,6 +555,33 @@ interface WizardQuestsResult {
 
 ---
 
-**Son Güncelleme:** 2026-01-13
-**Versiyon:** 1.3.0 (Wizard AI eklendi)
+## 🆕 Library: Goal Synergy Engine (`src/lib/ai/goalSynergyEngine.ts`)
+
+Multi-goal quest attribution ve sinerji analizi için kütüphane fonksiyonları.
+
+### `analyzeGoalSynergy(newGoalSlug, newGoalTitle, userId)`
+Yeni hedefin mevcut hedeflerle sinerji analizi.
+
+| Parametre | Tip | Zorunlu |
+|-----------|-----|---------|
+| `newGoalSlug` | string | ✅ |
+| `newGoalTitle` | string | ✅ |
+| `userId` | string | ✅ |
+
+**Return:** `Promise<SynergyAnalysisResult>`
+
+---
+
+### `createQuestGoalContributions(questId, primaryGoalId, userId, additionalGoalIds?)`
+Quest'i birden fazla hedefe bağlar.
+
+---
+
+### `updateGoalsFromQuestCompletion(questId, userId, baseProgress)`
+Tamamlanan quest'in tüm bağlı hedeflerini günceller.
+
+---
+
+**Son Güncelleme:** 2026-01-14
+**Versiyon:** 1.4.0 (Goal Synergy Engine eklendi)
 

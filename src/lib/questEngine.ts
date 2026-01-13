@@ -195,7 +195,7 @@ export function calculateRitualXp(ritual: Ritual): RitualXpBreakdown {
     const baseXp = ritual.base_xp || QUEST_XP.RITUAL_BASE
 
     // Streak multiplier: increases every 7 days
-    const streakWeeks = Math.floor(ritual.current_streak / 7)
+    const streakWeeks = Math.floor((ritual.current_streak ?? 0) / 7)
     const streakMultiplier = Math.min(1 + (streakWeeks * 0.5), 5) // Max 5x
 
     return {

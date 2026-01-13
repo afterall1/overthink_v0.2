@@ -140,11 +140,11 @@ async function fetchHealthProfile(userId: string): Promise<HealthProfile | null>
             weight_kg: data.weight_kg,
             height_cm: data.height_cm,
             birth_date: data.birth_date,
-            biological_sex: data.biological_sex,
-            activity_level: data.activity_level,
-            primary_goal: data.primary_goal,
+            biological_sex: data.biological_sex as HealthProfile['biological_sex'],
+            activity_level: data.activity_level as HealthProfile['activity_level'],
+            primary_goal: data.primary_goal as HealthProfile['primary_goal'] ?? undefined,
             target_weight_kg: data.target_weight_kg ?? undefined,
-            goal_pace: data.goal_pace,
+            goal_pace: data.goal_pace as HealthProfile['goal_pace'] ?? undefined,
             health_conditions: data.health_conditions || [],
             dietary_restrictions: data.dietary_restrictions || []
         }
@@ -382,7 +382,7 @@ async function getFallbackQuests(
                     difficulty: t.difficulty as 'easy' | 'medium' | 'hard',
                     estimated_minutes: 15,
                     calorie_impact: 0,
-                    xp_reward: t.xp_reward,
+                    xp_reward: t.xp_reward ?? 10,
                     emoji: t.emoji || '⭐',
                     scientific_rationale: 'Hedefine uygun önerilen görev.'
                 }))
@@ -401,7 +401,7 @@ async function getFallbackQuests(
                     difficulty: t.difficulty as 'easy' | 'medium' | 'hard',
                     estimated_minutes: 15,
                     calorie_impact: 0,
-                    xp_reward: t.xp_reward,
+                    xp_reward: t.xp_reward ?? 10,
                     emoji: t.emoji || '⭐',
                     scientific_rationale: 'Kategorine uygun önerilen görev.'
                 }))

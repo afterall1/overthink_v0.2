@@ -33,10 +33,13 @@ const RECURRENCE_OPTIONS = [
     { value: 'monthly', label: 'Her ay' },
 ]
 
-const STATUS_LABELS: Record<EventWithCategory['status'], { label: string; className: string }> = {
+const STATUS_LABELS: Record<string, { label: string; className: string }> = {
     pending: { label: 'Bekliyor', className: 'bg-amber-100 text-amber-700' },
     notified: { label: 'Bildirildi', className: 'bg-blue-100 text-blue-700' },
+    scheduled: { label: 'Planlandı', className: 'bg-indigo-100 text-indigo-700' },
+    in_progress: { label: 'Devam Ediyor', className: 'bg-violet-100 text-violet-700' },
     completed: { label: 'Tamamlandı', className: 'bg-emerald-100 text-emerald-700' },
+    cancelled: { label: 'İptal', className: 'bg-red-100 text-red-700' },
     skipped: { label: 'Atlandı', className: 'bg-slate-100 text-slate-500' },
 }
 
@@ -110,8 +113,8 @@ export default function EventDetailModal({
                 category_id: event.category_id || '',
                 scheduled_date: format(scheduledDate, 'yyyy-MM-dd'),
                 scheduled_time: format(scheduledDate, 'HH:mm'),
-                duration_min: event.duration_min,
-                reminder_min: event.reminder_min,
+                duration_min: event.duration_min ?? 30,
+                reminder_min: event.reminder_min ?? 15,
                 recurrence_rule: event.recurrence_rule || '',
             })
             setSelectedCategoryId(event.category_id)
@@ -160,7 +163,7 @@ export default function EventDetailModal({
 
     if (!event) return null
 
-    const statusInfo = STATUS_LABELS[event.status]
+    const statusInfo = STATUS_LABELS[event.status ?? 'pending'] ?? STATUS_LABELS.pending
 
     return (
         <AnimatePresence>

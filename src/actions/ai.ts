@@ -18,6 +18,18 @@ import {
 import { buildTaskAdvisorPrompt, TASK_ADVISOR_SYSTEM_PROMPT } from '@/lib/ai/prompts/taskAdvisor'
 import { buildLifeCoachPrompt, LIFE_COACH_SYSTEM_PROMPT } from '@/lib/ai/prompts/lifeCoach'
 import type { Json } from '@/types/database.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// =====================================================
+// Type Bypass for tables not yet in generated types
+// These will be resolved when migration is applied and types regenerated
+// =====================================================
+
+// Helper to bypass Supabase table type checking
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromTable(client: SupabaseClient<any>, table: string) {
+    return client.from(table)
+}
 
 // =====================================================
 // Types
@@ -263,15 +275,14 @@ export async function getConversationHistory(
         return []
     }
 
-    const { data } = await supabase
-        .from('ai_conversations')
+    const { data } = await fromTable(supabase, 'ai_conversations')
         .select('*')
         .eq('user_id', user.id)
         .eq('council_member', councilMember)
         .order('created_at', { ascending: false })
         .limit(limit)
 
-    return data ?? []
+    return (data as Array<{ messages: unknown }>) ?? []
 }
 
 // =====================================================
@@ -289,8 +300,7 @@ async function saveConversation(
 ): Promise<void> {
     const supabase = await createClient()
 
-    await supabase
-        .from('ai_conversations')
+    await fromTable(supabase, 'ai_conversations')
         .insert({
             user_id: userId,
             council_member: councilMember,
@@ -311,13 +321,12 @@ async function getCachedInsight(
 ): Promise<string | null> {
     const supabase = await createClient()
 
-    const { data } = await supabase
-        .from('ai_insights')
+    const { data } = await fromTable(supabase, 'ai_insights')
         .select('content, valid_until')
         .eq('user_id', userId)
         .eq('insight_type', insightType)
         .contains('metadata', { dateKey })
-        .single()
+        .single() as { data: { content: string; valid_until: string | null } | null }
 
     if (!data) return null
 
@@ -345,8 +354,7 @@ async function cacheInsight(
     const validUntil = new Date()
     validUntil.setHours(validUntil.getHours() + cacheHours)
 
-    await supabase
-        .from('ai_insights')
+    await fromTable(supabase, 'ai_insights')
         .insert({
             user_id: userId,
             insight_type: insightType,

@@ -164,7 +164,7 @@ export default function GoalDetailModal({
 
     const { progress, streakInfo, velocityInfo, streakDays, questContributions, momentum, maturityDays } = metrics
     const isCompleted = goal.is_completed || progress >= 100
-    const periodStyle = PERIOD_COLORS[goal.period] || PERIOD_COLORS.monthly
+    const periodStyle = PERIOD_COLORS[(goal.period ?? 'monthly') as keyof typeof PERIOD_COLORS] || PERIOD_COLORS.monthly
     const daysLeft = getDaysLeft(goal.end_date)
     const streakMultiplier = getStreakMultiplier(streakInfo.currentStreak)
     const maturityStage = getMaturityStage(maturityDays)
@@ -425,7 +425,7 @@ export default function GoalDetailModal({
                                         </h2>
                                         <div className="space-y-3">
                                             {[...(goal.goal_milestones || [])]
-                                                .sort((a, b) => a.sort_order - b.sort_order)
+                                                .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
                                                 .map((milestone) => {
                                                     const milestoneProgress = goal.target_value && milestone.target_value
                                                         ? Math.min(100, ((goal.current_value || 0) / milestone.target_value) * 100)
@@ -438,7 +438,7 @@ export default function GoalDetailModal({
                                                             targetValue={milestone.target_value ?? 0}
                                                             unit={goal.unit || ''}
                                                             progress={milestoneProgress}
-                                                            isCompleted={milestone.is_completed}
+                                                            isCompleted={milestone.is_completed ?? false}
                                                             onToggle={() => onToggleMilestone(milestone.id)}
                                                         />
                                                     )
@@ -609,6 +609,7 @@ function WeeklyProgressBar({ entries, targetValue, unit }: { entries: GoalEntry[
 
     const weeklyTotal = entries
         .filter(e => {
+            if (!e.logged_at) return false
             const date = parseISO(e.logged_at)
             return date >= weekAgo && date <= today
         })
@@ -794,7 +795,7 @@ function prepareStreakCalendar(entries: GoalEntry[]) {
 
     for (let i = 6; i >= 0; i--) {
         const date = subDays(today, i)
-        const hasActivity = entries.some(e => isSameDay(parseISO(e.logged_at), date))
+        const hasActivity = entries.some(e => e.logged_at && isSameDay(parseISO(e.logged_at), date))
         days.push({
             date,
             hasActivity,

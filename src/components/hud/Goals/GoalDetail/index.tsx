@@ -203,6 +203,7 @@ export default function GoalDetail({
         // Find best day
         const dayActivityMap = new Map<string, number>()
         entries.forEach(entry => {
+            if (!entry.logged_at) return
             const dateKey = format(parseISO(entry.logged_at), 'yyyy-MM-dd')
             dayActivityMap.set(dateKey, (dayActivityMap.get(dateKey) || 0) + (entry.value || 1))
         })
@@ -223,7 +224,7 @@ export default function GoalDetail({
 
         // Calculate streak status
         const lastActivity = (goal as GoalWithDetails & { last_activity_date?: string | null }).last_activity_date
-        const hasActivityToday = entries.some(e => isToday(parseISO(e.logged_at))) ||
+        const hasActivityToday = entries.some(e => e.logged_at && isToday(parseISO(e.logged_at))) ||
             linkedQuests.some(q => q.status === 'completed' && q.completed_at && isToday(new Date(q.completed_at)))
 
         const streakStatus: 'safe' | 'at_risk' | 'broken' | 'frozen' =
@@ -237,6 +238,7 @@ export default function GoalDetail({
 
         // Count entries
         entries.forEach(entry => {
+            if (!entry.logged_at) return
             const dateKey = format(parseISO(entry.logged_at), 'yyyy-MM-dd')
             activityMap.set(dateKey, (activityMap.get(dateKey) || 0) + 1)
         })

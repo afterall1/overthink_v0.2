@@ -63,18 +63,20 @@ export default function RitualCard({
     }, [onClick, ritual, isCompleting])
 
     // Streak status
-    const streakStatus = ritual.current_streak === 0
+    const currentStreak = ritual.current_streak ?? 0
+    const longestStreak = ritual.longest_streak ?? 0
+    const streakStatus = currentStreak === 0
         ? 'inactive'
-        : ritual.current_streak >= 7
+        : currentStreak >= 7
             ? 'active'
             : 'building'
 
     // Next milestone
-    const nextMilestone = ritual.current_streak < 7
+    const nextMilestone = currentStreak < 7
         ? 7
-        : ritual.current_streak < 30
+        : currentStreak < 30
             ? 30
-            : ritual.current_streak < 100
+            : currentStreak < 100
                 ? 100
                 : 365
 
@@ -154,7 +156,7 @@ export default function RitualCard({
                                     "w-3 h-3",
                                     streakStatus === 'active' && "fill-current animate-pulse"
                                 )} />
-                                <span className="font-medium">{ritual.current_streak} gün</span>
+                                <span className="font-medium">{currentStreak} gün</span>
                             </div>
 
                             {/* Multiplier */}
@@ -200,16 +202,16 @@ export default function RitualCard({
                 </div>
 
                 {/* Streak Progress Bar */}
-                {ritual.current_streak > 0 && ritual.current_streak < nextMilestone && (
+                {currentStreak > 0 && currentStreak < nextMilestone && (
                     <div className="mt-3">
                         <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                            <span>{ritual.current_streak} gün</span>
+                            <span>{currentStreak} gün</span>
                             <span>{nextMilestone} gün hedef</span>
                         </div>
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ scaleX: 0 }}
-                                animate={{ scaleX: ritual.current_streak / nextMilestone }}
+                                animate={{ scaleX: currentStreak / nextMilestone }}
                                 style={{ transformOrigin: 'left' }}
                                 className={twMerge(
                                     "h-full rounded-full",
@@ -223,9 +225,9 @@ export default function RitualCard({
                 )}
 
                 {/* Longest Streak Badge */}
-                {ritual.longest_streak > 0 && ritual.longest_streak > ritual.current_streak && (
+                {longestStreak > 0 && longestStreak > currentStreak && (
                     <div className="mt-2 text-xs text-slate-400">
-                        En uzun seri: {ritual.longest_streak} gün
+                        En uzun seri: {longestStreak} gün
                     </div>
                 )}
             </div>

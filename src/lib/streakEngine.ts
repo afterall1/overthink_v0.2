@@ -105,9 +105,20 @@ export function calculateStreak(entries: GoalEntry[]): StreakInfo {
         }
     }
 
-    // Sort entries by date descending
-    const sortedEntries = [...entries].sort(
-        (a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime()
+    // Sort entries by date descending (filter out entries without logged_at)
+    const validEntries = entries.filter(e => e.logged_at !== null)
+    if (validEntries.length === 0) {
+        return {
+            currentStreak: 0,
+            longestStreak: 0,
+            isActiveToday: false,
+            lastActivityDate: null,
+            streakStatus: 'inactive',
+            streakMessage: 'Henüz bir aktivite yok. İlk adımı at!'
+        }
+    }
+    const sortedEntries = [...validEntries].sort(
+        (a, b) => new Date(b.logged_at!).getTime() - new Date(a.logged_at!).getTime()
     )
 
     // Get unique activity dates
@@ -165,6 +176,7 @@ function getUniqueActivityDates(entries: GoalEntry[]): Date[] {
     const dates: Date[] = []
 
     for (const entry of entries) {
+        if (!entry.logged_at) continue
         const date = startOfDay(parseISO(entry.logged_at))
         const dateKey = format(date, 'yyyy-MM-dd')
 
@@ -401,12 +413,13 @@ function calculateMomentum(goal: Goal, entries: GoalEntry[]): number {
 
     // Get activity from 4-7 days ago
     const olderEntries = entries.filter(e => {
+        if (!e.logged_at) return false
         const entryDate = startOfDay(parseISO(e.logged_at))
         const daysAgo = differenceInDays(today, entryDate)
         return daysAgo >= 3 && daysAgo <= 6
     })
     const prev3Days = new Set(
-        olderEntries.map(e => format(startOfDay(parseISO(e.logged_at)), 'yyyy-MM-dd'))
+        olderEntries.filter(e => e.logged_at).map(e => format(startOfDay(parseISO(e.logged_at!)), 'yyyy-MM-dd'))
     ).size
 
     // Calculate momentum (-1 to +1)
@@ -429,6 +442,7 @@ function getActivityInLastNDays(entries: GoalEntry[], days: number): number {
     const recentDates = new Set<string>()
 
     for (const entry of entries) {
+        if (!entry.logged_at) continue
         const entryDate = startOfDay(parseISO(entry.logged_at))
         if (entryDate >= cutoff) {
             recentDates.add(format(entryDate, 'yyyy-MM-dd'))
@@ -576,7 +590,7 @@ export function calculateXP(goal: Goal, entries: GoalEntry[], completedMilestone
     for (const entry of entries) {
         totalXP += XP_REWARDS.LOG_PROGRESS
 
-        // Check if entry is from today
+        if (!entry.logged_at) continue
         if (isSameDay(parseISO(entry.logged_at), today)) {
             todayXP += XP_REWARDS.LOG_PROGRESS
         }

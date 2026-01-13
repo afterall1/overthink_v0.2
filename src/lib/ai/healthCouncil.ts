@@ -35,9 +35,9 @@ export interface UserHealthContext {
     water_liters: number
 
     // Goal
-    primary_goal: string
+    primary_goal?: string
     target_weight_kg?: number
-    goal_pace: string
+    goal_pace?: string
 
     // Health
     health_conditions: string[]

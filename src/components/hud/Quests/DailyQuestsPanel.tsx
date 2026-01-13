@@ -362,8 +362,8 @@ export default function DailyQuestsPanel({
                 {/* XP Progress Bar */}
                 {xpStats && (
                     <XPProgressBar
-                        totalXp={xpStats.total_xp}
-                        xpToday={xpStats.xp_today}
+                        totalXp={xpStats.total_xp ?? 0}
+                        xpToday={xpStats.xp_today ?? 0}
                         variant="compact"
                         className="mb-4"
                     />

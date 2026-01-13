@@ -106,7 +106,7 @@ export function scheduleNotification(
     onNotify?: (event: Event) => void
 ): number | null {
     const scheduledTime = new Date(event.scheduled_at).getTime()
-    const reminderTime = scheduledTime - event.reminder_min * 60 * 1000
+    const reminderTime = scheduledTime - (event.reminder_min ?? 0) * 60 * 1000
     const now = Date.now()
 
     const delay = reminderTime - now

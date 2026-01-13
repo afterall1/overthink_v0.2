@@ -24,3 +24,44 @@ export type {
     TaskContext,
     CategoryBreakdown
 } from './userDataAggregator'
+
+// Goal Synergy Engine
+export {
+    analyzeGoalSynergy,
+    createQuestGoalContributions,
+    getQuestGoalContributions,
+    updateGoalsFromQuestCompletion,
+    autoLinkSynergisticQuests,
+    getSynergyRelationship,
+    getSynergisticGoals,
+    getConflictingGoals,
+    areGoalsConflicting
+} from './goalSynergyEngine'
+export type {
+    SynergyAnalysisResult,
+    QuestContributionInfo,
+    ActiveGoalInfo,
+    SynergyType,
+    SynergyRelationship
+} from './goalSynergyEngine'
+
+// Synergy Matrix
+export {
+    GOAL_SYNERGY_MATRIX,
+    GOAL_METADATA
+} from './synergyMatrix'
+export type { GoalSynergyInfo } from './synergyMatrix'
+
+// Synergy Context Builder (NEW)
+export {
+    buildSynergyContext,
+    formatSynergyContextForPrompt,
+    fetchExistingQuests,
+    fetchSynergisticGoals,
+    identifyMultiGoalContributions
+} from './synergyContextBuilder'
+export type {
+    SynergyContext,
+    ExistingQuestInfo,
+    SynergisticGoalInfo
+} from './synergyContextBuilder'

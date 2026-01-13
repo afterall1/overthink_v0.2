@@ -63,7 +63,7 @@ export default function GoalModal({
                 description: editingGoal?.description || '',
                 target_value: editingGoal?.target_value ?? undefined,
                 unit: editingGoal?.unit || '',
-                period: editingGoal?.period || 'weekly',
+                period: (editingGoal?.period ?? 'weekly') as GoalPeriod,
                 category_id: editingGoal?.category_id || '',
                 start_date: editingGoal?.start_date || today,
                 end_date: editingGoal?.end_date || ''

@@ -71,7 +71,7 @@ export default function StreakHeatmap({
 
         for (let i = 27; i >= 0; i--) {
             const date = subDays(today, i)
-            const dayEntries = entries.filter(e => isSameDay(parseISO(e.logged_at), date))
+            const dayEntries = entries.filter(e => e.logged_at && isSameDay(parseISO(e.logged_at), date))
             const totalValue = dayEntries.reduce((sum, e) => sum + e.value, 0)
 
             days.push({

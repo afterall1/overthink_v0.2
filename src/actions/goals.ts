@@ -19,6 +19,17 @@ import type {
     DailyQuest
 } from '@/types/database.types'
 import { createQuestsFromTemplates } from './quests'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// =====================================================
+// Type Bypass Helper
+// For tables not yet in Supabase generated types (migration pending)
+// =====================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromTable(client: SupabaseClient<any>, table: string) {
+    return client.from(table)
+}
 
 // =====================================================
 // GOAL CRUD OPERATIONS
@@ -540,7 +551,7 @@ export async function createMilestone(
         .order('sort_order', { ascending: false })
         .limit(1)
 
-    const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0
+    const nextOrder = existing && existing.length > 0 ? (existing[0].sort_order ?? 0) + 1 : 0
 
     const { data, error } = await client
         .from('goal_milestones')
@@ -686,6 +697,7 @@ export async function logProgress(
             .from('goal_entries')
             .insert({
                 goal_id: goalId,
+                user_id: user.id,
                 value,
                 notes: notes || null,
                 logged_at: new Date().toISOString()
@@ -1066,7 +1078,7 @@ export async function createGoalFromTemplate(
         const startDate = customizations?.start_date || new Date().toISOString().split('T')[0]
         const endDate = customizations?.end_date || (() => {
             const end = new Date()
-            end.setDate(end.getDate() + typedTemplate.default_duration_days)
+            end.setDate(end.getDate() + (typedTemplate.default_duration_days ?? 30))
             return end.toISOString().split('T')[0]
         })()
 
@@ -1306,10 +1318,10 @@ export async function getGoalProgressHistory(goalId: string): Promise<ActionResu
                 emoji: questInfo?.emoji || '✅',
                 value: null,
                 xpEarned: completion.xp_earned,
-                timestamp: new Date(completion.completed_at),
+                timestamp: completion.completed_at ? new Date(completion.completed_at) : new Date(),
                 metadata: {
                     questId: completion.quest_id,
-                    streakCount: completion.streak_count,
+                    streakCount: completion.streak_count ?? undefined,
                     notes: completion.notes || undefined,
                     difficulty: questInfo?.difficulty
                 }
@@ -1325,7 +1337,7 @@ export async function getGoalProgressHistory(goalId: string): Promise<ActionResu
                 emoji: '📊',
                 value: entry.value,
                 xpEarned: null,
-                timestamp: new Date(entry.logged_at),
+                timestamp: entry.logged_at ? new Date(entry.logged_at) : new Date(),
                 metadata: {
                     notes: entry.notes || undefined
                 }
@@ -1362,7 +1374,7 @@ export async function getGoalProgressHistory(goalId: string): Promise<ActionResu
             uniqueDays.add(c.completed_date)
         }
         for (const e of entries) {
-            uniqueDays.add(new Date(e.logged_at).toISOString().split('T')[0])
+            uniqueDays.add(e.logged_at ? new Date(e.logged_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
         }
         const activeDays = uniqueDays.size
 

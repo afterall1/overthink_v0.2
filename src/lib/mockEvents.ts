@@ -13,14 +13,14 @@ function futureDate(daysFromNow: number, hour: number, minute: number = 0): stri
     return date.toISOString()
 }
 
-// Category data (mock - slug + color for categories)
+// Category data (mock - full Category type compatibility)
 const MOCK_CATEGORIES = {
-    trade: { id: 'cat-trade-001', name: 'Trade', slug: 'trade', color_code: '#F59E0B', icon_slug: 'chart-line' },
-    food: { id: 'cat-food-002', name: 'Food', slug: 'food', color_code: '#10B981', icon_slug: 'utensils' },
-    sport: { id: 'cat-sport-003', name: 'Sport', slug: 'sport', color_code: '#3B82F6', icon_slug: 'dumbbell' },
-    dev: { id: 'cat-dev-004', name: 'Dev', slug: 'dev', color_code: '#8B5CF6', icon_slug: 'code' },
-    etsy: { id: 'cat-etsy-005', name: 'Etsy', slug: 'etsy', color_code: '#EC4899', icon_slug: 'shopping-bag' },
-    gaming: { id: 'cat-gaming-006', name: 'Gaming', slug: 'gaming', color_code: '#EF4444', icon_slug: 'gamepad-2' },
+    trade: { id: 'cat-trade-001', name: 'Trade', slug: 'trade', color_code: '#F59E0B', icon_slug: 'chart-line', created_at: '2024-01-01T00:00:00Z', description: null },
+    food: { id: 'cat-food-002', name: 'Food', slug: 'food', color_code: '#10B981', icon_slug: 'utensils', created_at: '2024-01-01T00:00:00Z', description: null },
+    sport: { id: 'cat-sport-003', name: 'Sport', slug: 'sport', color_code: '#3B82F6', icon_slug: 'dumbbell', created_at: '2024-01-01T00:00:00Z', description: null },
+    dev: { id: 'cat-dev-004', name: 'Dev', slug: 'dev', color_code: '#8B5CF6', icon_slug: 'code', created_at: '2024-01-01T00:00:00Z', description: null },
+    etsy: { id: 'cat-etsy-005', name: 'Etsy', slug: 'etsy', color_code: '#EC4899', icon_slug: 'shopping-bag', created_at: '2024-01-01T00:00:00Z', description: null },
+    gaming: { id: 'cat-gaming-006', name: 'Gaming', slug: 'gaming', color_code: '#EF4444', icon_slug: 'gamepad-2', created_at: '2024-01-01T00:00:00Z', description: null },
 } as const
 
 export const mockEvents: EventWithCategory[] = [

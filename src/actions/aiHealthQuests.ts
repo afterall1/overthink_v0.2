@@ -190,19 +190,19 @@ export async function getHealthProfile(): Promise<HealthProfileResult> {
                 weight_kg: data.weight_kg,
                 height_cm: data.height_cm,
                 birth_date: data.birth_date,
-                biological_sex: data.biological_sex,
-                activity_level: data.activity_level,
+                biological_sex: data.biological_sex as 'male' | 'female',
+                activity_level: data.activity_level as 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme',
                 sleep_hours_avg: data.sleep_hours_avg ?? undefined,
-                stress_level: data.stress_level,
-                health_conditions: data.health_conditions,
-                dietary_restrictions: data.dietary_restrictions,
-                allergies: data.allergies,
-                primary_goal: data.primary_goal,
+                stress_level: (data.stress_level ?? undefined) as 'low' | 'medium' | 'high' | undefined,
+                health_conditions: data.health_conditions ?? undefined,
+                dietary_restrictions: data.dietary_restrictions ?? undefined,
+                allergies: data.allergies ?? undefined,
+                primary_goal: (data.primary_goal ?? undefined) as 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance' | undefined,
                 target_weight_kg: data.target_weight_kg ?? undefined,
-                goal_pace: data.goal_pace,
-                bmr_kcal: data.bmr_kcal,
-                tdee_kcal: data.tdee_kcal,
-                target_daily_kcal: data.target_daily_kcal
+                goal_pace: (data.goal_pace ?? undefined) as 'slow' | 'moderate' | 'aggressive' | undefined,
+                bmr_kcal: data.bmr_kcal ?? 0,
+                tdee_kcal: data.tdee_kcal ?? 0,
+                target_daily_kcal: data.target_daily_kcal ?? 0
             }
         }
 
@@ -262,23 +262,28 @@ export async function generatePersonalizedQuests(
         // Build context for AI
         const age = calculateAge(profile.birth_date)
 
+        // Extract values with null safety
+        const bmrKcal = profile.bmr_kcal ?? 0
+        const tdeeKcal = profile.tdee_kcal ?? 0
+        const targetDailyKcal = profile.target_daily_kcal ?? 0
+
         const context: UserHealthContext = {
             age_years: age,
-            biological_sex: profile.biological_sex,
+            biological_sex: profile.biological_sex as 'male' | 'female',
             weight_kg: profile.weight_kg,
             height_cm: profile.height_cm,
-            activity_level: profile.activity_level,
-            bmr_kcal: profile.bmr_kcal,
-            tdee_kcal: profile.tdee_kcal,
-            target_daily_kcal: profile.target_daily_kcal,
-            daily_adjustment: profile.target_daily_kcal - profile.tdee_kcal,
-            protein_g: Math.round((profile.target_daily_kcal * 0.30) / 4),
-            carbs_g: Math.round((profile.target_daily_kcal * 0.40) / 4),
-            fat_g: Math.round((profile.target_daily_kcal * 0.30) / 9),
+            activity_level: profile.activity_level as 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme',
+            bmr_kcal: bmrKcal,
+            tdee_kcal: tdeeKcal,
+            target_daily_kcal: targetDailyKcal,
+            daily_adjustment: targetDailyKcal - tdeeKcal,
+            protein_g: Math.round((targetDailyKcal * 0.30) / 4),
+            carbs_g: Math.round((targetDailyKcal * 0.40) / 4),
+            fat_g: Math.round((targetDailyKcal * 0.30) / 9),
             water_liters: Math.round(profile.weight_kg * 0.033 * 10) / 10,
-            primary_goal: profile.primary_goal,
+            primary_goal: (profile.primary_goal ?? undefined) as 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance' | undefined,
             target_weight_kg: profile.target_weight_kg ?? undefined,
-            goal_pace: profile.goal_pace,
+            goal_pace: (profile.goal_pace ?? undefined) as 'slow' | 'moderate' | 'aggressive' | undefined,
             health_conditions: profile.health_conditions || [],
             dietary_restrictions: profile.dietary_restrictions || [],
             allergies: profile.allergies || []

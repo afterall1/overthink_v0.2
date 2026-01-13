@@ -10,7 +10,8 @@ import {
     Sparkles,
     AlertCircle,
     ChevronRight,
-    Zap
+    Zap,
+    Link2
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import type { DailyQuest, Goal } from '@/types/database.types'
@@ -32,9 +33,17 @@ export interface QuestCardGoalInfo {
     progress_percent?: number
 }
 
+export interface LinkedGoalInfo {
+    id: string
+    title: string
+    synergy_type: 'SYNERGISTIC' | 'COMPLEMENTARY'
+    contribution_weight: number
+}
+
 export interface QuestCardProps {
     quest: DailyQuest
     goal?: QuestCardGoalInfo | null
+    additionalGoals?: LinkedGoalInfo[]  // NEW: Multi-goal contributions
     streakCount?: number
     contributionDisplay?: string | null  // "+306 kcal (~1.1%)"
     contributionPercent?: number | null  // 1.14
@@ -102,6 +111,7 @@ const stateConfig: Record<QuestState, {
 export default function QuestCard({
     quest,
     goal,
+    additionalGoals = [],
     streakCount = 0,
     contributionDisplay,
     contributionPercent,
@@ -320,6 +330,14 @@ export default function QuestCard({
                                     AI
                                 </span>
                             )}
+
+                            {/* Multi-Goal Badge (NEW) */}
+                            {additionalGoals.length > 0 && (
+                                <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md" title={`${additionalGoals.length + 1} hedefe katkı sağlıyor`}>
+                                    <Link2 className="w-3 h-3" />
+                                    <span className="text-[10px] font-bold">+{additionalGoals.length}</span>
+                                </span>
+                            )}
                         </div>
 
                         {/* Completion Time (if completed) */}
@@ -444,6 +462,49 @@ export default function QuestCard({
                                         {Math.min(100, prevProgress + contributionPercent).toFixed(1)}%
                                     </span>
                                 </motion.div>
+                            </motion.div>
+                        )}
+
+                        {/* Multi-Goal Celebration (NEW) */}
+                        {additionalGoals.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.8 }}
+                                className="mt-3 w-full max-w-[200px]"
+                            >
+                                <div className="flex items-center justify-center gap-1 mb-2">
+                                    <Link2 className="w-3 h-3 text-emerald-500" />
+                                    <span className="text-[10px] font-medium text-emerald-600">
+                                        +{additionalGoals.length} hedefe daha katkı!
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap justify-center gap-1">
+                                    {additionalGoals.slice(0, 3).map((g, idx) => (
+                                        <motion.div
+                                            key={g.id}
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.9 + idx * 0.1 }}
+                                            className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${g.synergy_type === 'SYNERGISTIC'
+                                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                                                }`}
+                                        >
+                                            {g.title.length > 12 ? `${g.title.slice(0, 12)}...` : g.title}
+                                        </motion.div>
+                                    ))}
+                                    {additionalGoals.length > 3 && (
+                                        <motion.span
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 1.2 }}
+                                            className="text-[9px] text-slate-400"
+                                        >
+                                            +{additionalGoals.length - 3} daha
+                                        </motion.span>
+                                    )}
+                                </div>
                             </motion.div>
                         )}
                     </motion.div>

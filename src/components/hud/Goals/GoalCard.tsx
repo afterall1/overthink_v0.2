@@ -35,16 +35,18 @@ function calculateProgress(goal: GoalWithDetails): number {
 function calculateStreak(entries: GoalEntry[]): number {
     if (!entries || entries.length === 0) return 0
 
-    // Sort desc
-    const sorted = [...entries].sort((a, b) => new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime())
+    // Sort desc - filter out entries without logged_at
+    const validEntries = entries.filter(e => e.logged_at !== null)
+    if (validEntries.length === 0) return 0
+    const sorted = [...validEntries].sort((a, b) => new Date(b.logged_at!).getTime() - new Date(a.logged_at!).getTime())
 
     let streak = 0
     const today = new Date()
 
     // Check if there is an entry for today (or yesterday to keep streak alive)
-    const hasEntryToday = sorted.some(e => isSameDay(parseISO(e.logged_at), today))
+    const hasEntryToday = sorted.some(e => e.logged_at && isSameDay(parseISO(e.logged_at), today))
     const yesterday = subDays(today, 1)
-    const hasEntryYesterday = sorted.some(e => isSameDay(parseISO(e.logged_at), yesterday))
+    const hasEntryYesterday = sorted.some(e => e.logged_at && isSameDay(parseISO(e.logged_at), yesterday))
 
     // If no entry today AND no entry yesterday, streak is broken (0)
     // Exception: If it's early in the day, maybe we accept yesterday as valid? 
@@ -59,7 +61,7 @@ function calculateStreak(entries: GoalEntry[]): number {
     // If latest entry is older than yesterday, streak is broken -> 0.
 
     const latestEntry = sorted[0]
-    const latestDate = parseISO(latestEntry.logged_at)
+    const latestDate = parseISO(latestEntry.logged_at!)
 
     if (differenceInDays(today, latestDate) > 1) {
         return 0
@@ -70,7 +72,7 @@ function calculateStreak(entries: GoalEntry[]): number {
     streak = 1 // At least the latest one counts
 
     for (let i = 1; i < sorted.length; i++) {
-        const entryDate = parseISO(sorted[i].logged_at)
+        const entryDate = parseISO(sorted[i].logged_at!)
         const diff = differenceInDays(checkDate, entryDate)
 
         if (diff === 0) continue // Multiple entries same day, ignore
@@ -96,7 +98,7 @@ function getNextMilestone(goal: GoalWithDetails): string {
     if (!goal.goal_milestones || goal.goal_milestones.length === 0) return 'Milestone Yok'
     // Find first incomplete milestone
     const next = goal.goal_milestones
-        .sort((a, b) => a.sort_order - b.sort_order)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         .find(m => !m.is_completed)
 
     if (!next) return 'Hepsi Tamam!'
@@ -107,7 +109,7 @@ function getNextMilestone(goal: GoalWithDetails): string {
 
 export default function GoalCard({ goal, onClick, index = 0 }: GoalCardProps) {
     const progress = calculateProgress(goal)
-    const period = periodConfig[goal.period]
+    const period = periodConfig[(goal.period ?? 'daily') as GoalPeriod]
     const streak = calculateStreak(goal.goal_entries || [])
     const daysLeft = getDaysLeft(goal.end_date)
     const nextMilestone = getNextMilestone(goal)

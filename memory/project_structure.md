@@ -98,6 +98,7 @@ overthink_v0.2/
 │   │   │   │   ├── MomentumGauge.tsx     # Dual progress gauge
 │   │   │   │   ├── MilestoneList.tsx
 │   │   │   │   ├── ProgressRing.tsx
+│   │   │   │   ├── SynergyWarningModal.tsx # 🆕 Goal sinerji uyarı modal
 │   │   │   │   │
 │   │   │   │   └── 📁 GoalDetail/   # 🆕 Modular GoalDetail
 │   │   │   │       ├── index.tsx        # Main orchestrator (iOS Bottom Sheet)
@@ -214,19 +215,24 @@ overthink_v0.2/
 │   │       ├── aiService.ts          # AI service layer
 │   │       ├── userDataAggregator.ts # User context builder
 │   │       ├── healthCouncil.ts      # AI Expert Council for health quests
-│   │       ├── goalSpecificContexts.ts # 🆕 Typed goal context interfaces
+│   │       ├── goalSpecificContexts.ts # Typed goal context interfaces
 │   │       │
-│   │       └── 📁 prompts/           # 🆕 Modular Goal-Specific Prompts
+│   │       ├── 📁 synergy/           # 🆕 Goal Synergy Intelligence (Phase 8.36)
+│   │       │   ├── synergyMatrix.ts      # 44+ hedef arası sinerji ilişkileri
+│   │       │   ├── goalSynergyEngine.ts  # Sinerji analizi, multi-goal güncelleme
+│   │       │   └── synergyContextBuilder.ts # AI prompt context injection
+│   │       │
+│   │       └── 📁 prompts/           # Modular Goal-Specific Prompts
 │   │           ├── index.ts              # Barrel export
 │   │           ├── baseSystemPrompt.ts   # Universal safety rules
-│   │           ├── healthPromptComposer.ts # Prompt composition
+│   │           ├── healthPromptComposer.ts # Prompt composition + synergy
 │   │           ├── sugarReductionPrompt.ts # Sugar reduction strategies
 │   │           ├── weightLossPrompt.ts     # Weight loss strategies
-│   │           ├── hydrationPrompt.ts      # 🆕 Hydration strategies
-│   │           ├── muscleGainPrompt.ts     # 🆕 Muscle gain strategies
-│   │           ├── fastingPrompt.ts        # 🆕 Fasting strategies
-│   │           ├── activityPrompt.ts       # 🆕 Activity strategies
-│   │           ├── healthyEatingPrompt.ts  # 🆕 Healthy eating strategies
+│   │           ├── hydrationPrompt.ts      # Hydration strategies
+│   │           ├── muscleGainPrompt.ts     # Muscle gain strategies
+│   │           ├── fastingPrompt.ts        # Fasting strategies
+│   │           ├── activityPrompt.ts       # Activity strategies
+│   │           ├── healthyEatingPrompt.ts  # Healthy eating strategies
 │   │           ├── council.ts              # Legacy council prompt
 │   │           ├── lifeCoach.ts            # Life coach prompt
 │   │           └── taskAdvisor.ts          # Task advisor prompt

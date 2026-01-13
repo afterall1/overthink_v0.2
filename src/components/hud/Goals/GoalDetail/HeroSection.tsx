@@ -218,7 +218,7 @@ export default function HeroSection({
     maturityDays,
     isCompleted
 }: HeroSectionProps) {
-    const periodStyle = getPeriodStyle(goal.period)
+    const periodStyle = getPeriodStyle((goal.period ?? 'monthly') as 'daily' | 'weekly' | 'monthly' | 'yearly')
     const streakTier = getStreakTier(streak)
     const maturity = getMaturityStage(maturityDays)
     const daysInfo = formatDaysLeft(goal.end_date)
@@ -252,7 +252,7 @@ export default function HeroSection({
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 
                                            bg-white/20 backdrop-blur-sm rounded-full
                                            text-xs font-bold text-white/90 uppercase tracking-wide">
-                                {PERIOD_LABELS[goal.period]}
+                                {PERIOD_LABELS[(goal.period ?? 'monthly') as 'daily' | 'weekly' | 'monthly' | 'yearly']}
                             </span>
 
                             {/* Days Remaining Badge */}

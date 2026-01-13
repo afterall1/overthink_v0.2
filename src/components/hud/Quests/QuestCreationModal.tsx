@@ -110,7 +110,7 @@ function TemplateCard({ template, isSelected, onSelect }: TemplateCardProps) {
                             {template.xp_reward} XP
                         </span>
 
-                        <DifficultyBadge difficulty={template.difficulty} />
+                        <DifficultyBadge difficulty={(template.difficulty ?? 'medium') as 'easy' | 'medium' | 'hard'} />
 
                         {template.estimated_minutes && (
                             <span className="flex items-center gap-1">

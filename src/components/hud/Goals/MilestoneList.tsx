@@ -25,7 +25,7 @@ export default function MilestoneList({
         )
     }
 
-    const sortedMilestones = [...milestones].sort((a, b) => a.sort_order - b.sort_order)
+    const sortedMilestones = [...milestones].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 
     return (
         <ul className="space-y-2">
