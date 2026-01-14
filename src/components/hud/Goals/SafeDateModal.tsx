@@ -17,7 +17,8 @@ import type { SafeDateSuggestion } from '@/lib/goalCalculator'
 interface SafeDateModalProps {
     isOpen: boolean
     onClose: () => void
-    onSelectPlan: (planType: 'relaxed' | 'balanced' | 'fast', endDate: string) => void
+    // UPDATED: Now passes full suggestion object to capture dailyDeficit for AI quest generation
+    onSelectPlan: (suggestion: SafeDateSuggestion) => void
     suggestions: SafeDateSuggestion[]
     originalEndDate: string
     originalDailyDeficit: number
@@ -77,7 +78,8 @@ export default function SafeDateModal({
     }
 
     const handleSelectPlan = (suggestion: SafeDateSuggestion) => {
-        onSelectPlan(suggestion.planType, suggestion.endDate)
+        // Pass full suggestion to parent (includes dailyDeficit for AI quest generation)
+        onSelectPlan(suggestion)
         onClose()
     }
 

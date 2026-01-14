@@ -35,6 +35,10 @@ export interface WizardContext {
     // From Step 3 (When)
     start_date: string
     end_date: string | null
+
+    // KRITIK: SafeDateModal'dan gelen kullanicinin sectigi gunluk kalori acigi
+    // Bu deger healthCalculator'dan gelen pace-based hesaplamadan ONCELIKLI
+    daily_calorie_deficit?: number
 }
 
 export interface WizardQuestsResult {
@@ -165,11 +169,17 @@ function buildAIContext(
     // STEP 1: Always determine goal from wizard data first
     const wizardGoalType = inferGoalFromWizard(wizard)
 
+    // STEP 2: Get wizard's explicit calorie deficit (from SafeDateModal selection)
+    // This is the user's chosen value and takes PRIORITY over calculated values
+    const wizardExplicitDeficit = wizard.daily_calorie_deficit
+
+    console.log('[buildAIContext] Wizard explicit deficit:', wizardExplicitDeficit ?? 'not set')
+
     // If health profile exists, use it for rich context
     if (healthProfile) {
         const age = calculateAge(healthProfile.birth_date)
 
-        // STEP 2: Create modified profile with WIZARD goal type, not profile's goal
+        // STEP 3: Create modified profile with WIZARD goal type, not profile's goal
         // This ensures calorie calculations match the wizard's goal, not the profile's legacy goal
         const modifiedProfile: HealthProfile = {
             ...healthProfile,
@@ -178,8 +188,22 @@ function buildAIContext(
             goal_pace: healthProfile.goal_pace || 'moderate'
         }
 
-        // STEP 3: Calculate metrics using the WIZARD goal type
+        // STEP 4: Calculate metrics using the WIZARD goal type
         const metrics = calculateHealthMetrics(modifiedProfile)
+
+        // STEP 5: KRITIK - Wizard'dan gelen explicit deficit varsa, override yap!
+        // Bu SafeDateModal'dan kullanicinin sectigi degerdir (ornegin 1000 kcal)
+        // healthCalculator pace'e gore hesaplayabilir (500 kcal) ama kullanici 1000 secmis olabilir
+        const finalDailyAdjustment = wizardExplicitDeficit
+            ? -Math.abs(wizardExplicitDeficit)  // Deficit her zaman negatif olmali
+            : metrics.daily_adjustment
+
+        const finalTargetKcal = wizardExplicitDeficit
+            ? metrics.tdee_kcal - Math.abs(wizardExplicitDeficit)
+            : metrics.target_daily_kcal
+
+        console.log('[buildAIContext] Final daily_adjustment:', finalDailyAdjustment,
+            wizardExplicitDeficit ? '(from wizard)' : '(from healthCalculator)')
 
         // Calculate duration in days
         let durationDays = 30
@@ -197,8 +221,8 @@ function buildAIContext(
             activity_level: healthProfile.activity_level,
             bmr_kcal: metrics.bmr_kcal,
             tdee_kcal: metrics.tdee_kcal,
-            target_daily_kcal: metrics.target_daily_kcal,
-            daily_adjustment: metrics.daily_adjustment, // Now correctly calculated from wizard goal
+            target_daily_kcal: finalTargetKcal,
+            daily_adjustment: finalDailyAdjustment, // Now correctly uses wizard's explicit choice
             protein_g: metrics.macros.protein_g,
             carbs_g: metrics.macros.carbs_g,
             fat_g: metrics.macros.fat_g,
@@ -217,7 +241,13 @@ function buildAIContext(
     // Use wizard goal to determine if surplus or deficit
     const isDeficitGoal = wizardGoalType === 'weight_loss'
     const isSurplusGoal = wizardGoalType === 'muscle_gain' || wizardGoalType === 'weight_gain'
-    const defaultAdjustment = isDeficitGoal ? -400 : (isSurplusGoal ? 300 : 0)
+
+    // KRITIK: Wizard'dan explicit deficit geldiyse onu kullan, yoksa varsayilan degerler
+    const defaultAdjustment = wizardExplicitDeficit
+        ? -Math.abs(wizardExplicitDeficit)
+        : (isDeficitGoal ? -400 : (isSurplusGoal ? 300 : 0))
+
+    console.log('[buildAIContext] Fallback mode, daily_adjustment:', defaultAdjustment)
 
     return {
         age_years: 30, // Default

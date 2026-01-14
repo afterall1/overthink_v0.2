@@ -10,42 +10,47 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.37: Health Safety & Smart Date Adjustment - TAMAMLANDI ✅   ║
+║  PHASE 8.39: Calorie Budget 95% Enforcement - TAMAMLANDI ✅          ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  Age-based calorie limits + Auto-adjust unsafe goal dates           ║
+║  AI quests now ALWAYS meet 95%+ of target calorie budget             ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.36: Goal Synergy Intelligence | ✅ Tamamlandı | 100% |
-| **Phase 8.37: Health Safety System** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.37: Health Safety System | ✅ Tamamlandı | 100% |
+| Phase 8.38: Calorie Deficit Data Flow Fix | ✅ Tamamlandı | 100% |
+| **Phase 8.39: Calorie Budget 95% Enforcement** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-14 (Oturum 9)
+## Session Summary: 2026-01-14 (Oturum 10)
 
-### ✅ Phase 8.37 - Tamamlanan Tüm Özellikler
+### ✅ Phase 8.38 - Calorie Deficit Data Flow Fix
 
-#### Feature 1: Health Safety Limits System ✅
-- `src/lib/healthCalculator.ts` - `performSafetyCheck()` fonksiyonu
-- Age-based calorie multipliers (`AGE_SAFETY_FACTORS`)
-- Sex-based safe calorie limits (erkek: 1500+ kcal, kadın: 1200+ kcal)
-- `SafetyWarning` interface ve detaylı uyarı mesajları
-- `SafetyWarningBanner.tsx` - UI uyarı bileşeni
+**Problem:** SafeDateModal'da seçilen günlük kalori açığı (1000 kcal) AI görev üretimine ulaşmıyordu. AI, healthCalculator'dan gelen pace-based varsayılan değeri (500 kcal) kullanıyordu → görevler ~550 kcal çıkıyordu.
 
-#### Feature 2: Smart Date Auto-Adjustment ✅
-- `src/lib/goalCalculator.ts` - 3 yeni fonksiyon:
-  - `calculateSafeEndDate()` - Güvenli bitiş tarihi hesapla
-  - `getSafeDateSuggestions()` - 3 plan önerisi üret
-  - `requiresSafetyAdjustment()` - Güvenlik kontrolü
-- `SafeDateModal.tsx` - Plan seçim modalı (Rahat/Dengeli/Hızlı)
-- `GoalCreationWizard.tsx` - Step3When entegrasyonu
+**Çözüm - 3 Dosya Değişikliği:**
 
-#### Feature 3: AI Prompt Safety Context ✅
-- `healthCouncil.ts` - `UserHealthContext`'e güvenlik alanları eklendi
-- AI, güvenlik ayarlaması yapıldığında sağlık koruyucu görevler ekler
+| Dosya | Değişiklik |
+|-------|------------|
+| `GoalCreationWizard.tsx` | `calculated_daily_deficit` alanı eklendi, `handleSelectSafePlan` güncelci |
+| `SafeDateModal.tsx` | Interface artık full `SafeDateSuggestion` objesi döndürüyor |
+| `wizardAI.ts` | `daily_calorie_deficit` eklendi, `buildAIContext` wizard değerini öncelikli kullanıyor |
+
+### ✅ Phase 8.39 - Calorie Budget 95% Enforcement
+
+**Problem:** AI ~800 kcal (~80% coverage) üretiyordu, hedef 1000 kcal'e ulaşmıyordu.
+
+**Çözüm - 4 Katmanlı Yaklaşım (`healthCouncil.ts`):**
+
+| Katman | Değişiklik |
+|--------|------------|
+| **System Prompt** | %70 → **%95** minimum, agresif dil |
+| **User Message** | %70-110 → **%95-105** |
+| **Post-Processing** | `scaleQuestsToMeetBudget()` - AI yetersiz üretirse otomatik ölçekleme |
+| **Validation** | %60 → **%90** minimum |
 
 ---
 
@@ -67,6 +72,5 @@
 
 ---
 
-**Son Güncelleme:** 2026-01-14 17:55 UTC+3
-**Phase 8.37 TAMAMLANDI - Health Safety & Smart Date Adjustment Aktif**
-
+**Son Güncelleme:** 2026-01-14 18:30 UTC+3
+**Phase 8.39 TAMAMLANDI - Calorie Budget 95% Enforcement Aktif**

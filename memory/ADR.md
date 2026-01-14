@@ -1189,5 +1189,62 @@ Mevcut sistem bu riskleri tespit etmiyor ve kullanıcıya uyarı vermiyordu.
 
 ---
 
-**Son Güncelleme:** 2026-01-14 17:55 UTC+3
-**Toplam ADR:** 21
+## ADR-022: Calorie Budget 95% Enforcement System
+
+**Tarih:** 2026-01-14  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Kullanıcı SafeDateModal'dan 1000 kcal günlük açık seçtiğinde:
+1. **İlk Sorun (Phase 8.38):** Kalori açığı bilgisi AI'a ulaşmıyordu → healthCalculator'dan gelen pace-based 500 kcal kullanılıyordu
+2. **İkinci Sorun (Phase 8.39):** AI prompt %70-100 aralığına izin veriyordu → AI ~800 kcal (%80) üretip duruyordu
+
+Sonuç: Kullanıcı 1000 kcal beklerken görevler ~550-800 kcal çıkıyordu.
+
+### Karar
+
+**Çift Fazlı Düzeltme:**
+
+#### Faz 1: Veri Akışı Düzeltmesi (Phase 8.38)
+- `GoalWizardData` → `calculated_daily_deficit` alanı
+- `SafeDateModal` → Full `SafeDateSuggestion` objesi döndürme
+- `WizardContext` → `daily_calorie_deficit` alanı
+- `buildAIContext` → Wizard değerini öncelikli kullanma
+
+#### Faz 2: Budget Enforcement (Phase 8.39)
+- **Prompt Güçlendirme:** %70 → %95 minimum, agresif dil
+- **User Message:** %70-110 → %95-105 aralık
+- **Post-Processing:** `scaleQuestsToMeetBudget()` fonksiyonu
+- **Validation:** %60-120 → %90-110 threshold
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Sadece Prompt Güçlendirme** | Basit | AI hala yetersiz üretebilir |
+| **Retry Loop** | Kesin sonuç | Yavaş, maliyet yüksek |
+| **Post-Processing Scaling ✓** | Hızlı, güvenilir | Kalori değerleri modifiye |
+
+### Sonuçlar
+
+**Pozitif:**
+- Kullanıcının seçtiği kalori açığı her zaman karşılanır (%95+)
+- AI yetersiz üretse bile sistem telafi eder
+- Tek API çağrısı yeterli (retry yok)
+
+**Negatif:**
+- Kalori değerleri ölçekleme ile modifiye ediliyor
+- Post-processing karmaşıklığı
+
+**Dosyalar:**
+- `src/components/hud/Goals/GoalCreationWizard.tsx` - `calculated_daily_deficit`
+- `src/components/hud/Goals/SafeDateModal.tsx` - Interface update
+- `src/actions/wizardAI.ts` - `daily_calorie_deficit`, `buildAIContext`
+- `src/lib/ai/healthCouncil.ts` - Prompt + `scaleQuestsToMeetBudget()`
+
+---
+
+**Son Güncelleme:** 2026-01-14 18:30 UTC+3
+**Toplam ADR:** 22

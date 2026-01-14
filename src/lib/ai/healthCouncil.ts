@@ -147,24 +147,27 @@ Kullanıcının sağlık profilini ve hesaplanmış değerlerini analiz ederek k
    - 1-2 alışkanlık görevi
    - 1 takip/ölçüm görevi
 
-6. **🎯 KALORİ BÜTÇESİ ZORUNLULUĞU (KRİTİK):**
+6. **🎯 KALORİ BÜTÇESİ ZORUNLULUĞU (EN KRİTİK KURAL):**
    
-   ⚠️ **MUTLAK KURAL:** Oluşturduğun görevlerin toplam \`calorie_impact\` değeri,
-   kullanıcının günlük kalori açığı/fazlası hedefinin **%70-100**'ünü karşılamalıdır.
+   ⛔ **MUTLAK ZORUNLULUK - İHLAL EDİLEMEZ:** Oluşturduğun görevlerin toplam \`calorie_impact\` değeri,
+   kullanıcının günlük kalori açığı/fazlası hedefinin **%95-105**'ini karşılaMalıdır.
    
-   Örnek Hesaplama (Hedef: -815 kcal/gün):
+   🚨 **%95'in ALTINDA ÜRETİM KESİNLİKLE KABUL EDİLMEZ!**
+   
+   Örnek Hesaplama (Hedef: -1000 kcal/gün):
    | Görev | calorie_impact |
    |-------|----------------|
-   | 45dk Tempolu Yürüyüş | -250 kcal |
-   | 30dk Ağırlık Antrenmanı | -200 kcal |
-   | Porsiyon %20 Azaltma | -150 kcal |
+   | 45dk Tempolu Yürüyüş/Koşu | -300 kcal |
+   | 30dk HIIT veya Ağırlık | -250 kcal |
+   | Porsiyon %25 Azaltma | -200 kcal |
    | Gece Atıştırmasına Hayır | -100 kcal |
-   | Merdiven Kullanımı | -75 kcal |
-   | Yüksek Lif Kahvaltı | -50 kcal |
-   | **TOPLAM** | **-825 kcal** ✅ |
+   | Merdiven + Günlük Hareket | -100 kcal |
+   | Şekerli İçeceklere Hayır | -75 kcal |
+   | **TOPLAM** | **-1025 kcal** ✅ |
    
-   ⚡ Minimum kabul: Hedefin %70'i
-   ⚡ Maksimum kabul: Hedefin %110'u
+   ⚡ Minimum ZORUNLU: Hedefin %95'i (örn: -1000 hedef → min -950)
+   ⚡ Maksimum kabul: Hedefin %105'i
+   ⚠️ %95 altı = BAŞARISIZ, yeniden hesapla!
    
    Kas yapma (muscle_gain) hedefi için calorie_impact POZITIF olmalı (kalori fazlası).
 
@@ -293,16 +296,20 @@ export async function generateHealthQuests(
         // Validate and sanitize quests
         const validatedQuests = validateAndSanitizeQuests(parsed.daily_quests || [], context)
 
-        // Check calorie budget coverage
-        const budgetCheck = validateCalorieBudgetCoverage(validatedQuests, context.daily_adjustment)
+        // Scale quests to meet 95% minimum budget coverage if AI underdelivered
+        const scaledQuests = scaleQuestsToMeetBudget(validatedQuests, context.daily_adjustment, 95)
+
+        // Check calorie budget coverage (after scaling)
+        const budgetCheck = validateCalorieBudgetCoverage(scaledQuests, context.daily_adjustment)
         console.log('[AI Quest Generation] Calorie Budget Check:', {
             target: context.daily_adjustment,
-            generated: budgetCheck.totalImpact,
+            original: validatedQuests.reduce((sum, q) => sum + (q.calorie_impact || 0), 0),
+            scaled: budgetCheck.totalImpact,
             coverage: `${budgetCheck.coverage.toFixed(1)}%`,
             status: budgetCheck.isValid ? '✅ Valid' : '⚠️ Below target'
         })
 
-        // Add warning if coverage is low
+        // Add warning if coverage is low (shouldn't happen after scaling)
         const warnings = [...(parsed.warnings || [])]
         if (!budgetCheck.isValid && Math.abs(context.daily_adjustment) > 100) {
             warnings.push(`Görevlerin toplam kalori etkisi (${budgetCheck.totalImpact} kcal) hedefin %${budgetCheck.coverage.toFixed(0)}'ini karşılıyor.`)
@@ -310,7 +317,7 @@ export async function generateHealthQuests(
 
         return {
             success: true,
-            daily_quests: validatedQuests,
+            daily_quests: scaledQuests,  // Return scaled quests
             nutrition_plan: parsed.nutrition_plan || getDefaultNutritionPlan(context),
             warnings,
             motivational_tip: parsed.motivational_tip || 'Bugün de harika bir gün olacak!',
@@ -339,10 +346,10 @@ export async function generateHealthQuests(
  * Build user context message for AI
  */
 function buildUserContextMessage(context: UserHealthContext): string {
-    // Calculate calorie budget range
+    // Calculate calorie budget range - STRICT 95-105% range
     const absAdjustment = Math.abs(context.daily_adjustment)
-    const minBudget = Math.round(absAdjustment * 0.7)
-    const maxBudget = Math.round(absAdjustment * 1.1)
+    const minBudget = Math.round(absAdjustment * 0.95)  // 95% minimum ZORUNLU
+    const maxBudget = Math.round(absAdjustment * 1.05)  // 105% maximum
     const isDeficit = context.daily_adjustment < 0
     const budgetType = isDeficit ? 'AÇIK' : 'FAZLA'
 
@@ -381,12 +388,13 @@ function buildUserContextMessage(context: UserHealthContext): string {
 - Hedef Günlük Kalori: ${context.target_daily_kcal} kcal
 - Günlük ${budgetType}: ${absAdjustment} kcal
 
-## 🎯 KALORİ BÜTÇESİ HEDEFİ (KRİTİK):
-⚠️ Görevlerin toplam calorie_impact değeri bu aralıkta olmalı:
+## 🎯 KALORİ BÜTÇESİ HEDEFİ (EN KRİTİK - İHLAL EDİLEMEZ):
+⛔ ZORUNLU: Görevlerin toplam calorie_impact değeri bu aralıkta OLMAK ZORUNDA:
 - Hedef: ${context.daily_adjustment} kcal/gün
-- Minimum Kabul: ${isDeficit ? '-' : '+'}${minBudget} kcal
-- Maksimum Kabul: ${isDeficit ? '-' : '+'}${maxBudget} kcal
+- Minimum ZORUNLU: ${isDeficit ? '-' : '+'}${minBudget} kcal (%95)
+- Maksimum Kabul: ${isDeficit ? '-' : '+'}${maxBudget} kcal (%105)
 - Tip: ${isDeficit ? 'Kalori AÇIĞI (negatif impact)' : 'Kalori FAZLASI (pozitif impact)'}
+🚨 %95 ALTINDA ÜRETİM KABUL EDİLMEYECEK!
 ${safetySection}
 ## MAKRO HEDEFLERİ:
 - Protein: ${context.protein_g} g
@@ -409,7 +417,8 @@ ${context.days_since_start ? `## İLERLEME:
 - Kilo değişimi: ${context.weight_change_kg || 0} kg` : ''}
 
 Lütfen bu kullanıcı için kişiselleştirilmiş günlük görevler ve beslenme planı oluştur.
-⚡ HATIRLATMA: Görevlerin toplam calorie_impact değeri ${isDeficit ? '-' : '+'}${minBudget} ile ${isDeficit ? '-' : '+'}${maxBudget} kcal arasında olmalı!
+⛔ KRİTİK ZORUNLULUK: Görevlerin toplam calorie_impact değeri ${isDeficit ? '-' : '+'}${minBudget} ile ${isDeficit ? '-' : '+'}${maxBudget} kcal arasında OLMALI!
+🚨 ${minBudget} kcal altında üretim KABUL EDİLMEYECEK!
 ${context.safety_adjusted ? '🛡️ SAĞLIK KORUYUCU GÖREVLER EKLEMEYI UNUTMA!' : ''}
 `
 }
@@ -455,11 +464,55 @@ function validateCalorieBudgetCoverage(
         (targetAdjustment < 0 && totalImpact <= 0) ||
         (targetAdjustment > 0 && totalImpact >= 0)
 
-    // Valid if coverage is between 60-120% AND signs match
-    // Lower threshold to 60% to account for non-calorie quests (habit, tracking)
-    const isValid = (coverage >= 60 && coverage <= 120) && signsMatch
+    // Valid if coverage is between 90-110% AND signs match
+    // After scaling, this should always pass
+    const isValid = (coverage >= 90 && coverage <= 110) && signsMatch
 
     return { isValid, totalImpact, coverage }
+}
+
+/**
+ * Scale quest calorie impacts to meet target budget
+ * If AI underdelivers (e.g., 800 instead of 1000), proportionally increase calorie impacts
+ * This ensures user always gets quests that match their selected deficit
+ */
+function scaleQuestsToMeetBudget(
+    quests: AIGeneratedQuest[],
+    targetAdjustment: number,
+    minCoveragePercent: number = 95
+): AIGeneratedQuest[] {
+    if (quests.length === 0) return quests
+
+    const totalImpact = quests.reduce((sum, q) => sum + (q.calorie_impact || 0), 0)
+    const absTarget = Math.abs(targetAdjustment)
+    const absImpact = Math.abs(totalImpact)
+
+    // Calculate current coverage
+    const currentCoverage = absTarget > 0 ? (absImpact / absTarget) * 100 : 100
+
+    // If coverage is below minimum and we have calorie impacts to scale
+    if (currentCoverage < minCoveragePercent && absImpact > 0) {
+        // Calculate scale factor to reach exactly target (100%)
+        const scaleFactor = absTarget / absImpact
+
+        console.log('[Calorie Scaling] Scaling quests to meet target:', {
+            original: totalImpact,
+            target: targetAdjustment,
+            currentCoverage: `${currentCoverage.toFixed(1)}%`,
+            scaleFactor: scaleFactor.toFixed(2),
+            newTotal: Math.round(totalImpact * scaleFactor)
+        })
+
+        return quests.map(q => ({
+            ...q,
+            // Only scale quests that have calorie impact
+            calorie_impact: q.calorie_impact !== 0
+                ? Math.round(q.calorie_impact * scaleFactor)
+                : 0
+        }))
+    }
+
+    return quests
 }
 
 /**

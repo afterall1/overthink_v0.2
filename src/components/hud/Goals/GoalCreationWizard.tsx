@@ -46,6 +46,8 @@ export interface GoalWizardData {
     // Step 3: When
     start_date: string
     end_date: string
+    // SafeDateModal'dan gelen hesaplanmış günlük kalori açığı (1000 kcal limit seçildiğinde)
+    calculated_daily_deficit?: number
 
     // Goal Template (optional - if selected, auto-populates other fields)
     goal_template_id: string | null
@@ -1337,12 +1339,15 @@ function Step3When({ formData, updateField, errors }: StepProps) {
         }
     }, [formData.target_value, formData.unit, formData.title, formData.start_date, formData.end_date, formData.category_id, isWeightLossGoal])
 
-    // Handle safe plan selection
-    const handleSelectSafePlan = (planType: 'relaxed' | 'balanced' | 'fast', endDate: string) => {
-        updateField('end_date', endDate)
+    // Handle safe plan selection - captures the daily deficit for AI quest generation
+    const handleSelectSafePlan = (suggestion: SafeDateSuggestion) => {
+        updateField('end_date', suggestion.endDate)
+        // KRITIK: SafeDateModal'dan gelen kalori açığını kaydet
+        // Bu değer AI görev üretiminde kullanılacak (Step 4)
+        updateField('calculated_daily_deficit', suggestion.dailyDeficit)
         setShowSafeDateModal(false)
         setPendingEndDate(null)
-        console.log(`[SafeDate] User selected ${planType} plan → ${endDate}`)
+        console.log(`[SafeDate] User selected ${suggestion.planType} plan → ${suggestion.endDate}, deficit: ${suggestion.dailyDeficit} kcal/day`)
     }
 
     // Handle modal close without selection (user insists on original date)
@@ -1564,8 +1569,13 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                     category_slug: getSelectedCategorySlug(),
                     goal_template_id: formData.goal_template_id,
                     start_date: formData.start_date,
-                    end_date: formData.end_date || null
+                    end_date: formData.end_date || null,
+                    // KRITIK: SafeDateModal'dan gelen kalori açığını AI'a ilet
+                    // Bu değer AI görev üretiminde kullanılacak (kalori bütçesi)
+                    daily_calorie_deficit: formData.calculated_daily_deficit
                 }
+
+                console.log('[Step4AIQuests] Context daily_calorie_deficit:', formData.calculated_daily_deficit ?? 'not set')
 
                 const result = await generateWizardQuests(context)
 
