@@ -9,62 +9,45 @@
 ## Current Phase
 
 ```
-╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.41: Health Profile Edit & Wizard Integration - TAMAMLANDI ✅ ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  UnifiedHealthProfileWizard artık GoalCreationWizard'da aktif        ║
-╚══════════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════╗
+║  PHASE 8.43: Weekly Quest Generation System - TAMAMLANDI ✅               ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║  7 günlük çeşitlendirilmiş quest üretimi sistemi                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.40: Unified Health Profile | ✅ Tamamlandı | 100% |
-| **Phase 8.41: Health Profile Edit & Wizard Integration** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.42: Daily Quest Auto-Generation | ✅ Tamamlandı | 100% |
+| **Phase 8.43: Weekly Quest Generation** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-14 (Oturum 12)
+## Session Summary: 2026-01-14 (Oturum 14)
 
-### ✅ Phase 8.41 - Health Profile Edit & Wizard Integration (TAMAMLANDI)
+### ✅ Phase 8.43 - Weekly Quest Generation (TAMAMLANDI)
 
-**Amaç:** Kullanıcının sağlık profilini düzenleyebilmesi + UnifiedHealthProfileWizard'ın (7-step) frontend'e entegrasyonu.
-
-**Tespitler:**
-- `UnifiedHealthProfileWizard` (7-step) backend'de oluşturulmuştu ama frontend'e **hiç entegre edilmemişti**
-- `GoalCreationWizard` hala eski `HealthProfileWizard` (5-step) kullanıyordu
-- `lose_fat` template auto-population logic'ine dahil edilmemişti
+**Amaç:** Kullanıcıya her gün farklı quest'ler sunmak için AI'ın 7 günlük çeşitlendirilmiş quest batch'i üretmesi.
 
 **Yapılan İşler:**
 
-| Aşama | Durum | Açıklama |
-|-------|-------|----------|
-| 1. Edit Button | ✅ | "Profili Düzenle" butonu auto-populated panele eklendi |
-| 2. isEditMode Prop | ✅ | HealthProfileWizard'a edit mode desteği |
-| 3. ProfileEditButton | ✅ | 🆕 Reusable component (icon/full/compact variants) |
-| 4. Consecutive Edit Fix | ✅ | `setAutoPopulated(true)` ile buton kaybolma sorunu çözüldü |
-| 5. Wizard Integration | ✅ | **UnifiedHealthProfileWizard** GoalCreationWizard'a entegre edildi |
-| 6. lose_fat Fix | ✅ | Auto-population logic'e eklendi |
+| Aşama | Durum | Dosya | Açıklama |
+|-------|-------|-------|----------|
+| 1. Migration | ✅ | `20260116_weekly_quest_batches.sql` | Yeni tablo, RLS, indexes |
+| 2. Backend | ✅ | `weeklyQuests.ts` | generateWeeklyBatch, getWeeklyQuestsForDate |
+| 3. AI Prompt | ✅ | `healthCouncil.ts` | generateWeeklyHealthQuests (7 günlük) |
+| 4. Frontend Trigger | ✅ | `page.tsx` | Goal oluşturulunca otomatik batch |
+| 5. Memory Sync | ✅ | ADR-025, database_schema.md | Dökümantasyon |
 
-**Oluşturulan/Değiştirilen Dosyalar:**
+**Oluşturulan Dosyalar:**
 
-| Dosya | Değişiklik |
-|-------|------------|
-| `Health/index.ts` | ✏️ `UnifiedHealthProfileWizard` + `ProfileEditButton` export |
-| `GoalCreationWizard.tsx` | ✏️ 7-step wizard kullanımı, initialData genişletildi |
-| `HealthProfileWizard.tsx` | ✏️ `isEditMode` prop eklendi |
-| `ProfileEditButton.tsx` | 🆕 YENİ - Reusable edit button |
-
-**Aktif Wizard Değişikliği:**
-```
-ESKİ: HealthProfileWizard (5-step)
-    → Temel, Aktivite, Sağlık, Beslenme, Hedef
-
-YENİ: UnifiedHealthProfileWizard (7-step)
-    → Temel (zorunlu), Aktivite (zorunlu), Antrenman (opsiyonel),
-      Beslenme (opsiyonel), Su & Şeker (opsiyonel), Uyku (opsiyonel),
-      Hedef (zorunlu)
-```
+| Dosya | Tipi |
+|-------|------|
+| `supabase/migrations/20260116_weekly_quest_batches.sql` | 🆕 NEW |
+| `src/actions/weeklyQuests.ts` | 🆕 NEW |
+| `src/lib/ai/healthCouncil.ts` | ✏️ MODIFIED |
+| `src/app/page.tsx` | ✏️ MODIFIED |
 
 ---
 
@@ -73,11 +56,10 @@ YENİ: UnifiedHealthProfileWizard (7-step)
 | Dosya | Güncellendi |
 |-------|-------------|
 | `active_context.md` | ✅ |
-| `project_structure.md` | ✅ |
-| `database_schema.md` | ⏭️ Değişiklik yok |
+| `database_schema.md` | ✅ (weekly_quest_batches) |
+| `ADR.md` | ✅ (ADR-025) |
+| `project_structure.md` | ⏭️ Değişiklik yok |
 | `api_contracts.md` | ⏭️ Değişiklik yok |
-| `ADR.md` | ⏭️ Değişiklik yok (ADR-023 mevcut) |
-| `tech_stack.md` | ⏭️ Değişiklik yok |
 
 ---
 
@@ -85,24 +67,9 @@ YENİ: UnifiedHealthProfileWizard (7-step)
 
 ### Next Up: Phase 9 - OAuth Providers
 1. [ ] Google OAuth entegrasyonu
-2. [ ] Apple Sign-In
-3. [ ] `/reset-password` sayfası
-
-### Alternatif Öncelikler
-- [ ] 7-step wizard'ı production'da test et
-- [ ] "Atla" butonlarının çalışmasını doğrula
-- [ ] Profil verilerinin DB'ye yazılmasını test et
+2. [ ] Apple Sign-In entegrasyonu
+3. [ ] Password reset flow
 
 ---
 
-## Build Status
-```
-✅ npx tsc --noEmit --skipLibCheck → 0 hata
-✅ npm run dev → Çalışıyor
-✅ TypeScript strict mode compliant
-```
-
----
-
-**Son Güncelleme:** 2026-01-14 21:36 UTC+3
-**Phase 8.41 TAMAMLANDI - UnifiedHealthProfileWizard Entegre!**
+**Son Güncelleme:** 2026-01-14 23:40 UTC+3

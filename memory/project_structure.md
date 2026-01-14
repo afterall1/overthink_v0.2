@@ -36,7 +36,8 @@ overthink_v0.2/
 │       ├── 20260112_goal_templates.sql      # Goal Templates (44 şablon)
 │       ├── 20260113_momentum_score_system.sql # Momentum Score System
 │       ├── 20260113_fix_quest_progress_contribution.sql # Progress fix
-│       └── 20260113_cleanup_orphan_quests.sql # 🆕 Orphan quest temizliği
+│       ├── 20260113_cleanup_orphan_quests.sql # Orphan quest temizliği
+│       └── 20260116_weekly_quest_batches.sql  # 🆕 Haftalık quest batch tablosu
 │
 ├── 📁 src/                   # Kaynak kod
 │   │
@@ -198,7 +199,8 @@ overthink_v0.2/
 │   │   ├── quests.ts         # Quest CRUD + XP management
 │   │   ├── ai.ts             # AI Council server actions
 │   │   ├── aiHealthQuests.ts # Health profile + AI quest generation
-│   │   └── wizardAI.ts       # 🆕 Goal Wizard AI quest generation
+│   │   ├── wizardAI.ts       # Goal Wizard AI quest generation
+│   │   └── weeklyQuests.ts   # 🆕 Haftalık quest batch üretimi ve yönetimi
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   ├── useIsMobile.ts    # (Scene.tsx içinde şu an)

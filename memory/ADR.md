@@ -1299,5 +1299,73 @@ Mevcut sistemde her goal türü için ayrı sorular soruluyordu (reduce_sugar, g
 
 ---
 
-**Son Güncelleme:** 2026-01-14 21:00 UTC+3
-**Toplam ADR:** 23
+## ADR-025: Haftalık Quest Generation System (Weekly Batch)
+
+**Tarih:** 2026-01-14  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** AI Expert Council, Proje Sahibi
+
+### Bağlam
+
+Mevcut sistemde AI-generated quest'ler **daily recurring** olarak üretiliyordu. Kullanıcı her gün aynı quest'leri görüyordu. Bu durum:
+- **Monotonluk:** Kullanıcı engagement düşüşü
+- **İlerleme hissi eksikliği:** "Hep aynı şeyi yapıyorum" algısı
+- **AI potansiyelinin israfı:** Her gün yeni üretim yerine cache kullanılabilir
+
+### Karar
+
+**Haftalık Batch Generation** sistemi uygulandı:
+
+1. **`weekly_quest_batches` Tablosu:** 7 günlük quest seti JSONB olarak
+2. **AI Prompt:** Günlük temalarla çeşitlendirilmiş üretim:
+   - Pazartesi: fresh_start
+   - Salı-Perşembe: momentum/consistency
+   - Cuma: weekend_prep
+   - Cumartesi: active_rest
+   - Pazar: recovery
+
+3. **Frontend Entegrasyonu:** Quest'ler `daily_quests`'e kaydediliyor
+4. **Trigger:** Goal oluşturulduğunda otomatik batch generation
+
+### Data Flow
+
+```
+GoalCreationWizard
+    ↓ onSubmit
+page.tsx → generateWeeklyBatch(goalId)
+    ↓
+weeklyQuests.ts → AI 7 günlük üretim
+    ↓ 
+JSONB → weekly_quest_batches
+    ↓
+Günün quest'leri → daily_quests tablosu
+    ↓
+Frontend (mevcut UI değişmedi)
+```
+
+### Alternatifler
+
+| Seçenek | Eksileri |
+|---------|----------|
+| Daily Recurring (Mevcut) | Monoton, engagement düşük |
+| Daily AI Generation | Maliyet yüksek (~$0.0005/gün) |
+| **Weekly Batch ✓** | En dengeli: maliyet + çeşitlilik |
+
+### Sonuçlar
+
+**Pozitif:**
+- Haftalık AI maliyeti: ~$0.0008 (7x yerine 1x çağrı)
+- Her gün farklı quest'ler
+- Mevcut frontend değişmeden çalışıyor
+- Subscription model potansiyeli
+
+**Dosyalar:**
+- `supabase/migrations/20260116_weekly_quest_batches.sql`
+- `src/actions/weeklyQuests.ts`
+- `src/lib/ai/healthCouncil.ts` (generateWeeklyHealthQuests)
+- `src/app/page.tsx` (trigger eklendi)
+
+---
+
+**Son Güncelleme:** 2026-01-14 23:35 UTC+3
+**Toplam ADR:** 25

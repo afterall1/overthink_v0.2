@@ -115,6 +115,33 @@ export interface AIHealthResponse {
     error?: string
 }
 
+// Weekly Quest Types
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+export interface DayQuests {
+    theme: string
+    quests: AIGeneratedQuest[]
+    total_calorie_impact: number
+}
+
+export interface WeeklyQuestsData {
+    monday?: DayQuests
+    tuesday?: DayQuests
+    wednesday?: DayQuests
+    thursday?: DayQuests
+    friday?: DayQuests
+    saturday?: DayQuests
+    sunday?: DayQuests
+}
+
+export interface WeeklyAIHealthResponse {
+    success: boolean
+    weekly_quests?: WeeklyQuestsData
+    warnings: string[]
+    token_usage?: number
+    error?: string
+}
+
 // =====================================================
 // System Prompt - AI Expert Council
 // =====================================================
@@ -363,6 +390,174 @@ export async function generateHealthQuests(
             council_notes: '',
             error: error instanceof Error ? error.message : 'Unknown error'
         }
+    }
+}
+
+// =====================================================
+// Weekly Quest Generation
+// =====================================================
+
+const WEEKLY_SYSTEM_PROMPT = `Sen bir üst düzey sağlık ve beslenme uzmanları konseyi olarak hareket ediyorsun.
+
+## HAFTALIK GÖREV:
+Kullanıcı için 7 GÜNLÜK çeşitlendirilmiş quest planı oluştur.
+Her gün için 5-6 benzersiz quest olmalı.
+
+## KESİN KURALLAR:
+
+1. **ÇEŞİTLİLİK ZORUNLU:**
+   - Aynı yemek önerisini 2+ gün tekrarlama
+   - Aynı egzersizi arka arkaya günlerde önerme
+   - Her gün farklı tema ve yaklaşım kullan
+
+2. **GÜN TEMALARI:**
+   - Pazartesi (monday): Fresh start, hafta başı motivasyon
+   - Salı (tuesday): Momentum building
+   - Çarşamba (wednesday): Midweek push
+   - Perşembe (thursday): Consistency focus
+   - Cuma (friday): Weekend prep, ödül zihniyeti
+   - Cumartesi (saturday): Esnek/sosyal, aktif dinlenme
+   - Pazar (sunday): Recovery, haftalık değerlendirme
+
+3. **KALORİ BÜTÇESİ:**
+   Her gün için toplam calorie_impact hedefin %95-105'i olmalı.
+
+4. **OUTPUT FORMAT (JSON):**
+{
+  "monday": {
+    "theme": "fresh_start",
+    "quests": [{title, description, category, difficulty, estimated_minutes, calorie_impact, xp_reward, emoji, scientific_rationale}],
+    "total_calorie_impact": -400
+  },
+  "tuesday": { ... },
+  "wednesday": { ... },
+  "thursday": { ... },
+  "friday": { ... },
+  "saturday": { ... },
+  "sunday": { ... }
+}`
+
+/**
+ * Generate weekly diversified quests using AI
+ */
+export async function generateWeeklyHealthQuests(
+    context: UserHealthContext,
+    daysToGenerate: DayOfWeek[]
+): Promise<WeeklyAIHealthResponse> {
+    try {
+        // Build user context message
+        const userMessage = buildWeeklyUserMessage(context, daysToGenerate)
+
+        // Prepare messages for AI
+        const messages: ChatMessage[] = [
+            { role: 'system', content: WEEKLY_SYSTEM_PROMPT },
+            { role: 'user', content: userMessage }
+        ]
+
+        // Call AI with higher token limit for weekly output
+        const response = await generateCompletion(messages, {
+            temperature: 0.8,  // Slightly higher for variety
+            maxTokens: 8000   // 7 days needs more tokens
+        })
+
+        if (!response.success) {
+            console.error('[generateWeeklyHealthQuests] AI failed:', response.error)
+            return {
+                success: false,
+                warnings: ['AI servisi yanıt veremedi.'],
+                error: response.error
+            }
+        }
+
+        // Parse JSON response
+        const parsed = parseWeeklyAIResponse(response.content)
+
+        if (!parsed) {
+            return {
+                success: false,
+                warnings: ['AI yanıtı işlenemedi.'],
+                error: 'Failed to parse weekly AI response'
+            }
+        }
+
+        // Validate each day's quests
+        const validatedWeekly: WeeklyQuestsData = {}
+        for (const day of daysToGenerate) {
+            if (parsed[day]) {
+                validatedWeekly[day] = {
+                    theme: parsed[day].theme || day,
+                    quests: validateAndSanitizeQuests(parsed[day].quests || [], context),
+                    total_calorie_impact: parsed[day].quests?.reduce(
+                        (sum: number, q: AIGeneratedQuest) => sum + (q.calorie_impact || 0), 0
+                    ) || 0
+                }
+            }
+        }
+
+        return {
+            success: true,
+            weekly_quests: validatedWeekly,
+            warnings: []
+        }
+
+    } catch (error) {
+        console.error('[generateWeeklyHealthQuests] Exception:', error)
+        return {
+            success: false,
+            warnings: ['Haftalık quest üretiminde hata.'],
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+
+/**
+ * Build user context for weekly generation
+ */
+function buildWeeklyUserMessage(context: UserHealthContext, days: DayOfWeek[]): string {
+    const daysStr = days.join(', ')
+
+    return `
+## KULLANICI PROFİLİ:
+- Yaş: ${context.age_years}
+- Cinsiyet: ${context.biological_sex === 'male' ? 'Erkek' : 'Kadın'}
+- Kilo: ${context.weight_kg} kg
+- Boy: ${context.height_cm} cm
+- Aktivite Seviyesi: ${context.activity_level}
+
+## HESAPLANAN DEĞERLER:
+- Günlük Hedef Kalori: ${context.target_daily_kcal} kcal
+- Günlük Kalori Açığı/Fazlası: ${context.daily_adjustment} kcal
+
+## MAKRO HEDEFLERİ:
+- Protein: ${context.protein_g} g
+- Su: ${context.water_liters} L
+
+## ANA HEDEF:
+- ${context.primary_goal || 'weight_loss'}
+- Hız: ${context.goal_pace || 'moderate'}
+
+## ÜRETİLECEK GÜNLER:
+${daysStr}
+
+Lütfen yukarıdaki günler için çeşitlendirilmiş quest planı oluştur.
+Her gün için 5-6 farklı quest olmalı.
+Günler arasında tekrar yapma!
+`
+}
+
+/**
+ * Parse weekly AI response
+ */
+function parseWeeklyAIResponse(content: string): WeeklyQuestsData | null {
+    try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) return null
+
+        const parsed = JSON.parse(jsonMatch[0])
+        return parsed as WeeklyQuestsData
+    } catch (error) {
+        console.error('[parseWeeklyAIResponse] Parse error:', error)
+        return null
     }
 }
 

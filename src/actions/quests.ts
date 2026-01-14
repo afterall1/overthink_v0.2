@@ -137,8 +137,35 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
             }
         })
 
+        // CRITICAL: Filter out quests whose linked goal has ended
+        // This prevents recurring quests from showing after goal's end_date
+        const goalLinkedQuestIds = [...(scheduledQuests || []), ...activeRecurring]
+            .filter(q => q.goal_id)
+            .map(q => q.goal_id as string)
+
+        let activeGoalIds: Set<string> = new Set()
+        if (goalLinkedQuestIds.length > 0) {
+            const uniqueGoalIds = [...new Set(goalLinkedQuestIds)]
+            const { data: activeGoals } = await supabase
+                .from('goals')
+                .select('id')
+                .in('id', uniqueGoalIds)
+                .or(`end_date.is.null,end_date.gte.${today}`)
+
+            activeGoalIds = new Set((activeGoals || []).map(g => g.id))
+        }
+
+        // Filter quests: show if no goal_id OR goal is still active
+        const filteredScheduled = (scheduledQuests || []).filter(q =>
+            !q.goal_id || activeGoalIds.has(q.goal_id)
+        )
+        const filteredRecurring = activeRecurring.filter(q =>
+            !q.goal_id || activeGoalIds.has(q.goal_id)
+        )
+
         // Check completion status for today
-        const allQuests = [...(scheduledQuests || []), ...activeRecurring]
+        // Use filtered quests that exclude expired goals
+        const allQuests = [...filteredScheduled, ...filteredRecurring]
         const questIds = allQuests.map(q => q.id)
 
         if (questIds.length > 0) {

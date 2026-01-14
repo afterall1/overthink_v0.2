@@ -461,6 +461,18 @@ export default function Home() {
                 throw new Error(result.error)
               }
 
+              // WEEKLY BATCH TRIGGER: Generate weekly diversified quests for the new goal
+              if (result.data?.goal?.id) {
+                try {
+                  const { generateWeeklyBatch } = await import('@/actions/weeklyQuests')
+                  await generateWeeklyBatch(result.data.goal.id)
+                  console.log('[GoalCreationWizard] Weekly batch generated for goal:', result.data.goal.id)
+                } catch (batchError) {
+                  // Non-blocking: Log error but don't fail goal creation
+                  console.error('[GoalCreationWizard] Weekly batch generation failed:', batchError)
+                }
+              }
+
               // Refresh both goals and quests (since template auto-creates linked quests)
               await Promise.all([fetchGoals(), fetchQuests()])
               return
@@ -493,6 +505,18 @@ export default function Home() {
                   createQuestFromTemplate(templateId, newGoal.id)
                 )
               )
+            }
+
+            // WEEKLY BATCH TRIGGER: Generate weekly diversified quests for the new goal
+            if (newGoal?.id) {
+              try {
+                const { generateWeeklyBatch } = await import('@/actions/weeklyQuests')
+                await generateWeeklyBatch(newGoal.id)
+                console.log('[GoalCreationWizard] Weekly batch generated for goal:', newGoal.id)
+              } catch (batchError) {
+                // Non-blocking: Log error but don't fail goal creation
+                console.error('[GoalCreationWizard] Weekly batch generation failed:', batchError)
+              }
             }
 
             // Refresh both goals and quests

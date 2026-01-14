@@ -640,6 +640,55 @@ Unified profile verilerinden AI prompt bölümü oluşturur.
 
 ---
 
-**Son Güncelleme:** 2026-01-14
-**Versiyon:** 1.5.0 (Unified Health Profile API eklendi)
+## 🆕 Actions: Weekly Quest Batches (`src/actions/weeklyQuests.ts`)
+
+Haftalık çeşitlendirilmiş quest üretimi ve yönetimi. Her gün farklı quest'ler için AI 7 günlük batch oluşturur.
+
+### `generateWeeklyBatch(goalId, startFromDate?)`
+Goal için haftalık quest batch'i oluşturur.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `goalId` | string | ✅ | Hedef ID |
+| `startFromDate` | Date | ❌ | Başlangıç tarihi (default: bugün) |
+
+**Return:** `Promise<ActionResult<WeeklyQuestBatch>>`
+
+```typescript
+interface WeeklyQuestBatch {
+    id: string
+    user_id: string
+    goal_id: string
+    week_start: string
+    week_end: string
+    quests_data: WeeklyQuestsData
+    status: 'active' | 'expired' | 'regenerating'
+}
+```
+
+---
+
+### `getWeeklyBatch(goalId, date?)`
+Goal için aktif haftalık batch'i getirir.
+
+**Return:** `Promise<ActionResult<WeeklyQuestBatch>>`
+
+---
+
+### `getWeeklyQuestsForDate(goalId, date?)`
+Belirli bir gün için quest'leri getirir.
+
+**Return:** `Promise<ActionResult<AIGeneratedQuest[]>>`
+
+---
+
+### `expireOldBatches()`
+Süresi geçmiş batch'leri expire eder (cron job için).
+
+**Return:** `Promise<ActionResult<number>>` (expire edilen batch sayısı)
+
+---
+
+**Son Güncelleme:** 2026-01-14 23:45 UTC+3
+**Versiyon:** 1.6.0 (Weekly Quest Batches API eklendi)
 

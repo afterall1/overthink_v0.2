@@ -765,6 +765,52 @@ Kapsamlı kullanıcı sağlık profili. Tüm goal tipleri için tek kaynak.
 
 ---
 
-**Son Güncelleme:** 2026-01-14 21:00 UTC+3
-**Versiyon:** 2.6.0 (Unified Health Profile eklendi)
+### 19. weekly_quest_batches
+
+Haftalık çeşitlendirilmiş quest batch'leri. Her goal için JSONB olarak 7 günlük quest seti saklar.
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Batch ID |
+| `user_id` | UUID | FK → users, NOT NULL | Kullanıcı |
+| `goal_id` | UUID | FK → goals, NOT NULL | Hedef |
+| `week_start` | DATE | NOT NULL | Hafta başlangıcı (Pazartesi) |
+| `week_end` | DATE | NOT NULL | Hafta sonu (Pazar) |
+| `quests_data` | JSONB | NOT NULL | 7 günlük quest verisi |
+| `status` | TEXT | CHECK (active/expired/regenerating) | Batch durumu |
+| `generated_at` | TIMESTAMPTZ | DEFAULT NOW() | Üretim tarihi |
+| `expires_at` | TIMESTAMPTZ | | Son kullanma |
+| `days_delivered` | INTEGER | DEFAULT 0 | Teslim edilen gün sayısı |
+| `ai_model` | TEXT | DEFAULT 'gemini-2.0-flash' | AI modeli |
+| `token_usage` | INTEGER | | Token kullanımı |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Oluşturma |
+| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Güncelleme |
+
+**JSONB `quests_data` Yapısı:**
+
+```json
+{
+  "monday": { "theme": "fresh_start", "quests": [...], "total_calorie_impact": -400 },
+  "tuesday": { "theme": "momentum", "quests": [...] },
+  "wednesday": { "theme": "midweek_push", "quests": [...] },
+  "thursday": { "theme": "consistency", "quests": [...] },
+  "friday": { "theme": "weekend_prep", "quests": [...] },
+  "saturday": { "theme": "active_rest", "quests": [...] },
+  "sunday": { "theme": "recovery", "quests": [...] }
+}
+```
+
+**Unique Constraint:** `(user_id, goal_id, week_start)`
+
+**Indexes:**
+- `idx_weekly_batches_user` (user_id)
+- `idx_weekly_batches_goal` (goal_id)
+- `idx_weekly_batches_week` (week_start)
+- `idx_weekly_batches_status` (status) WHERE status = 'active'
+- `idx_weekly_batches_quests_gin` USING GIN (quests_data)
+
+---
+
+**Son Güncelleme:** 2026-01-14 23:40 UTC+3
+**Versiyon:** 2.7.0 (Weekly Quest Batches eklendi)
 
