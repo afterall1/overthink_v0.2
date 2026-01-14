@@ -48,10 +48,38 @@ export interface UserHealthContext {
     days_since_start?: number
     weight_change_kg?: number
 
-    // Safety context (NEW)
+    // Safety context
     safety_adjusted?: boolean
     original_target_kcal?: number
     safety_warnings?: string[]
+
+    // === UNIFIED PROFILE EXTENDED FIELDS ===
+    // Training
+    training_experience?: 'none' | 'beginner' | 'intermediate' | 'advanced'
+    training_types?: string[]
+    gym_access?: 'full_gym' | 'home_gym' | 'outdoor' | 'none'
+    available_training_times?: string[]
+
+    // Nutrition habits
+    meals_per_day?: '2' | '3' | '4' | '5+'
+    cooks_at_home?: 'always' | 'often' | 'sometimes' | 'rarely'
+    daily_vegetables?: string
+    fast_food_frequency?: 'never' | 'weekly' | 'few_times_week' | 'daily'
+    has_breakfast?: 'always' | 'sometimes' | 'rarely' | 'never'
+
+    // Hydration & Sugar
+    current_water_intake_liters?: number
+    sugar_drinks_per_day?: number
+    sugar_craving_trigger?: 'morning_coffee' | 'after_lunch' | 'after_dinner' | 'late_night' | 'stress'
+    accepts_artificial_sweeteners?: boolean
+
+    // Sleep & Stress
+    sleep_hours_avg?: number
+    sleep_quality?: 'poor' | 'fair' | 'good' | 'excellent'
+    stress_level?: 'low' | 'medium' | 'high'
+
+    // Profile completeness
+    sections_completed?: string[]
 }
 
 export interface AIGeneratedQuest {
@@ -411,7 +439,7 @@ ${context.target_weight_kg ? `- Hedef Kilo: ${context.target_weight_kg} kg` : ''
 ${context.health_conditions.length > 0 ? `- Sağlık Koşulları: ${context.health_conditions.join(', ')}` : '- Sağlık Koşulları: Bilinen yok'}
 ${context.dietary_restrictions.length > 0 ? `- Diyet Kısıtlamaları: ${context.dietary_restrictions.join(', ')}` : '- Diyet Kısıtlamaları: Yok'}
 ${context.allergies.length > 0 ? `- Alerjiler: ${context.allergies.join(', ')}` : '- Alerjiler: Yok'}
-
+${buildUnifiedProfileSection(context)}
 ${context.days_since_start ? `## İLERLEME:
 - Başlangıçtan bu yana: ${context.days_since_start} gün
 - Kilo değişimi: ${context.weight_change_kg || 0} kg` : ''}
@@ -421,6 +449,128 @@ Lütfen bu kullanıcı için kişiselleştirilmiş günlük görevler ve beslenm
 🚨 ${minBudget} kcal altında üretim KABUL EDİLMEYECEK!
 ${context.safety_adjusted ? '🛡️ SAĞLIK KORUYUCU GÖREVLER EKLEMEYI UNUTMA!' : ''}
 `
+}
+
+/**
+ * Build unified profile section for AI context
+ * Uses extended profile fields for highly personalized recommendations
+ */
+function buildUnifiedProfileSection(context: UserHealthContext): string {
+    const sections: string[] = []
+
+    // Training section (if profile has training data)
+    if (context.training_experience || context.gym_access || context.training_types?.length) {
+        const trainingLines = ['## 🏋️ ANTRENMAN PROFİLİ:']
+        if (context.training_experience) {
+            const expLabels: Record<string, string> = {
+                'none': 'Hiç deneyim yok',
+                'beginner': 'Başlangıç (0-6 ay)',
+                'intermediate': 'Orta (6ay-2yıl)',
+                'advanced': 'İleri (2+ yıl)'
+            }
+            trainingLines.push(`- Antrenman Deneyimi: ${expLabels[context.training_experience] || context.training_experience}`)
+        }
+        if (context.gym_access) {
+            const gymLabels: Record<string, string> = {
+                'full_gym': 'Tam donanımlı salon',
+                'home_gym': 'Ev ekipmanları',
+                'outdoor': 'Açık alan/park',
+                'none': 'Ekipman yok'
+            }
+            trainingLines.push(`- Ekipman Erişimi: ${gymLabels[context.gym_access] || context.gym_access}`)
+        }
+        if (context.training_types?.length) {
+            trainingLines.push(`- Tercih Edilen Antrenman: ${context.training_types.join(', ')}`)
+        }
+        if (context.available_training_times?.length) {
+            trainingLines.push(`- Uygun Saatler: ${context.available_training_times.join(', ')}`)
+        }
+        sections.push(trainingLines.join('\n'))
+    }
+
+    // Nutrition habits section
+    if (context.meals_per_day || context.cooks_at_home || context.fast_food_frequency) {
+        const nutritionLines = ['## 🍽️ BESLENME ALIŞKANLIKLARI:']
+        if (context.meals_per_day) {
+            nutritionLines.push(`- Günlük Öğün Sayısı: ${context.meals_per_day}`)
+        }
+        if (context.cooks_at_home) {
+            const cookLabels: Record<string, string> = {
+                'always': 'Her zaman evde',
+                'often': 'Çoğunlukla evde',
+                'sometimes': 'Bazen dışarıda',
+                'rarely': 'Çoğunlukla dışarıda'
+            }
+            nutritionLines.push(`- Evde Yemek: ${cookLabels[context.cooks_at_home] || context.cooks_at_home}`)
+        }
+        if (context.fast_food_frequency) {
+            const fastFoodLabels: Record<string, string> = {
+                'never': 'Asla',
+                'weekly': 'Haftada 1',
+                'few_times_week': 'Haftada birkaç kez',
+                'daily': 'Her gün'
+            }
+            nutritionLines.push(`- Fast Food: ${fastFoodLabels[context.fast_food_frequency] || context.fast_food_frequency}`)
+        }
+        if (context.has_breakfast) {
+            nutritionLines.push(`- Kahvaltı: ${context.has_breakfast === 'always' ? 'Her zaman' : context.has_breakfast === 'sometimes' ? 'Bazen' : 'Nadiren/Hiç'}`)
+        }
+        sections.push(nutritionLines.join('\n'))
+    }
+
+    // Hydration & Sugar section
+    if (context.current_water_intake_liters || context.sugar_drinks_per_day !== undefined || context.sugar_craving_trigger) {
+        const hydrationLines = ['## 💧 HİDRASYON & ŞEKER:']
+        if (context.current_water_intake_liters) {
+            hydrationLines.push(`- Mevcut Su Tüketimi: ${context.current_water_intake_liters}L/gün`)
+        }
+        if (context.sugar_drinks_per_day !== undefined) {
+            hydrationLines.push(`- Şekerli İçecek: ${context.sugar_drinks_per_day} adet/gün`)
+        }
+        if (context.sugar_craving_trigger) {
+            const triggerLabels: Record<string, string> = {
+                'morning_coffee': 'Sabah kahvesiyle',
+                'after_lunch': 'Öğle sonrası',
+                'after_dinner': 'Akşam yemeği sonrası',
+                'late_night': 'Gece geç saatte',
+                'stress': 'Stres anında'
+            }
+            hydrationLines.push(`- Şeker İsteği Zamanı: ${triggerLabels[context.sugar_craving_trigger] || context.sugar_craving_trigger}`)
+        }
+        if (context.accepts_artificial_sweeteners !== undefined) {
+            hydrationLines.push(`- Yapay Tatlandırıcı: ${context.accepts_artificial_sweeteners ? 'Kabul eder' : 'İstemiyor'}`)
+        }
+        sections.push(hydrationLines.join('\n'))
+    }
+
+    // Sleep & Stress section
+    if (context.sleep_hours_avg || context.sleep_quality || context.stress_level) {
+        const sleepLines = ['## 😴 UYKU & STRES:']
+        if (context.sleep_hours_avg) {
+            sleepLines.push(`- Ortalama Uyku: ${context.sleep_hours_avg} saat/gece`)
+        }
+        if (context.sleep_quality) {
+            const qualityLabels: Record<string, string> = {
+                'poor': 'Kötü',
+                'fair': 'Orta',
+                'good': 'İyi',
+                'excellent': 'Mükemmel'
+            }
+            sleepLines.push(`- Uyku Kalitesi: ${qualityLabels[context.sleep_quality] || context.sleep_quality}`)
+        }
+        if (context.stress_level) {
+            const stressLabels: Record<string, string> = {
+                'low': 'Düşük',
+                'medium': 'Orta',
+                'high': 'Yüksek'
+            }
+            sleepLines.push(`- Stres Seviyesi: ${stressLabels[context.stress_level] || context.stress_level}`)
+        }
+        sections.push(sleepLines.join('\n'))
+    }
+
+    // Return combined sections or empty string if no data
+    return sections.length > 0 ? '\n' + sections.join('\n\n') : ''
 }
 
 /**

@@ -23,19 +23,64 @@ import {
 // =====================================================
 
 export interface HealthProfileInput {
+    // === BASIC (Required) ===
     weight_kg: number
     height_cm: number
     birth_date: string
     biological_sex: 'male' | 'female'
     activity_level: 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extreme'
+
+    // === ACTIVITY (Extended) ===
+    current_steps_avg?: number
+    work_environment?: 'desk' | 'mixed' | 'active' | 'standing'
+    has_fitness_tracker?: boolean
+    best_activity_time?: 'morning' | 'afternoon' | 'evening' | 'flexible'
+
+    // === TRAINING ===
+    training_experience?: 'none' | 'beginner' | 'intermediate' | 'advanced'
+    training_types?: string[]
+    gym_access?: 'full_gym' | 'home_gym' | 'outdoor' | 'none'
+    available_training_times?: string[]
+
+    // === NUTRITION ===
+    meals_per_day?: '2' | '3' | '4' | '5+'
+    cooks_at_home?: 'always' | 'often' | 'sometimes' | 'rarely'
+    daily_vegetables?: '0' | '1-2' | '3-4' | '5+'
+    fast_food_frequency?: 'never' | 'weekly' | 'few_times_week' | 'daily'
+    has_breakfast?: 'always' | 'sometimes' | 'rarely' | 'never'
+    alcohol_frequency?: 'never' | 'occasional' | 'weekly' | 'daily'
+
+    // === HYDRATION & SUGAR ===
+    current_water_intake_liters?: number
+    coffee_tea_cups?: '0' | '1-2' | '3-4' | '5+'
+    has_water_bottle?: boolean
+    hydration_barriers?: string[]
+    sugar_drinks_per_day?: number
+    sugar_sources?: string[]
+    sugar_craving_trigger?: 'morning_coffee' | 'after_lunch' | 'after_dinner' | 'late_night' | 'stress'
+    accepts_artificial_sweeteners?: boolean
+
+    // === SLEEP & STRESS ===
     sleep_hours_avg?: number
+    sleep_quality?: 'poor' | 'fair' | 'good' | 'excellent'
     stress_level?: 'low' | 'medium' | 'high'
+
+    // === HEALTH ===
     health_conditions?: string[]
     dietary_restrictions?: string[]
     allergies?: string[]
+    uses_supplements?: boolean
+
+    // === GOALS ===
     primary_goal?: 'weight_loss' | 'weight_gain' | 'maintenance' | 'muscle_gain' | 'endurance'
     target_weight_kg?: number
     goal_pace?: 'slow' | 'moderate' | 'aggressive'
+    previous_diet_attempts?: 'never' | 'failed' | 'partial' | 'success'
+    main_struggles?: string[]
+
+    // === METADATA ===
+    sections_completed?: string[]
+    profile_version?: number
 }
 
 export interface HealthProfileResult {
@@ -98,22 +143,60 @@ export async function upsertHealthProfile(
 
         const metrics = calculateHealthMetrics(healthProfile)
 
-        // Prepare data for upsert
+        // Prepare data for upsert - include all unified profile fields
         const profileData = {
             user_id: user.id,
+            // Basic
             weight_kg: input.weight_kg,
             height_cm: input.height_cm,
             birth_date: input.birth_date,
             biological_sex: input.biological_sex,
             activity_level: input.activity_level,
-            sleep_hours_avg: input.sleep_hours_avg || null,
-            stress_level: input.stress_level || 'medium',
-            health_conditions: input.health_conditions || [],
-            dietary_restrictions: input.dietary_restrictions || [],
-            allergies: input.allergies || [],
-            primary_goal: input.primary_goal || 'maintenance',
-            target_weight_kg: input.target_weight_kg || null,
-            goal_pace: input.goal_pace || 'moderate',
+            // Activity Extended
+            current_steps_avg: input.current_steps_avg ?? null,
+            work_environment: input.work_environment ?? null,
+            has_fitness_tracker: input.has_fitness_tracker ?? false,
+            best_activity_time: input.best_activity_time ?? null,
+            // Training
+            training_experience: input.training_experience ?? null,
+            training_types: input.training_types ?? [],
+            gym_access: input.gym_access ?? null,
+            available_training_times: input.available_training_times ?? [],
+            // Nutrition
+            meals_per_day: input.meals_per_day ?? null,
+            cooks_at_home: input.cooks_at_home ?? null,
+            daily_vegetables: input.daily_vegetables ?? null,
+            fast_food_frequency: input.fast_food_frequency ?? null,
+            has_breakfast: input.has_breakfast ?? null,
+            alcohol_frequency: input.alcohol_frequency ?? null,
+            // Hydration & Sugar
+            current_water_intake_liters: input.current_water_intake_liters ?? 1.5,
+            coffee_tea_cups: input.coffee_tea_cups ?? null,
+            has_water_bottle: input.has_water_bottle ?? false,
+            hydration_barriers: input.hydration_barriers ?? [],
+            sugar_drinks_per_day: input.sugar_drinks_per_day ?? 0,
+            sugar_sources: input.sugar_sources ?? [],
+            sugar_craving_trigger: input.sugar_craving_trigger ?? null,
+            accepts_artificial_sweeteners: input.accepts_artificial_sweeteners ?? true,
+            // Sleep & Stress
+            sleep_hours_avg: input.sleep_hours_avg ?? null,
+            sleep_quality: input.sleep_quality ?? null,
+            stress_level: input.stress_level ?? 'medium',
+            // Health
+            health_conditions: input.health_conditions ?? [],
+            dietary_restrictions: input.dietary_restrictions ?? [],
+            allergies: input.allergies ?? [],
+            uses_supplements: input.uses_supplements ?? false,
+            // Goals
+            primary_goal: input.primary_goal ?? 'maintenance',
+            target_weight_kg: input.target_weight_kg ?? null,
+            goal_pace: input.goal_pace ?? 'moderate',
+            previous_diet_attempts: input.previous_diet_attempts ?? null,
+            main_struggles: input.main_struggles ?? [],
+            // Metadata
+            sections_completed: input.sections_completed ?? [],
+            profile_version: input.profile_version ?? 2,
+            // Calculated
             bmr_kcal: metrics.bmr_kcal,
             tdee_kcal: metrics.tdee_kcal,
             target_daily_kcal: metrics.target_daily_kcal,
@@ -183,6 +266,9 @@ export async function getHealthProfile(): Promise<HealthProfileResult> {
             return { success: false, error: `Profil yüklenemedi: ${error.message}` }
         }
 
+        // Cast to any for unified profile fields not yet in DB types
+        const extendedData = data as Record<string, unknown>
+
         return {
             success: true,
             profile: {
@@ -202,7 +288,20 @@ export async function getHealthProfile(): Promise<HealthProfileResult> {
                 goal_pace: (data.goal_pace ?? undefined) as 'slow' | 'moderate' | 'aggressive' | undefined,
                 bmr_kcal: data.bmr_kcal ?? 0,
                 tdee_kcal: data.tdee_kcal ?? 0,
-                target_daily_kcal: data.target_daily_kcal ?? 0
+                target_daily_kcal: data.target_daily_kcal ?? 0,
+                // Unified profile extended fields - type assertions for literal types
+                training_experience: (extendedData.training_experience as HealthProfileInput['training_experience']) ?? undefined,
+                training_types: (extendedData.training_types as string[]) ?? undefined,
+                gym_access: (extendedData.gym_access as HealthProfileInput['gym_access']) ?? undefined,
+                meals_per_day: (extendedData.meals_per_day as HealthProfileInput['meals_per_day']) ?? undefined,
+                cooks_at_home: (extendedData.cooks_at_home as HealthProfileInput['cooks_at_home']) ?? undefined,
+                fast_food_frequency: (extendedData.fast_food_frequency as HealthProfileInput['fast_food_frequency']) ?? undefined,
+                current_water_intake_liters: (extendedData.current_water_intake_liters as number) ?? undefined,
+                sugar_drinks_per_day: (extendedData.sugar_drinks_per_day as number) ?? undefined,
+                sugar_craving_trigger: (extendedData.sugar_craving_trigger as HealthProfileInput['sugar_craving_trigger']) ?? undefined,
+                sleep_quality: (extendedData.sleep_quality as HealthProfileInput['sleep_quality']) ?? undefined,
+                sections_completed: (extendedData.sections_completed as string[]) ?? undefined,
+                profile_version: (extendedData.profile_version as number) ?? 1
             }
         }
 

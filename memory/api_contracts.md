@@ -582,6 +582,64 @@ Tamamlanan quest'in tüm bağlı hedeflerini günceller.
 
 ---
 
+## 🆕 Actions: Unified Health Profile (`src/actions/aiHealthQuests.ts`)
+
+Kapsamlı sağlık profili yönetimi. Tüm goal tipleri için tek kaynak.
+
+### `upsertHealthProfile(input)`
+Sağlık profili oluşturur veya günceller.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `weight_kg` | number | ✅ | Kilo (kg) |
+| `height_cm` | number | ✅ | Boy (cm) |
+| `birth_date` | string | ✅ | YYYY-MM-DD |
+| `biological_sex` | 'male' \| 'female' | ✅ | Biyolojik cinsiyet |
+| `activity_level` | ActivityLevel | ✅ | sedentary/light/moderate/very_active/extreme |
+| `training_experience` | TrainingExp | ❌ | none/beginner/intermediate/advanced |
+| `training_types` | string[] | ❌ | ['cardio', 'weights', ...] |
+| `gym_access` | GymAccess | ❌ | full_gym/home_gym/outdoor/none |
+| `meals_per_day` | MealsPerDay | ❌ | 2/3/4/5+ |
+| `cooks_at_home` | CooksFreq | ❌ | always/often/sometimes/rarely |
+| `fast_food_frequency` | FastFoodFreq | ❌ | never/weekly/few_times_week/daily |
+| `current_water_intake_liters` | number | ❌ | Mevcut su tüketimi (L) |
+| `sugar_drinks_per_day` | number | ❌ | Günlük şekerli içecek |
+| `sugar_craving_trigger` | CravingTrigger | ❌ | morning_coffee/after_lunch/... |
+| `sleep_quality` | SleepQuality | ❌ | poor/fair/good/excellent |
+| `sections_completed` | string[] | ❌ | ['basic', 'training', ...] |
+
+**Return:** `Promise<HealthProfileResult>`
+
+```typescript
+interface HealthProfileResult {
+    success: boolean
+    profile?: HealthProfileInput & { id: string; bmr_kcal: number; tdee_kcal: number; target_daily_kcal: number }
+    error?: string
+}
+```
+
+---
+
+### `getHealthProfile()`
+Kullanıcının sağlık profilini getirir (unified fields dahil).
+
+**Return:** `Promise<HealthProfileResult>`
+
+---
+
+## 🆕 AI Context Builder (`src/lib/ai/healthCouncil.ts`)
+
+### `buildUnifiedProfileSection(context)`
+Unified profile verilerinden AI prompt bölümü oluşturur.
+
+**Üretilen Bölümler:**
+- 🏋️ ANTRENMAN PROFİLİ
+- 🍽️ BESLENME ALIŞKANLIKLARI
+- 💧 HİDRASYON & ŞEKER
+- 😴 UYKU & STRES
+
+---
+
 **Son Güncelleme:** 2026-01-14
-**Versiyon:** 1.4.0 (Goal Synergy Engine eklendi)
+**Versiyon:** 1.5.0 (Unified Health Profile API eklendi)
 

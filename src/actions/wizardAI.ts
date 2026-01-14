@@ -128,8 +128,24 @@ export async function generateWizardQuests(
 
 /**
  * Fetch user health profile if available
+ * Returns full unified profile for rich AI context
  */
-async function fetchHealthProfile(userId: string): Promise<HealthProfile | null> {
+async function fetchHealthProfile(userId: string): Promise<HealthProfile & {
+    // Unified profile extended fields
+    training_experience?: string
+    training_types?: string[]
+    gym_access?: string
+    meals_per_day?: string
+    cooks_at_home?: string
+    fast_food_frequency?: string
+    current_water_intake_liters?: number
+    sugar_drinks_per_day?: number
+    sugar_craving_trigger?: string
+    sleep_quality?: string
+    sleep_hours_avg?: number
+    stress_level?: string
+    sections_completed?: string[]
+} | null> {
     try {
         const adminClient = createAdminClient()
         const { data, error } = await adminClient
@@ -140,7 +156,12 @@ async function fetchHealthProfile(userId: string): Promise<HealthProfile | null>
 
         if (error || !data) return null
 
+        // Cast to any for unified profile fields that may not exist in DB types yet
+        // These fields are added by migration 20260115_unified_health_profile.sql
+        const extendedData = data as Record<string, unknown>
+
         return {
+            // Core HealthProfile fields
             weight_kg: data.weight_kg,
             height_cm: data.height_cm,
             birth_date: data.birth_date,
@@ -150,7 +171,21 @@ async function fetchHealthProfile(userId: string): Promise<HealthProfile | null>
             target_weight_kg: data.target_weight_kg ?? undefined,
             goal_pace: data.goal_pace as HealthProfile['goal_pace'] ?? undefined,
             health_conditions: data.health_conditions || [],
-            dietary_restrictions: data.dietary_restrictions || []
+            dietary_restrictions: data.dietary_restrictions || [],
+            // Unified profile extended fields (from migration)
+            training_experience: (extendedData.training_experience as string) ?? undefined,
+            training_types: (extendedData.training_types as string[]) ?? [],
+            gym_access: (extendedData.gym_access as string) ?? undefined,
+            meals_per_day: (extendedData.meals_per_day as string) ?? undefined,
+            cooks_at_home: (extendedData.cooks_at_home as string) ?? undefined,
+            fast_food_frequency: (extendedData.fast_food_frequency as string) ?? undefined,
+            current_water_intake_liters: (extendedData.current_water_intake_liters as number) ?? undefined,
+            sugar_drinks_per_day: (extendedData.sugar_drinks_per_day as number) ?? undefined,
+            sugar_craving_trigger: (extendedData.sugar_craving_trigger as string) ?? undefined,
+            sleep_quality: (extendedData.sleep_quality as string) ?? undefined,
+            sleep_hours_avg: data.sleep_hours_avg ?? undefined,
+            stress_level: data.stress_level ?? undefined,
+            sections_completed: (extendedData.sections_completed as string[]) ?? []
         }
     } catch {
         return null
@@ -213,6 +248,9 @@ function buildAIContext(
             durationDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
         }
 
+        // Get unified profile extended fields (cast for extended fields)
+        const extendedProfile = healthProfile as unknown as Record<string, unknown>
+
         return {
             age_years: age,
             biological_sex: healthProfile.biological_sex,
@@ -233,7 +271,24 @@ function buildAIContext(
             health_conditions: healthProfile.health_conditions || [],
             dietary_restrictions: healthProfile.dietary_restrictions || [],
             allergies: [],
-            days_since_start: 0
+            days_since_start: 0,
+            // === UNIFIED PROFILE EXTENDED FIELDS ===
+            training_experience: extendedProfile.training_experience as UserHealthContext['training_experience'],
+            training_types: extendedProfile.training_types as string[] | undefined,
+            gym_access: extendedProfile.gym_access as UserHealthContext['gym_access'],
+            available_training_times: extendedProfile.available_training_times as string[] | undefined,
+            meals_per_day: extendedProfile.meals_per_day as UserHealthContext['meals_per_day'],
+            cooks_at_home: extendedProfile.cooks_at_home as UserHealthContext['cooks_at_home'],
+            fast_food_frequency: extendedProfile.fast_food_frequency as UserHealthContext['fast_food_frequency'],
+            has_breakfast: extendedProfile.has_breakfast as UserHealthContext['has_breakfast'],
+            current_water_intake_liters: extendedProfile.current_water_intake_liters as number | undefined,
+            sugar_drinks_per_day: extendedProfile.sugar_drinks_per_day as number | undefined,
+            sugar_craving_trigger: extendedProfile.sugar_craving_trigger as UserHealthContext['sugar_craving_trigger'],
+            accepts_artificial_sweeteners: extendedProfile.accepts_artificial_sweeteners as boolean | undefined,
+            sleep_hours_avg: extendedProfile.sleep_hours_avg as number | undefined,
+            sleep_quality: extendedProfile.sleep_quality as UserHealthContext['sleep_quality'],
+            stress_level: extendedProfile.stress_level as UserHealthContext['stress_level'],
+            sections_completed: extendedProfile.sections_completed as string[] | undefined
         }
     }
 

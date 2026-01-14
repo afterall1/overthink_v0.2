@@ -1246,5 +1246,58 @@ Sonuç: Kullanıcı 1000 kcal beklerken görevler ~550-800 kcal çıkıyordu.
 
 ---
 
-**Son Güncelleme:** 2026-01-14 18:30 UTC+3
-**Toplam ADR:** 22
+## ADR-023: Unified Health Profile (Tek Kapsamlı Sağlık Profili)
+
+**Tarih:** 2026-01-14  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** AI Expert Council (5 uzman), Proje Sahibi
+
+### Bağlam
+
+Mevcut sistemde her goal türü için ayrı sorular soruluyordu (reduce_sugar, gain_muscle, drink_water, eat_healthy). Bu durum "form fatigue" yaratıyor, veri fragmentasyonuna yol açıyor ve AI'ın holistic bakış açısını engelliyordu.
+
+### Karar
+
+**"Unified Health Profile"** sistemi uygulandı:
+
+1. **7-Step Wizard:** Tek kapsamlı profil, opsiyonel "Atla" butonlarıyla
+2. **Sections Tracking:** `sections_completed[]` ile tamamlanan bölümler
+3. **Goal-Profile Mapping:** Her goal için gerekli section'lar belirlendi
+4. **AI Context Enrichment:** Tüm unified fields AI'a aktarılıyor
+
+**Yeni AI Context Bölümleri:**
+- 🏋️ ANTRENMAN PROFİLİ (deneyim, ekipman, tercih)
+- 🍽️ BESLENME ALIŞKANLIKLARI (öğün, evde yemek, fast food)
+- 💧 HİDRASYON & ŞEKER (su, şekerli içecek, craving)
+- 😴 UYKU & STRES (saat, kalite, stres seviyesi)
+
+### Alternatifler
+
+| Seçenek | Eksileri |
+|---------|----------|
+| Goal-Specific Questions (Mevcut) | Form fatigue, fragmented data |
+| Onboarding Only | 20+ soru, engagement drop |
+| Progressive Profiling | Karmaşık logic |
+| **Unified Profile ✓** | En dengeli çözüm |
+
+### Sonuçlar
+
+**Pozitif:**
+- Form fatigue çözüldü
+- AI holistic bakış açısına sahip
+- Skip seçeneği ile kullanıcı kontrolü
+- Tek kaynak prensibi
+
+**Dosyalar:**
+- `supabase/migrations/20260115_unified_health_profile.sql`
+- `src/types/unifiedHealthProfile.types.ts`
+- `src/components/hud/Health/UnifiedHealthProfileWizard.tsx`
+- `src/actions/aiHealthQuests.ts`
+- `src/actions/wizardAI.ts`
+- `src/components/hud/Goals/GoalQuestionsStep.tsx`
+- `src/lib/ai/healthCouncil.ts`
+
+---
+
+**Son Güncelleme:** 2026-01-14 21:00 UTC+3
+**Toplam ADR:** 23

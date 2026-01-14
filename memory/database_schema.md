@@ -651,6 +651,120 @@ Aşağıdaki sütunlar eklendi:
 
 ---
 
-**Son Güncelleme:** 2026-01-13 22:32 UTC+3
-**Versiyon:** 2.5.0 (Goal Synergy System eklendi)
+## user_health_profiles Tablosu (2026-01-15)
+
+> ⚠️ Migration: `supabase/migrations/20260115_unified_health_profile.sql`
+
+Kapsamlı kullanıcı sağlık profili. Tüm goal tipleri için tek kaynak.
+
+### Temel Sütunlar
+
+| Sütun | Tip | Kısıtlar | Açıklama |
+|-------|-----|----------|----------|
+| `id` | UUID | PK | Profil ID |
+| `user_id` | UUID | FK → users, UNIQUE | Kullanıcı |
+| `weight_kg` | NUMERIC | NOT NULL | Kilo (kg) |
+| `height_cm` | NUMERIC | NOT NULL | Boy (cm) |
+| `birth_date` | DATE | NOT NULL | Doğum tarihi |
+| `biological_sex` | TEXT | CHECK (male/female) | Biyolojik cinsiyet |
+| `activity_level` | TEXT | CHECK | sedentary/light/moderate/very_active/extreme |
+| `primary_goal` | TEXT | CHECK | weight_loss/weight_gain/maintenance/muscle_gain/endurance |
+| `target_weight_kg` | NUMERIC | NULLABLE | Hedef kilo |
+| `goal_pace` | TEXT | CHECK | slow/moderate/aggressive |
+
+### Hesaplanan Değerler
+
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `bmr_kcal` | INTEGER | Bazal metabolizma (Mifflin-St Jeor) |
+| `tdee_kcal` | INTEGER | Günlük harcama (BMR × aktivite) |
+| `target_daily_kcal` | INTEGER | Hedef günlük kalori |
+
+### Aktivite & Hareket
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `current_steps_avg` | INTEGER | Günlük ortalama adım |
+| `work_environment` | TEXT | desk/mixed/active/standing |
+| `has_fitness_tracker` | BOOLEAN | Fitness takipçisi var mı |
+| `best_activity_time` | TEXT | morning/afternoon/evening/flexible |
+
+### Antrenman Profili
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `training_experience` | TEXT | none/beginner/intermediate/advanced |
+| `training_types` | TEXT[] | [cardio, weights, hiit, yoga, ...] |
+| `gym_access` | TEXT | full_gym/home_gym/outdoor/none |
+| `available_training_times` | TEXT[] | [morning, afternoon, evening] |
+
+### Beslenme Alışkanlıkları
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `meals_per_day` | TEXT | 2/3/4/5+ |
+| `cooks_at_home` | TEXT | always/often/sometimes/rarely |
+| `daily_vegetables` | TEXT | 0/1-2/3-4/5+ |
+| `fast_food_frequency` | TEXT | never/weekly/few_times_week/daily |
+| `has_breakfast` | TEXT | always/sometimes/rarely/never |
+| `alcohol_frequency` | TEXT | never/occasional/weekly/daily |
+
+### Hidrasyon
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `current_water_intake_liters` | DECIMAL(3,1) | Mevcut su tüketimi (L) |
+| `coffee_tea_cups` | TEXT | 0/1-2/3-4/5+ |
+| `has_water_bottle` | BOOLEAN | Su şişesi taşıyor mu |
+| `hydration_barriers` | TEXT[] | [forget, taste, access, habit] |
+
+### Şeker Alışkanlıkları
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `sugar_drinks_per_day` | INTEGER | Günlük şekerli içecek sayısı |
+| `sugar_sources` | TEXT[] | [soda, juice, coffee, dessert, ...] |
+| `sugar_craving_trigger` | TEXT | morning_coffee/after_lunch/after_dinner/late_night/stress |
+| `accepts_artificial_sweeteners` | BOOLEAN | Yapay tatlandırıcı kabul eder mi |
+
+### Uyku & Stres
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `sleep_hours_avg` | DECIMAL | Ortalama uyku saati |
+| `sleep_quality` | TEXT | poor/fair/good/excellent |
+| `stress_level` | TEXT | low/medium/high |
+
+### Sağlık Durumu
+
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `health_conditions` | TEXT[] | [diabetes, hypertension, ...] |
+| `dietary_restrictions` | TEXT[] | [vegetarian, vegan, ...] |
+| `allergies` | TEXT[] | [nuts, dairy, ...] |
+| `uses_supplements` | BOOLEAN | Supplement kullanıyor mu |
+
+### Hedef Geçmişi
+
+| Sütun | Tip | Değerler |
+|-------|-----|----------|
+| `previous_diet_attempts` | TEXT | never/failed/partial/success |
+| `main_struggles` | TEXT[] | [emotional_eating, portion_control, ...] |
+
+### Profil Metadata
+
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `profile_version` | INTEGER | 1=legacy, 2=unified |
+| `sections_completed` | TEXT[] | [basic, activity, training, nutrition, ...] |
+
+### Indexes
+
+- `idx_user_health_profiles_sections` (user_id, sections_completed)
+- `idx_user_health_profiles_version` (user_id, profile_version)
+
+---
+
+**Son Güncelleme:** 2026-01-14 21:00 UTC+3
+**Versiyon:** 2.6.0 (Unified Health Profile eklendi)
 
