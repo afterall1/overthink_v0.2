@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, UseFormRegister, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
-    X, Plus, TrendingUp, Utensils, Dumbbell,
+    X, TrendingUp, Utensils, Dumbbell,
     Code2, ShoppingBag, Gamepad2, Smile
 } from 'lucide-react'
 import { CategorySlug } from '@/types/database.types'
@@ -26,8 +26,13 @@ const CATEGORIES = [
 const inputClasses = "w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
 const labelClasses = "text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function TradeForm({ register, errors }: { register: any, errors: any }) {
+// Type-safe form props interfaces
+interface FormFieldsProps<T extends Record<string, unknown>> {
+    register: UseFormRegister<T>
+    errors: FieldErrors<T>
+}
+
+function TradeForm({ register, errors }: FormFieldsProps<TradeFormData>) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -59,8 +64,7 @@ function TradeForm({ register, errors }: { register: any, errors: any }) {
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function FoodForm({ register, errors }: { register: any, errors: any }) {
+function FoodForm({ register, errors }: FormFieldsProps<FoodFormData>) {
     return (
         <div className="space-y-4">
             <div>
@@ -91,8 +95,7 @@ function FoodForm({ register, errors }: { register: any, errors: any }) {
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function SportForm({ register, errors }: { register: any, errors: any }) {
+function SportForm({ register, errors }: FormFieldsProps<SportFormData>) {
     return (
         <div className="space-y-4">
             <div>
@@ -115,8 +118,7 @@ function SportForm({ register, errors }: { register: any, errors: any }) {
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DevForm({ register, errors }: { register: any, errors: any }) {
+function DevForm({ register, errors }: FormFieldsProps<DevFormData>) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -149,8 +151,7 @@ function DevForm({ register, errors }: { register: any, errors: any }) {
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function EtsyForm({ register, errors }: { register: any, errors: any }) {
+function EtsyForm({ register, errors }: FormFieldsProps<EtsyFormData>) {
     return (
         <div className="space-y-4">
             <div>
@@ -176,8 +177,7 @@ function EtsyForm({ register, errors }: { register: any, errors: any }) {
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function GamingForm({ register, errors }: { register: any, errors: any }) {
+function GamingForm({ register, errors }: FormFieldsProps<GamingFormData>) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -325,14 +325,14 @@ export default function LoggerModal({ isOpen, onClose, onSubmit }: LoggerModalPr
                                 ← Geri
                             </button>
 
-                            {/* Category-specific form */}
+                            {/* Category-specific form with type assertions for dynamic schema */}
                             <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
-                                {selectedCategory === 'trade' && <TradeForm register={register} errors={errors} />}
-                                {selectedCategory === 'food' && <FoodForm register={register} errors={errors} />}
-                                {selectedCategory === 'sport' && <SportForm register={register} errors={errors} />}
-                                {selectedCategory === 'dev' && <DevForm register={register} errors={errors} />}
-                                {selectedCategory === 'etsy' && <EtsyForm register={register} errors={errors} />}
-                                {selectedCategory === 'gaming' && <GamingForm register={register} errors={errors} />}
+                                {selectedCategory === 'trade' && <TradeForm register={register as unknown as UseFormRegister<TradeFormData>} errors={errors as unknown as FieldErrors<TradeFormData>} />}
+                                {selectedCategory === 'food' && <FoodForm register={register as unknown as UseFormRegister<FoodFormData>} errors={errors as unknown as FieldErrors<FoodFormData>} />}
+                                {selectedCategory === 'sport' && <SportForm register={register as unknown as UseFormRegister<SportFormData>} errors={errors as unknown as FieldErrors<SportFormData>} />}
+                                {selectedCategory === 'dev' && <DevForm register={register as unknown as UseFormRegister<DevFormData>} errors={errors as unknown as FieldErrors<DevFormData>} />}
+                                {selectedCategory === 'etsy' && <EtsyForm register={register as unknown as UseFormRegister<EtsyFormData>} errors={errors as unknown as FieldErrors<EtsyFormData>} />}
+                                {selectedCategory === 'gaming' && <GamingForm register={register as unknown as UseFormRegister<GamingFormData>} errors={errors as unknown as FieldErrors<GamingFormData>} />}
                             </div>
 
                             {/* Sentiment */}

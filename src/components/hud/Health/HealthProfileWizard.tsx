@@ -313,10 +313,10 @@ export default function HealthProfileWizard({
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+                    className="w-full max-w-lg max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col"
                 >
-                    {/* Header */}
-                    <div className="relative p-6 bg-gradient-to-r from-emerald-500 to-teal-600">
+                    {/* Header - flex-shrink-0 to prevent compression */}
+                    <div className="relative p-6 bg-gradient-to-r from-emerald-500 to-teal-600 flex-shrink-0">
                         <button
                             onClick={onClose}
                             className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -364,8 +364,8 @@ export default function HealthProfileWizard({
                         </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-6 max-h-[60vh] overflow-y-auto">
+                    {/* Content - flex-1 with min-h-0 for proper scroll */}
+                    <div className="flex-1 min-h-0 overflow-y-auto p-6">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={currentStep}
@@ -420,8 +420,8 @@ export default function HealthProfileWizard({
                         )}
                     </div>
 
-                    {/* Footer Actions */}
-                    <div className="p-4 border-t border-slate-100 flex justify-between">
+                    {/* Footer Actions - flex-shrink-0 to always show */}
+                    <div className="p-4 border-t border-slate-100 flex justify-between flex-shrink-0">
                         <button
                             onClick={goPrev}
                             disabled={currentStep === 1}

@@ -639,21 +639,9 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
     // Fetch goal templates
     useEffect(() => {
         async function fetchTemplates() {
-            const startTime = performance.now()
-            console.log('[Step2] Starting template fetch...', { selectedCategory })
-
             setIsLoading(true)
             try {
-                const fetchStart = performance.now()
                 const result = await getGoalTemplates(selectedCategory ?? undefined)
-                const fetchEnd = performance.now()
-
-                console.log('[Step2] Template fetch completed', {
-                    duration: `${(fetchEnd - fetchStart).toFixed(0)}ms`,
-                    templateCount: result.data?.length ?? 0,
-                    error: result.error ?? null
-                })
-
                 if (result.data) {
                     setGoalTemplates(result.data)
                 }
@@ -661,8 +649,6 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
                 console.error('[Step2] Failed to fetch goal templates:', error)
             } finally {
                 setIsLoading(false)
-                const totalTime = performance.now() - startTime
-                console.log('[Step2] Total loading time:', `${totalTime.toFixed(0)}ms`)
             }
         }
         fetchTemplates()

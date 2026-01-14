@@ -244,10 +244,7 @@ export async function getGoalById(goalId: string): Promise<GoalWithDetails | nul
  * Backwards compatible - handles case where enhanced columns don't exist yet
  */
 export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise<Goal | null> {
-    console.log('[DEBUG createGoal] Input data:', goalData)
-
     const { client, user } = await getAuthenticatedClient()
-    console.log('[DEBUG createGoal] User ID:', user.id)
 
     // Separate core fields from enhanced fields
     // Core fields exist in original schema
@@ -279,7 +276,6 @@ export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise
 
     // First try with all fields (enhanced schema)
     const fullInsertData = { ...coreFields, ...enhancedFields }
-    console.log('[DEBUG createGoal] Attempting with enhanced schema...')
 
     let result = await client
         .from('goals')
@@ -289,8 +285,6 @@ export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise
 
     // If enhanced fields fail (schema not updated), fallback to core-only
     if (result.error && result.error.message.includes('schema cache')) {
-        console.log('[DEBUG createGoal] Enhanced schema not available, falling back to core fields...')
-
         result = await client
             .from('goals')
             .insert(coreFields)
@@ -303,7 +297,6 @@ export async function createGoal(goalData: Omit<GoalInsert, 'user_id'>): Promise
         throw new Error(`Failed to create goal: ${result.error.message}`)
     }
 
-    console.log('[DEBUG createGoal] Successfully created goal:', result.data?.id)
     return result.data
 }
 
@@ -392,8 +385,6 @@ export async function deleteGoal(goalId: string): Promise<boolean> {
         totalCompletionsDeleted = completions?.length ?? 0
         totalXpToSubtract = (completions || []).reduce((sum, c) => sum + (c.xp_earned || 0), 0)
 
-        console.log(`[DEBUG deleteGoal] Found ${totalCompletionsDeleted} completions with total ${totalXpToSubtract} XP for goal ${goalId}`)
-
         // Step 3: Subtract XP from user stats
         if (totalXpToSubtract > 0) {
             const { data: currentStats } = await adminClient
@@ -413,8 +404,6 @@ export async function deleteGoal(goalId: string): Promise<boolean> {
                         quests_completed_count: Math.max(0, (currentStats.quests_completed_count || 0) - totalCompletionsDeleted)
                     })
                     .eq('user_id', user.id)
-
-                console.log(`[DEBUG deleteGoal] Subtracted ${totalXpToSubtract} XP and ${totalCompletionsDeleted} completions from user stats`)
             }
         }
 
@@ -445,8 +434,6 @@ export async function deleteGoal(goalId: string): Promise<boolean> {
         }
     }
 
-    console.log(`[DEBUG deleteGoal] Deleted ${questIds.length} quest(s) and ${totalCompletionsDeleted} completion(s) for goal ${goalId}`)
-
     // Step 6: Delete the goal (milestones and entries cascade via FK constraints)
     const { error: goalDeleteError } = await adminClient
         .from('goals')
@@ -459,7 +446,6 @@ export async function deleteGoal(goalId: string): Promise<boolean> {
         throw new Error(`Failed to delete goal: ${goalDeleteError.message}`)
     }
 
-    console.log(`[DEBUG deleteGoal] Successfully deleted goal ${goalId} with ${questIds.length} quest(s), ${totalCompletionsDeleted} completion(s), and ${totalXpToSubtract} XP rollback`)
     revalidatePath('/')
 
     return true
@@ -748,13 +734,6 @@ export async function logProgress(
         throw new Error(`Failed to update goal progress: ${updateError.message}`)
     }
 
-    console.log('[DEBUG logProgress] Progress logged successfully:', {
-        goalId,
-        addedValue: value,
-        newTotal: newValue,
-        usedDirectUpdate: useDirectUpdate
-    })
-
     // If we used direct update (no entry table), return a synthetic entry object
     if (useDirectUpdate) {
         return {
@@ -904,13 +883,6 @@ export async function deleteProgressEntry(entryId: string): Promise<boolean> {
                 updated_at: new Date().toISOString()
             })
             .eq('id', entry.goal_id)
-
-        console.log('[DEBUG deleteProgressEntry] Entry deleted, goal updated:', {
-            entryId,
-            goalId: entry.goal_id,
-            removedValue: deletedValue,
-            newTotal: newValue
-        })
 
         return true
     } catch (error) {
@@ -1110,19 +1082,10 @@ export async function createGoalFromTemplate(
         }
 
         // 4. Get linked quest templates
-        const { data: questTemplates, error: questTemplatesError } = await client
+        const { data: questTemplates } = await client
             .from('quest_templates')
             .select('id')
             .eq('goal_template_id', typedTemplate.id)
-
-        // DEBUG: Log quest template linking
-        console.log('[createGoalFromTemplate] Goal Template ID:', typedTemplate.id)
-        console.log('[createGoalFromTemplate] Goal Template Slug:', typedTemplate.slug)
-        console.log('[createGoalFromTemplate] Quest Templates Found:', questTemplates?.length ?? 0)
-        console.log('[createGoalFromTemplate] Quest Templates Error:', questTemplatesError?.message ?? 'None')
-        if (questTemplates && questTemplates.length > 0) {
-            console.log('[createGoalFromTemplate] Quest Template IDs:', questTemplates.map((qt: { id: string }) => qt.id))
-        }
 
         // 5. Create quests from templates
         let questsCreated = 0
@@ -1130,11 +1093,8 @@ export async function createGoalFromTemplate(
 
         if (questTemplates && questTemplates.length > 0) {
             templateIdsToCreate = questTemplates.map((qt: { id: string }) => qt.id)
-            console.log('[createGoalFromTemplate] Using linked quest templates:', templateIdsToCreate.length)
         } else {
             // FALLBACK: If no quests linked via goal_template_id, try category_slug match
-            console.log('[createGoalFromTemplate] No linked quests, trying category_slug fallback...')
-
             const { data: categoryQuests } = await client
                 .from('quest_templates')
                 .select('id')
@@ -1144,23 +1104,16 @@ export async function createGoalFromTemplate(
 
             if (categoryQuests && categoryQuests.length > 0) {
                 templateIdsToCreate = categoryQuests.map((qt: { id: string }) => qt.id)
-                console.log('[createGoalFromTemplate] FALLBACK: Found', templateIdsToCreate.length, 'quests via category_slug:', typedTemplate.category_slug)
-            } else {
-                console.log('[createGoalFromTemplate] WARNING: No quest templates found even with category fallback!')
             }
+            // If no templates found, questsCreated will remain 0
         }
 
         // Create quests if we have any
         if (templateIdsToCreate.length > 0) {
-            console.log('[createGoalFromTemplate] Creating quests from template IDs:', templateIdsToCreate)
             const questResult = await createQuestsFromTemplates(templateIdsToCreate, goal.id)
-
-            console.log('[createGoalFromTemplate] Quest Result:', questResult.data?.length ?? 0, 'created, error:', questResult.error ?? 'None')
             if (questResult.data) {
                 questsCreated = questResult.data.length
             }
-        } else {
-            console.log('[createGoalFromTemplate] ERROR: No quest templates to create!')
         }
 
         revalidatePath('/')

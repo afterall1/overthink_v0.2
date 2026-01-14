@@ -291,12 +291,8 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
         const completionCount = completions?.length ?? 0
         const totalXpToSubtract = (completions || []).reduce((sum, c) => sum + (c.xp_earned || 0), 0)
 
-        console.log(`[DEBUG deleteQuest] Quest ${questId} has ${completionCount} completions with total ${totalXpToSubtract} XP`)
-
-        // Step 3: Subtract XP from user_xp_stats if any completions exist
         if (totalXpToSubtract > 0) {
             await updateUserXpStats(user.id, -totalXpToSubtract)
-            console.log(`[DEBUG deleteQuest] Subtracted ${totalXpToSubtract} XP from user ${user.id}`)
         }
 
         // Step 4: Rollback goal progress if quest was linked to a goal
@@ -324,8 +320,6 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', quest.goal_id)
-
-                console.log(`[DEBUG deleteQuest] Rolled back goal ${quest.goal_id} progress: ${currentValue} -> ${newValue} (-${totalProgressToSubtract})`)
             }
         }
 
@@ -341,8 +335,6 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
                 console.error('[ERROR deleteQuest] Failed to delete completions:', deleteCompletionsError)
                 return { data: null, error: deleteCompletionsError.message }
             }
-
-            console.log(`[DEBUG deleteQuest] Deleted ${completionCount} completion record(s)`)
         }
 
         // Step 6: Delete the quest
@@ -356,8 +348,6 @@ export async function deleteQuest(questId: string): Promise<ActionResult<void>> 
             console.error('[ERROR deleteQuest] Failed to delete quest:', deleteQuestError)
             return { data: null, error: deleteQuestError.message }
         }
-
-        console.log(`[DEBUG deleteQuest] Successfully deleted quest ${questId} with ${completionCount} completions and ${totalXpToSubtract} XP rollback`)
 
         revalidatePath('/')
         return { data: undefined, error: null }
