@@ -47,6 +47,11 @@ export interface UserHealthContext {
     // Current progress (optional)
     days_since_start?: number
     weight_change_kg?: number
+
+    // Safety context (NEW)
+    safety_adjusted?: boolean
+    original_target_kcal?: number
+    safety_warnings?: string[]
 }
 
 export interface AIGeneratedQuest {
@@ -142,7 +147,28 @@ Kullanıcının sağlık profilini ve hesaplanmış değerlerini analiz ederek k
    - 1-2 alışkanlık görevi
    - 1 takip/ölçüm görevi
 
-6. **HEDEFE ÖZGÜ GÖREV STRATEJİSİ:**
+6. **🎯 KALORİ BÜTÇESİ ZORUNLULUĞU (KRİTİK):**
+   
+   ⚠️ **MUTLAK KURAL:** Oluşturduğun görevlerin toplam \`calorie_impact\` değeri,
+   kullanıcının günlük kalori açığı/fazlası hedefinin **%70-100**'ünü karşılamalıdır.
+   
+   Örnek Hesaplama (Hedef: -815 kcal/gün):
+   | Görev | calorie_impact |
+   |-------|----------------|
+   | 45dk Tempolu Yürüyüş | -250 kcal |
+   | 30dk Ağırlık Antrenmanı | -200 kcal |
+   | Porsiyon %20 Azaltma | -150 kcal |
+   | Gece Atıştırmasına Hayır | -100 kcal |
+   | Merdiven Kullanımı | -75 kcal |
+   | Yüksek Lif Kahvaltı | -50 kcal |
+   | **TOPLAM** | **-825 kcal** ✅ |
+   
+   ⚡ Minimum kabul: Hedefin %70'i
+   ⚡ Maksimum kabul: Hedefin %110'u
+   
+   Kas yapma (muscle_gain) hedefi için calorie_impact POZITIF olmalı (kalori fazlası).
+
+7. **HEDEFE ÖZGÜ GÖREV STRATEJİSİ:**
 
    📉 **weight_loss (Kilo Verme):**
    - Kalori açığını destekleyen görevler (porsiyon kontrolü, düşük kalorili alternatifler)
@@ -267,11 +293,26 @@ export async function generateHealthQuests(
         // Validate and sanitize quests
         const validatedQuests = validateAndSanitizeQuests(parsed.daily_quests || [], context)
 
+        // Check calorie budget coverage
+        const budgetCheck = validateCalorieBudgetCoverage(validatedQuests, context.daily_adjustment)
+        console.log('[AI Quest Generation] Calorie Budget Check:', {
+            target: context.daily_adjustment,
+            generated: budgetCheck.totalImpact,
+            coverage: `${budgetCheck.coverage.toFixed(1)}%`,
+            status: budgetCheck.isValid ? '✅ Valid' : '⚠️ Below target'
+        })
+
+        // Add warning if coverage is low
+        const warnings = [...(parsed.warnings || [])]
+        if (!budgetCheck.isValid && Math.abs(context.daily_adjustment) > 100) {
+            warnings.push(`Görevlerin toplam kalori etkisi (${budgetCheck.totalImpact} kcal) hedefin %${budgetCheck.coverage.toFixed(0)}'ini karşılıyor.`)
+        }
+
         return {
             success: true,
             daily_quests: validatedQuests,
             nutrition_plan: parsed.nutrition_plan || getDefaultNutritionPlan(context),
-            warnings: parsed.warnings || [],
+            warnings,
             motivational_tip: parsed.motivational_tip || 'Bugün de harika bir gün olacak!',
             council_notes: parsed.council_notes || ''
         }
@@ -298,6 +339,34 @@ export async function generateHealthQuests(
  * Build user context message for AI
  */
 function buildUserContextMessage(context: UserHealthContext): string {
+    // Calculate calorie budget range
+    const absAdjustment = Math.abs(context.daily_adjustment)
+    const minBudget = Math.round(absAdjustment * 0.7)
+    const maxBudget = Math.round(absAdjustment * 1.1)
+    const isDeficit = context.daily_adjustment < 0
+    const budgetType = isDeficit ? 'AÇIK' : 'FAZLA'
+
+    // Build safety context section if applicable
+    const safetySection = context.safety_adjusted ? `
+
+## 🛡️ GÜVENLİK AYARLAMASI (KRİTİK):
+⚠️ Bu kullanıcının hedefi güvenlik nedeniyle AYARLANDI.
+- Orijinal Hedef: ${context.original_target_kcal} kcal (güvensiz)
+- Ayarlanan Hedef: ${context.target_daily_kcal} kcal (güvenli)
+- Sebep: Minimum güvenli kalori sınırının altındaydı
+
+🏥 SAĞLIK KORUYUCU GÖREVLER EKLEMELİSİN:
+1. Protein hedefini koruma görevi (kas kaybını önle)
+2. Yeterli uyku görevi (7+ saat)
+3. Stres yönetimi veya dinlenme görevi
+4. Multivitamin/mineral takibi hatırlatması
+
+⛔ YAPMAMAN GEREKENLER:
+- Çok yoğun egzersiz önerme (toparlanma zorlaşır)
+- Öğün atlama önerme
+- Aşırı kısıtlayıcı diyet önerisi
+` : ''
+
     return `
 ## KULLANICI PROFİLİ:
 - Yaş: ${context.age_years}
@@ -310,8 +379,15 @@ function buildUserContextMessage(context: UserHealthContext): string {
 - BMR (Bazal Metabolizma): ${context.bmr_kcal} kcal
 - TDEE (Günlük Harcama): ${context.tdee_kcal} kcal
 - Hedef Günlük Kalori: ${context.target_daily_kcal} kcal
-- Günlük Açık/Fazla: ${context.daily_adjustment} kcal
+- Günlük ${budgetType}: ${absAdjustment} kcal
 
+## 🎯 KALORİ BÜTÇESİ HEDEFİ (KRİTİK):
+⚠️ Görevlerin toplam calorie_impact değeri bu aralıkta olmalı:
+- Hedef: ${context.daily_adjustment} kcal/gün
+- Minimum Kabul: ${isDeficit ? '-' : '+'}${minBudget} kcal
+- Maksimum Kabul: ${isDeficit ? '-' : '+'}${maxBudget} kcal
+- Tip: ${isDeficit ? 'Kalori AÇIĞI (negatif impact)' : 'Kalori FAZLASI (pozitif impact)'}
+${safetySection}
 ## MAKRO HEDEFLERİ:
 - Protein: ${context.protein_g} g
 - Karbonhidrat: ${context.carbs_g} g  
@@ -333,6 +409,8 @@ ${context.days_since_start ? `## İLERLEME:
 - Kilo değişimi: ${context.weight_change_kg || 0} kg` : ''}
 
 Lütfen bu kullanıcı için kişiselleştirilmiş günlük görevler ve beslenme planı oluştur.
+⚡ HATIRLATMA: Görevlerin toplam calorie_impact değeri ${isDeficit ? '-' : '+'}${minBudget} ile ${isDeficit ? '-' : '+'}${maxBudget} kcal arasında olmalı!
+${context.safety_adjusted ? '🛡️ SAĞLIK KORUYUCU GÖREVLER EKLEMEYI UNUTMA!' : ''}
 `
 }
 
@@ -353,6 +431,35 @@ function parseAIResponse(content: string): Partial<AIHealthResponse> | null {
         console.error('[AI Health Council] JSON parse error:', error)
         return null
     }
+}
+
+/**
+ * Validate calorie budget coverage
+ * Checks if generated quests collectively meet the target calorie adjustment
+ */
+function validateCalorieBudgetCoverage(
+    quests: AIGeneratedQuest[],
+    targetAdjustment: number
+): { isValid: boolean; totalImpact: number; coverage: number } {
+    // Sum all calorie impacts from quests
+    const totalImpact = quests.reduce((sum, q) => sum + (q.calorie_impact || 0), 0)
+
+    // Calculate coverage percentage
+    const absTarget = Math.abs(targetAdjustment)
+    const coverage = absTarget > 0
+        ? (Math.abs(totalImpact) / absTarget) * 100
+        : 100
+
+    // Check if signs match (deficit should have negative impact, surplus positive)
+    const signsMatch = targetAdjustment === 0 ||
+        (targetAdjustment < 0 && totalImpact <= 0) ||
+        (targetAdjustment > 0 && totalImpact >= 0)
+
+    // Valid if coverage is between 60-120% AND signs match
+    // Lower threshold to 60% to account for non-calorie quests (habit, tracking)
+    const isValid = (coverage >= 60 && coverage <= 120) && signsMatch
+
+    return { isValid, totalImpact, coverage }
 }
 
 /**

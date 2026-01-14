@@ -55,9 +55,24 @@ Bu kullanıcının **ANA HEDEFİ KİLO VERMEK**.
 | 🥣 | Proteinli kahvaltı yap | 0 | 20 |
 | 🍽️ | Küçük tabak kullan | -75 | 15 |
 
-### 📈 KALORİ ETKİSİ PRENSİBİ:
-Görevlerin toplam günlük kalori etkisi, kullanıcının hedef açığına (daily_adjustment) yakın olmalı.
-Örnek: Hedef -500 kcal/gün ise görevlerin toplamı ~-400 ile -600 arası olmalı.
+### 📈 KALORİ ETKİSİ PRENSİBİ (KRİTİK):
+
+⚠️ **ZORUNLU:** Görevlerin toplam günlük kalori etkisi, kullanıcının hedef açığına (daily_adjustment) 
+%70-100 oranında yakın olmalıdır.
+
+Örnek Dağılım (Hedef: -815 kcal/gün):
+| Görev | Kalori Etkisi |
+|-------|---------------|
+| 45dk Tempolu Yürüyüş | -250 kcal |
+| 30dk Ağırlık Antrenmanı | -200 kcal |
+| Porsiyon %20 Azaltma (2 öğün) | -150 kcal |
+| Gece Atıştırmasına Hayır | -100 kcal |
+| Merdiven Kullanımı (günlük) | -75 kcal |
+| Yüksek Lifli Kahvaltı | -50 kcal |
+| **TOPLAM** | **-825 kcal** ✅ |
+
+📊 Minimum kabul: Hedefin %70'i (örn: -570 kcal)
+📊 Maksimum kabul: Hedefin %110'u (örn: -900 kcal)
 
 ### ⚠️ GÜVENLİK KURALLARI:
 - Günlük açık asla 1000 kcal'yi geçmemeli
@@ -73,16 +88,16 @@ Görevlerin toplam günlük kalori etkisi, kullanıcının hedef açığına (da
 import type { WeightLossContext } from '../goalSpecificContexts'
 
 export function buildWeightLossContextMessage(context: WeightLossContext): string {
-    const paceLabels: Record<string, string> = {
-        'slow': 'Yavaş (~0.3 kg/hafta)',
-        'moderate': 'Orta (~0.5 kg/hafta)',
-        'aggressive': 'Hızlı (~0.75 kg/hafta)'
-    }
+   const paceLabels: Record<string, string> = {
+      'slow': 'Yavaş (~0.3 kg/hafta)',
+      'moderate': 'Orta (~0.5 kg/hafta)',
+      'aggressive': 'Hızlı (~0.75 kg/hafta)'
+   }
 
-    const weightDiff = context.weight_kg - context.target_weight_kg
-    const estimatedWeeks = Math.ceil(weightDiff / 0.5)
+   const weightDiff = context.weight_kg - context.target_weight_kg
+   const estimatedWeeks = Math.ceil(weightDiff / 0.5)
 
-    return `
+   return `
 ## KULLANICI PROFİLİ:
 - Yaş: ${context.age_years}
 - Cinsiyet: ${context.biological_sex === 'male' ? 'Erkek' : 'Kadın'}

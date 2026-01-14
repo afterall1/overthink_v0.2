@@ -59,6 +59,21 @@ export interface GoalCalculation {
 
     // Recommended quest template slugs
     recommendedQuestSlugs: string[]
+
+    // Safe date suggestions (for weight goals exceeding safe limits)
+    safeDateSuggestions?: SafeDateSuggestion[]
+    requiresSafetyAdjustment?: boolean
+}
+
+export interface SafeDateSuggestion {
+    planType: 'relaxed' | 'balanced' | 'fast'
+    label: string
+    emoji: string
+    endDate: string
+    totalDays: number
+    dailyDeficit: number
+    weeklyLoss: number
+    description: string
 }
 
 // =====================================================
@@ -102,6 +117,21 @@ const FEASIBILITY_COLORS: Record<FeasibilityLevel, string> = {
     challenging: '#F59E0B', // Amber
     extreme: '#EF4444',   // Red
     unrealistic: '#991B1B', // Dark Red
+}
+
+/**
+ * Maximum safe daily calorie deficit (kcal)
+ * Based on medical consensus - exceeding this risks muscle loss and metabolic adaptation
+ */
+const MAX_SAFE_DAILY_DEFICIT = 1000
+
+/**
+ * Plan configurations for safe date suggestions
+ */
+const SAFE_DATE_PLANS = {
+    relaxed: { deficit: 500, label: 'Rahat Plan', emoji: '🌱' },
+    balanced: { deficit: 750, label: 'Dengeli Plan', emoji: '🎯' },
+    fast: { deficit: 1000, label: 'Hızlı Plan', emoji: '⚡' }
 }
 
 // =====================================================
@@ -223,6 +253,9 @@ function calculateWeightLoss(
         'intermittent-fasting'
     ]
 
+    // Check if safety adjustment is needed
+    const needsSafetyAdjustment = dailyDeficit > MAX_SAFE_DAILY_DEFICIT
+
     return {
         totalDays,
         dailyTarget: dailyDeficit,
@@ -235,7 +268,10 @@ function calculateWeightLoss(
         feasibilityColor: FEASIBILITY_COLORS[feasibility],
         warnings,
         tips,
-        recommendedQuestSlugs
+        recommendedQuestSlugs,
+        requiresSafetyAdjustment: needsSafetyAdjustment,
+        // Note: safeDateSuggestions will be populated by the caller (Step3When) 
+        // since we need the startDate which is not available here
     }
 }
 
@@ -697,6 +733,94 @@ function calculateGeneric(
         tips: ['Küçük adımlarla ilerle.', 'İlerlemeyi düzenli takip et.'],
         recommendedQuestSlugs: []
     }
+}
+
+// =====================================================
+// Safe Date Calculation Functions
+// =====================================================
+
+/**
+ * Calculate safe end date for weight loss goals
+ * Returns the minimum date required to keep daily deficit at or below maxDeficit
+ */
+export function calculateSafeEndDate(
+    startDate: string,
+    targetKg: number,
+    maxDailyDeficit: number = MAX_SAFE_DAILY_DEFICIT
+): {
+    safeEndDate: string
+    safeDays: number
+    safeDeficit: number
+} {
+    const totalKcal = targetKg * KCAL_PER_KG
+    const safeDays = Math.ceil(totalKcal / maxDailyDeficit)
+    const safeDeficit = Math.round(totalKcal / safeDays)
+
+    const start = new Date(startDate)
+    const safeEnd = new Date(start)
+    safeEnd.setDate(safeEnd.getDate() + safeDays)
+
+    return {
+        safeEndDate: safeEnd.toISOString().split('T')[0],
+        safeDays,
+        safeDeficit
+    }
+}
+
+/**
+ * Generate safe date suggestions for weight loss goals
+ * Returns 3 plan options: relaxed, balanced, and fast
+ */
+export function getSafeDateSuggestions(
+    startDate: string,
+    targetKg: number
+): SafeDateSuggestion[] {
+    const totalKcal = targetKg * KCAL_PER_KG
+    const start = new Date(startDate)
+    const suggestions: SafeDateSuggestion[] = []
+
+    const planTypes: Array<'relaxed' | 'balanced' | 'fast'> = ['relaxed', 'balanced', 'fast']
+
+    for (const planType of planTypes) {
+        const plan = SAFE_DATE_PLANS[planType]
+        const days = Math.ceil(totalKcal / plan.deficit)
+        const dailyDeficit = Math.round(totalKcal / days)
+        const weeklyLoss = (dailyDeficit * 7) / KCAL_PER_KG
+
+        const endDate = new Date(start)
+        endDate.setDate(endDate.getDate() + days)
+
+        const description = planType === 'relaxed'
+            ? 'Sürdürülebilir ve sağlıklı tempo'
+            : planType === 'balanced'
+                ? 'Önerilen denge noktası'
+                : 'Maksimum güvenli hız'
+
+        suggestions.push({
+            planType,
+            label: plan.label,
+            emoji: plan.emoji,
+            endDate: endDate.toISOString().split('T')[0],
+            totalDays: days,
+            dailyDeficit,
+            weeklyLoss: Math.round(weeklyLoss * 100) / 100,
+            description
+        })
+    }
+
+    return suggestions
+}
+
+/**
+ * Check if a weight loss goal requires safety adjustment
+ */
+export function requiresSafetyAdjustment(
+    targetKg: number,
+    totalDays: number
+): boolean {
+    const totalKcal = targetKg * KCAL_PER_KG
+    const dailyDeficit = totalKcal / totalDays
+    return dailyDeficit > MAX_SAFE_DAILY_DEFICIT
 }
 
 // =====================================================

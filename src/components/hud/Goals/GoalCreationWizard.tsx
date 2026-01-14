@@ -11,10 +11,13 @@ import { clsx } from 'clsx'
 import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
 import { getGoalTemplates, getGoalTemplateCategories } from '@/actions/goals'
 import GoalInsightCard from './GoalInsightCard'
+import SafeDateModal from './SafeDateModal'
 import {
     calculateGoal,
     getCalculationTypeFromTemplateSlug,
-    type GoalCalculation
+    getSafeDateSuggestions,
+    type GoalCalculation,
+    type SafeDateSuggestion
 } from '@/lib/goalCalculator'
 import { HealthProfileBanner, HealthProfileWizard } from '@/components/hud/Health'
 import useHealthProfile from '@/hooks/useHealthProfile'
@@ -1266,6 +1269,20 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
 
 function Step3When({ formData, updateField, errors }: StepProps) {
     const [calculation, setCalculation] = useState<GoalCalculation | null>(null)
+    const [showSafeDateModal, setShowSafeDateModal] = useState(false)
+    const [safeDateSuggestions, setSafeDateSuggestions] = useState<SafeDateSuggestion[]>([])
+    const [pendingEndDate, setPendingEndDate] = useState<string | null>(null)
+    const [originalDailyDeficit, setOriginalDailyDeficit] = useState(0)
+
+    // Check if this is a weight loss goal
+    const isWeightLossGoal = useMemo(() => {
+        const lowerTitle = formData.title.toLowerCase()
+        const lowerUnit = formData.unit.toLowerCase()
+        return (lowerTitle.includes('kilo') && !lowerTitle.includes('al')) ||
+            (lowerUnit === 'kg' && !lowerTitle.includes('al')) ||
+            lowerTitle.includes('ver') ||
+            lowerTitle.includes('yağ')
+    }, [formData.title, formData.unit])
 
     // Recalculate when dates or target changes
     useEffect(() => {
@@ -1298,6 +1315,19 @@ function Step3When({ formData, updateField, errors }: StepProps) {
                     categorySlug: formData.category_id
                 })
                 setCalculation(calc)
+
+                // Check if safety adjustment is needed for weight loss goals
+                if (isWeightLossGoal && calc.requiresSafetyAdjustment && calc.dailyTarget > 1000) {
+                    // Generate safe date suggestions
+                    const suggestions = getSafeDateSuggestions(
+                        formData.start_date,
+                        formData.target_value
+                    )
+                    setSafeDateSuggestions(suggestions)
+                    setOriginalDailyDeficit(calc.dailyTarget)
+                    setPendingEndDate(formData.end_date)
+                    setShowSafeDateModal(true)
+                }
             } catch (error) {
                 console.error('Calculation error:', error)
                 setCalculation(null)
@@ -1305,7 +1335,22 @@ function Step3When({ formData, updateField, errors }: StepProps) {
         } else {
             setCalculation(null)
         }
-    }, [formData.target_value, formData.unit, formData.title, formData.start_date, formData.end_date, formData.category_id])
+    }, [formData.target_value, formData.unit, formData.title, formData.start_date, formData.end_date, formData.category_id, isWeightLossGoal])
+
+    // Handle safe plan selection
+    const handleSelectSafePlan = (planType: 'relaxed' | 'balanced' | 'fast', endDate: string) => {
+        updateField('end_date', endDate)
+        setShowSafeDateModal(false)
+        setPendingEndDate(null)
+        console.log(`[SafeDate] User selected ${planType} plan → ${endDate}`)
+    }
+
+    // Handle modal close without selection (user insists on original date)
+    const handleModalClose = () => {
+        setShowSafeDateModal(false)
+        // Keep the original date but log it
+        console.log('[SafeDate] User closed modal without selecting safe plan')
+    }
 
     return (
         <div className="space-y-5">
@@ -1363,6 +1408,17 @@ function Step3When({ formData, updateField, errors }: StepProps) {
                     </span>
                 </p>
             </div>
+
+            {/* Safe Date Modal - Shows when deficit exceeds safe limit */}
+            <SafeDateModal
+                isOpen={showSafeDateModal}
+                onClose={handleModalClose}
+                onSelectPlan={handleSelectSafePlan}
+                suggestions={safeDateSuggestions}
+                originalEndDate={pendingEndDate || formData.end_date}
+                originalDailyDeficit={originalDailyDeficit}
+                targetKg={formData.target_value || 0}
+            />
         </div>
     )
 }

@@ -60,6 +60,9 @@ Bu kullanıcının ana hedefi KAS KÜTLE kazanmak. Kalori açığı veya kilo ve
 
 export function buildMuscleGainContextMessage(context: MuscleGainContext): string {
     const proteinTarget = Math.round(context.weight_kg * 2)
+    const dailySurplus = context.daily_surplus || 300
+    const minBudget = Math.round(dailySurplus * 0.7)
+    const maxBudget = Math.round(dailySurplus * 1.1)
 
     return `
 ## KULLANICI PROFİLİ:
@@ -73,7 +76,7 @@ export function buildMuscleGainContextMessage(context: MuscleGainContext): strin
 - BMR: ${context.bmr_kcal} kcal
 - TDEE: ${context.tdee_kcal} kcal
 - Hedef Günlük Kalori: ${context.target_daily_kcal} kcal
-- Günlük Fazla: +${context.daily_surplus} kcal
+- Günlük Fazla: +${dailySurplus} kcal
 - Hedef Protein: ${proteinTarget}g/gün
 - Hedef Karbonhidrat: ${context.carbs_g}g
 - Hedef Yağ: ${context.fat_g}g
@@ -81,10 +84,18 @@ export function buildMuscleGainContextMessage(context: MuscleGainContext): strin
 - Haftalık Antrenman Günü: ${context.training_days_per_week}
 ${context.target_weight_kg ? `- Hedef Kilo: ${context.target_weight_kg} kg` : ''}
 
+## 🎯 KALORİ BÜTÇESİ HEDEFİ (KRİTİK):
+⚠️ Bu bir KAS YAPMA hedefi - görevlerin toplam calorie_impact değeri POZİTİF olmalı!
+- Hedef Günlük Fazla: +${dailySurplus} kcal
+- Minimum Kabul: +${minBudget} kcal
+- Maksimum Kabul: +${maxBudget} kcal
+- Tip: Kalori FAZLASI (pozitif impact değerleri)
+
 ## HEDEF:
 Bu kullanıcının kas kütlesi kazanmasını sağlayacak, KALORI FAZLASI ve PROTEIN odaklı görevler oluştur.
 Kilo verme veya kalori açığı ile ilgili görev ÜRETME.
 
 Lütfen bu kullanıcı için kişiselleştirilmiş günlük kas geliştirme görevleri oluştur.
+⚡ HATIRLATMA: Görevlerin toplam calorie_impact değeri +${minBudget} ile +${maxBudget} kcal arasında POZİTİF olmalı!
 `
 }

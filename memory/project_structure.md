@@ -98,7 +98,9 @@ overthink_v0.2/
 │   │   │   │   ├── MomentumGauge.tsx     # Dual progress gauge
 │   │   │   │   ├── MilestoneList.tsx
 │   │   │   │   ├── ProgressRing.tsx
-│   │   │   │   ├── SynergyWarningModal.tsx # 🆕 Goal sinerji uyarı modal
+│   │   │   │   ├── SynergyWarningModal.tsx # Goal sinerji uyarı modal
+│   │   │   │   ├── SafeDateModal.tsx       # 🆕 Güvenli tarih seçim modalı
+│   │   │   │   ├── GoalInsightCard.tsx     # Hesaplama ve uyarı kartı
 │   │   │   │   │
 │   │   │   │   └── 📁 GoalDetail/   # 🆕 Modular GoalDetail
 │   │   │   │       ├── index.tsx        # Main orchestrator (iOS Bottom Sheet)
@@ -133,8 +135,9 @@ overthink_v0.2/
 │   │   │   ├── 📁 Health/         # 🆕 Health Quest System UI
 │   │   │   │   ├── index.ts               # Barrel export
 │   │   │   │   ├── HealthProfileWizard.tsx  # 5-step wizard
-│   │   │   │   ├── HealthProfileBanner.tsx  # 🆕 Context-aware banner (food/sport)
-│   │   │   │   ├── AIQuestGeneratorModal.tsx # 🆕 AI quest generation modal
+│   │   │   │   ├── HealthProfileBanner.tsx  # Context-aware banner (food/sport)
+│   │   │   │   ├── SafetyWarningBanner.tsx  # 🆕 Safety limit uyarı banner'ı
+│   │   │   │   ├── AIQuestGeneratorModal.tsx # AI quest generation modal
 │   │   │   │   └── HealthFAB.tsx            # FAB (artık kullanılmıyor)
 │   │   │   │
 │   │   │   ├── 📁 Questions/      # 🆕 Goal-Specific Questions

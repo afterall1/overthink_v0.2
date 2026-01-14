@@ -64,13 +64,43 @@ export interface HealthCalculations {
 
     // Warnings and safety
     warnings: string[]
+    safety_warnings: SafetyWarning[]
     is_safe: boolean
+
+    // Safety adjustment info
+    safety_adjusted: boolean
+    original_target_kcal?: number
 }
 
 export interface MacroBreakdown {
     protein_percent: number
     carbs_percent: number
     fat_percent: number
+}
+
+// =====================================================
+// Safety Types
+// =====================================================
+
+export type SafetyWarningType = 'critical' | 'warning' | 'info'
+
+export interface SafetyWarning {
+    type: SafetyWarningType
+    code: string
+    title: string
+    message: string
+    explanation: string
+}
+
+export interface SafetyCheckResult {
+    is_safe: boolean
+    adjusted_target_kcal: number
+    original_target_kcal: number
+    adjusted_deficit: number
+    original_deficit: number
+    warnings: SafetyWarning[]
+    recommendation: string | null
+    adjustment_reason: string | null
 }
 
 // =====================================================
@@ -143,7 +173,7 @@ const MACRO_RATIOS: Record<PrimaryGoal, MacroBreakdown> = {
 }
 
 /**
- * Minimum safe calorie intake
+ * Minimum safe calorie intake - ENHANCED with age factors
  */
 const MIN_SAFE_CALORIES = {
     male: 1500,
@@ -151,9 +181,52 @@ const MIN_SAFE_CALORIES = {
 }
 
 /**
+ * Enhanced safe calorie limits with recommendations
+ */
+export const SAFE_CALORIE_LIMITS = {
+    male: {
+        absolute_minimum: 1500,      // Never go below (medical consensus)
+        recommended_minimum: 1600,   // Warn if below this
+        bmr_safety_factor: 1.0       // Target should be at least BMR × this
+    },
+    female: {
+        absolute_minimum: 1200,
+        recommended_minimum: 1400,
+        bmr_safety_factor: 1.0
+    }
+}
+
+/**
+ * Age-based safety adjustment factors
+ * Older individuals need slightly higher minimums due to:
+ * - Slower metabolism recovery
+ * - Higher nutrient needs
+ * - Muscle preservation importance
+ */
+export const AGE_SAFETY_FACTORS: Record<string, { factor: number; label: string }> = {
+    '18-25': { factor: 1.0, label: 'Genç yetişkin' },
+    '26-35': { factor: 1.0, label: 'Yetişkin' },
+    '36-45': { factor: 1.05, label: 'Orta yaş' },
+    '46-55': { factor: 1.10, label: 'Orta yaş+' },
+    '56-65': { factor: 1.15, label: 'Olgun yaş' },
+    '65+': { factor: 1.20, label: 'Yaşlı yetişkin' }
+}
+
+/**
  * Maximum safe daily deficit
  */
 const MAX_SAFE_DEFICIT = 1000
+
+/**
+ * Goal-specific maximum deficits
+ */
+export const GOAL_SPECIFIC_LIMITS: Record<PrimaryGoal, { max_deficit: number; max_surplus: number; notes: string }> = {
+    weight_loss: { max_deficit: 1000, max_surplus: 0, notes: 'Protein koruması önemli' },
+    weight_gain: { max_deficit: 0, max_surplus: 500, notes: 'Yağ birikimini önle' },
+    maintenance: { max_deficit: 200, max_surplus: 200, notes: 'Denge koru' },
+    muscle_gain: { max_deficit: 0, max_surplus: 500, notes: 'Kalori fazlası gerekli' },
+    endurance: { max_deficit: 500, max_surplus: 300, notes: 'Karbonhidrat yeterliliği' }
+}
 
 // =====================================================
 // Core Functions
@@ -274,6 +347,141 @@ export function calculateWaterIntake(weight_kg: number): number {
     return Math.round(totalMl / 1000 * 10) / 10 // Convert to liters, round to 1 decimal
 }
 
+/**
+ * Get age bracket for safety factor lookup
+ */
+function getAgeBracket(age: number): string {
+    if (age >= 65) return '65+'
+    if (age >= 56) return '56-65'
+    if (age >= 46) return '46-55'
+    if (age >= 36) return '36-45'
+    if (age >= 26) return '26-35'
+    return '18-25'
+}
+
+/**
+ * Comprehensive safety check for calorie targets
+ * Returns adjusted target if necessary with detailed warnings
+ */
+export function performSafetyCheck(
+    targetCalories: number,
+    bmr: number,
+    tdee: number,
+    biologicalSex: BiologicalSex,
+    ageYears: number,
+    goalType: PrimaryGoal,
+    originalDeficit: number
+): SafetyCheckResult {
+    const warnings: SafetyWarning[] = []
+    let adjustedTarget = targetCalories
+    let adjustedDeficit = originalDeficit
+    let adjustmentReason: string | null = null
+    let recommendation: string | null = null
+    let isSafe = true
+
+    // Get age-based safety factor
+    const ageBracket = getAgeBracket(ageYears)
+    const ageFactor = AGE_SAFETY_FACTORS[ageBracket]?.factor || 1.0
+
+    // Get sex-based limits
+    const limits = SAFE_CALORIE_LIMITS[biologicalSex]
+
+    // Calculate age-adjusted minimum
+    const ageAdjustedMinimum = Math.round(limits.absolute_minimum * ageFactor)
+    const ageAdjustedRecommended = Math.round(limits.recommended_minimum * ageFactor)
+
+    // Get goal-specific limits
+    const goalLimits = GOAL_SPECIFIC_LIMITS[goalType]
+
+    // Check 1: Below absolute minimum
+    if (targetCalories < ageAdjustedMinimum) {
+        isSafe = false
+        const originalTarget = targetCalories
+        adjustedTarget = ageAdjustedMinimum
+        adjustedDeficit = tdee - adjustedTarget
+        adjustmentReason = `Minimum güvenli kalori seviyesinin altında`
+
+        warnings.push({
+            type: 'critical',
+            code: 'BELOW_MINIMUM',
+            title: 'Kalori Hedefi Çok Düşük',
+            message: `Hesaplanan günlük kalori hedefiniz (${originalTarget} kcal) güvenli sınırın altındaydı.`,
+            explanation: `${biologicalSex === 'male' ? 'Erkekler' : 'Kadınlar'} için minimum güvenli günlük kalori alımı ${ageAdjustedMinimum} kcal'dir. ${ageYears >= 46 ? `Yaşınız (${ageYears}) nedeniyle bu sınır biraz yükseltilmiştir.` : ''} Bu seviyenin altına düşmek kas kaybına, metabolizma yavaşlamasına ve besin eksikliklerine yol açabilir.`
+        })
+
+        recommendation = `Hedefiniz ${adjustedTarget} kcal olarak ayarlandı. Bu, haftada ~${(adjustedDeficit * 7 / 7700).toFixed(2)} kg kaybetmenizi sağlar.`
+    }
+
+    // Check 2: Below recommended minimum (warning only)
+    else if (targetCalories < ageAdjustedRecommended) {
+        warnings.push({
+            type: 'warning',
+            code: 'BELOW_RECOMMENDED',
+            title: 'Dikkatli Olun',
+            message: `Günlük kalori hedefiniz (${targetCalories} kcal) önerilen sınırın altında.`,
+            explanation: `Önerilen minimum ${ageAdjustedRecommended} kcal'dir. Bu seviyede devam edebilirsiniz ancak protein alımınızı artırmanız ve düzenli kontrol yapmanız önerilir.`
+        })
+    }
+
+    // Check 3: Below BMR
+    if (targetCalories < bmr) {
+        warnings.push({
+            type: 'warning',
+            code: 'BELOW_BMR',
+            title: 'BMR Altında',
+            message: `Hedef kalori (${targetCalories} kcal) bazal metabolizma hızınızın (${bmr} kcal) altında.`,
+            explanation: `BMR, vücudunuzun dinlenme halinde ihtiyaç duyduğu minimum kaloridir. Uzun süre bu seviyenin altında kalmak metabolizmanızı yavaşlatabilir.`
+        })
+    }
+
+    // Check 4: Deficit too high for goal type
+    const actualDeficit = Math.abs(originalDeficit)
+    if (goalType === 'weight_loss' && actualDeficit > goalLimits.max_deficit) {
+        if (adjustmentReason === null) {
+            // Only adjust if not already adjusted
+            adjustedDeficit = goalLimits.max_deficit
+            adjustedTarget = tdee - goalLimits.max_deficit
+            adjustmentReason = `Maksimum güvenli açık aşıldı`
+            isSafe = false
+        }
+
+        warnings.push({
+            type: 'warning',
+            code: 'DEFICIT_TOO_HIGH',
+            title: 'Açık Çok Yüksek',
+            message: `Günlük ${actualDeficit} kcal açık, maksimum önerilen ${goalLimits.max_deficit} kcal'yi aşıyor.`,
+            explanation: `Çok yüksek kalori açığı kas kaybına ve metabolizma adaptasyonuna yol açar. Haftada 1 kg'dan fazla kayıp sürdürülebilir değildir.`
+        })
+    }
+
+    // Check 5: Age-specific warnings
+    if (ageYears >= 65) {
+        warnings.push({
+            type: 'info',
+            code: 'AGE_CONSIDERATION',
+            title: 'Yaş Faktörü',
+            message: 'Yaşınız göz önüne alındığında özel dikkat gerekiyor.',
+            explanation: '65 yaş üstü bireyler için kas koruma çok önemlidir. Protein alımınızı vücut ağırlığınızın 1.2-1.5 katı gram olarak tutun ve düzenli direnç egzersizi yapın.'
+        })
+    }
+
+    // Add goal-specific health protective notes
+    if (goalType === 'weight_loss' && warnings.length > 0) {
+        recommendation = recommendation || `Sağlığınız için günlük en az ${Math.round(bmr * 1.0)} kcal almanız ve haftada 0.5-0.75 kg kaybetmeniz önerilir.`
+    }
+
+    return {
+        is_safe: isSafe,
+        adjusted_target_kcal: adjustedTarget,
+        original_target_kcal: targetCalories,
+        adjusted_deficit: adjustedDeficit,
+        original_deficit: originalDeficit,
+        warnings,
+        recommendation,
+        adjustment_reason: adjustmentReason
+    }
+}
+
 // =====================================================
 // Main Calculator Function
 // =====================================================
@@ -296,42 +504,68 @@ export function calculateHealthMetrics(profile: HealthProfile): HealthCalculatio
     // Calculate TDEE
     const tdee_kcal = calculateTDEE(bmr_kcal, profile.activity_level)
 
-    // Calculate target calories with safety checks
+    // Calculate target calories with basic safety checks
     const goal = profile.primary_goal || 'maintenance'
     const pace = profile.goal_pace || 'moderate'
 
-    const { targetCalories, adjustment, warnings, isSafe } = calculateTargetCalories(
+    const { targetCalories, adjustment, warnings: basicWarnings, isSafe: basicSafe } = calculateTargetCalories(
         tdee_kcal,
         goal,
         pace,
         profile.biological_sex
     )
 
-    // Calculate macros
-    const macros = calculateMacros(targetCalories, goal)
+    // Perform comprehensive safety check
+    const safetyCheck = performSafetyCheck(
+        targetCalories,
+        bmr_kcal,
+        tdee_kcal,
+        profile.biological_sex,
+        age_years,
+        goal,
+        adjustment
+    )
+
+    // Use adjusted target if safety check modified it
+    const finalTargetCalories = safetyCheck.adjusted_target_kcal
+    const finalAdjustment = safetyCheck.adjusted_deficit
+
+    // Calculate macros based on final target
+    const macros = calculateMacros(finalTargetCalories, goal)
 
     // Calculate water intake
     const water_liters = calculateWaterIntake(profile.weight_kg)
 
-    // Calculate weekly weight change
-    const weeklyChange = PACE_ADJUSTMENTS[pace].weeklyChange
+    // Calculate weekly weight change based on final adjustment
+    const weeklyChange = Math.abs(finalAdjustment) * 7 / 7700 // 7700 kcal = 1 kg
     const weekly_weight_change_kg = goal === 'weight_loss' ? -weeklyChange :
         goal === 'weight_gain' || goal === 'muscle_gain' ? weeklyChange : 0
 
     // Add health condition warnings
     const healthWarnings = generateHealthWarnings(profile)
 
+    // Combine all string warnings
+    const allWarnings = [...basicWarnings, ...healthWarnings]
+    if (safetyCheck.recommendation) {
+        allWarnings.push(`💡 ${safetyCheck.recommendation}`)
+    }
+
     return {
         age_years,
         bmr_kcal,
         tdee_kcal,
-        target_daily_kcal: targetCalories,
-        daily_adjustment: adjustment,
-        weekly_weight_change_kg,
+        target_daily_kcal: finalTargetCalories,
+        daily_adjustment: finalAdjustment,
+        weekly_weight_change_kg: Math.round(weekly_weight_change_kg * 100) / 100,
         macros,
         water_liters,
-        warnings: [...warnings, ...healthWarnings],
-        is_safe: isSafe && healthWarnings.length === 0
+        warnings: allWarnings,
+        safety_warnings: safetyCheck.warnings,
+        is_safe: safetyCheck.is_safe && basicSafe && healthWarnings.length === 0,
+        safety_adjusted: safetyCheck.original_target_kcal !== safetyCheck.adjusted_target_kcal,
+        original_target_kcal: safetyCheck.original_target_kcal !== safetyCheck.adjusted_target_kcal
+            ? safetyCheck.original_target_kcal
+            : undefined
     }
 }
 

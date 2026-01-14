@@ -1128,7 +1128,66 @@ Mevcut sistemde bir quest yalnızca tek bir hedefe bağlıydı.
 
 ---
 
-**Son Güncelleme:** 2026-01-14 00:30 UTC+3
-**Toplam ADR:** 20
+## ADR-021: Health Safety & Smart Date Adjustment System
 
+**Tarih:** 2026-01-14  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
 
+### Bağlam
+
+Kullanıcılar kilo verme hedefi belirlerken sağlık açısından riskli parametreler seçebiliyor:
+- **Aşırı Kalori Açığı:** Günlük 1,000+ kcal açık kas kaybına yol açar
+- **Çok Düşük Kalori Hedefi:** BMR altı beslenme metabolizmayı yavaşlatır
+- **Yaş Faktörü:** 50+ yaş için minimum kalori gereksinimleri farklıdır
+
+Mevcut sistem bu riskleri tespit etmiyor ve kullanıcıya uyarı vermiyordu.
+
+### Karar
+
+**Çok Katmanlı Sağlık Güvenlik Sistemi:**
+
+1. **Güvenlik Kontrolleri (`performSafetyCheck`):**
+   - Yaşa göre minimum kalori ayarlaması
+   - Cinsiyete göre güvenli limitler (erkek: 1500+, kadın: 1200+)
+   - Günlük maksimum açık: 1,000 kcal
+
+2. **Akıllı Tarih Otomatik Ayarlama (`SafeDateModal`):**
+   - Açık > 1,000 olunca modal açılır
+   - 3 güvenli plan sunulur: Rahat (500), Dengeli (750), Hızlı (1000)
+   - Kullanıcı seçer, tarih otomatik güncellenir
+
+3. **AI Prompt Entegrasyonu:**
+   - `UserHealthContext`'e güvenlik alanları eklendi
+   - AI, güvenlik ayarlaması durumunda sağlık koruyucu görevler ekler
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Sadece Uyarı** | Basit | Kullanıcı yoksayabilir |
+| **Zorunlu Sınır** | Güvenli | UX kısıtlayıcı |
+| **Modal + 3 Plan ✓** | Seçim özgürlüğü + güvenlik | Modal complexity |
+
+### Sonuçlar
+
+**Pozitif:**
+- Kullanıcı sağlık risklerinden korunur
+- AI güvenlik durumuna göre optimize görevler üretir
+- Kullanıcı hala kendi planını seçebilir (3 opsiyon)
+
+**Negatif:**
+- Extra modal UX adımı
+- Hesaplama karmaşıklığı artışı
+
+**Dosyalar:**
+- `src/lib/healthCalculator.ts` - `performSafetyCheck()`, `AGE_SAFETY_FACTORS`
+- `src/lib/goalCalculator.ts` - `calculateSafeEndDate()`, `getSafeDateSuggestions()`
+- `src/components/hud/Goals/SafeDateModal.tsx` (238 satır)
+- `src/components/hud/Health/SafetyWarningBanner.tsx` (285 satır)
+- `src/lib/ai/healthCouncil.ts` - `UserHealthContext` güvenlik alanları
+
+---
+
+**Son Güncelleme:** 2026-01-14 17:55 UTC+3
+**Toplam ADR:** 21
