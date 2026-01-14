@@ -135,8 +135,9 @@ overthink_v0.2/
 │   │   │   ├── 📁 Health/         # 🆕 Health Quest System UI
 │   │   │   │   ├── index.ts               # Barrel export
 │   │   │   │   ├── HealthProfileWizard.tsx  # Legacy 5-step wizard
-│   │   │   │   ├── UnifiedHealthProfileWizard.tsx # 🆕 7-step unified wizard
+│   │   │   │   ├── UnifiedHealthProfileWizard.tsx # 🆕 7-step unified wizard (AKTİF)
 │   │   │   │   ├── HealthProfileBanner.tsx  # Context-aware banner (food/sport)
+│   │   │   │   ├── ProfileEditButton.tsx    # 🆕 Reusable profile edit button
 │   │   │   │   ├── SafetyWarningBanner.tsx  # 🆕 Safety limit uyarı banner'ı
 │   │   │   │   ├── AIQuestGeneratorModal.tsx # AI quest generation modal
 │   │   │   │   └── HealthFAB.tsx            # FAB (artık kullanılmıyor)

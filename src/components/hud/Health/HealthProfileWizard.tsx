@@ -32,6 +32,8 @@ interface HealthProfileWizardProps {
     onClose: () => void
     onComplete?: (profile: HealthProfileInput) => void
     initialData?: Partial<HealthProfileInput>
+    /** True if editing an existing profile */
+    isEditMode?: boolean
 }
 
 interface FormData {
@@ -143,7 +145,8 @@ export default function HealthProfileWizard({
     isOpen,
     onClose,
     onComplete,
-    initialData
+    initialData,
+    isEditMode = false
 }: HealthProfileWizardProps) {
     const [currentStep, setCurrentStep] = useState(1)
     const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM_DATA, ...initialData })
@@ -328,8 +331,12 @@ export default function HealthProfileWizard({
                                 <Sparkles className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">Sağlık Profili</h2>
-                                <p className="text-sm text-white/80">Kişiselleştirilmiş görevler için</p>
+                                <h2 className="text-xl font-bold text-white">
+                                    {isEditMode ? 'Profili Düzenle' : 'Sağlık Profili'}
+                                </h2>
+                                <p className="text-sm text-white/80">
+                                    {isEditMode ? 'Bilgilerini güncelle' : 'Kişiselleştirilmiş görevler için'}
+                                </p>
                             </div>
                         </div>
 

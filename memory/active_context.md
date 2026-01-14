@@ -10,56 +10,61 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.40: Unified Health Profile - TAMAMLANDI ✅                 ║
+║  PHASE 8.41: Health Profile Edit & Wizard Integration - TAMAMLANDI ✅ ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  Migration uygulandı, tüm sistemler hazır                            ║
+║  UnifiedHealthProfileWizard artık GoalCreationWizard'da aktif        ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.37: Health Safety System | ✅ Tamamlandı | 100% |
-| Phase 8.38: Calorie Deficit Data Flow Fix | ✅ Tamamlandı | 100% |
-| Phase 8.39: Calorie Budget 95% Enforcement | ✅ Tamamlandı | 100% |
-| **Phase 8.40: Unified Health Profile** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.40: Unified Health Profile | ✅ Tamamlandı | 100% |
+| **Phase 8.41: Health Profile Edit & Wizard Integration** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-14 (Oturum 11)
+## Session Summary: 2026-01-14 (Oturum 12)
 
-### ✅ Phase 8.40 - Unified Health Profile (TAMAMLANDI)
+### ✅ Phase 8.41 - Health Profile Edit & Wizard Integration (TAMAMLANDI)
 
-**Amaç:** Goal-specific sorular yerine tek kapsamlı sağlık profili. Kullanıcı her goal için tekrar soru cevaplamak zorunda kalmayacak.
+**Amaç:** Kullanıcının sağlık profilini düzenleyebilmesi + UnifiedHealthProfileWizard'ın (7-step) frontend'e entegrasyonu.
+
+**Tespitler:**
+- `UnifiedHealthProfileWizard` (7-step) backend'de oluşturulmuştu ama frontend'e **hiç entegre edilmemişti**
+- `GoalCreationWizard` hala eski `HealthProfileWizard` (5-step) kullanıyordu
+- `lose_fat` template auto-population logic'ine dahil edilmemişti
 
 **Yapılan İşler:**
 
 | Aşama | Durum | Açıklama |
 |-------|-------|----------|
-| 1. Database Migration | ✅ | 25+ sütun eklendi, Supabase'e uygulandı |
-| 2. Type Definitions | ✅ | `unifiedHealthProfile.types.ts` oluşturuldu |
-| 3. Wizard Component | ✅ | 7 adımlı wizard, skip butonları |
-| 4. Goal Integration | ✅ | `GoalQuestionsStep.tsx` unified profile kontrolü |
-| 5. AI Enrichment | ✅ | `UserHealthContext` + `buildUnifiedProfileSection` |
-| 6. Memory Sync | ✅ | Tüm memory dosyaları güncellendi |
+| 1. Edit Button | ✅ | "Profili Düzenle" butonu auto-populated panele eklendi |
+| 2. isEditMode Prop | ✅ | HealthProfileWizard'a edit mode desteği |
+| 3. ProfileEditButton | ✅ | 🆕 Reusable component (icon/full/compact variants) |
+| 4. Consecutive Edit Fix | ✅ | `setAutoPopulated(true)` ile buton kaybolma sorunu çözüldü |
+| 5. Wizard Integration | ✅ | **UnifiedHealthProfileWizard** GoalCreationWizard'a entegre edildi |
+| 6. lose_fat Fix | ✅ | Auto-population logic'e eklendi |
 
 **Oluşturulan/Değiştirilen Dosyalar:**
 
 | Dosya | Değişiklik |
 |-------|------------|
-| `migrations/20260115_unified_health_profile.sql` | 🆕 YENİ - 25+ sütun |
-| `types/unifiedHealthProfile.types.ts` | 🆕 YENİ - Tip tanımları |
-| `UnifiedHealthProfileWizard.tsx` | 🆕 YENİ - 7 adımlı wizard |
-| `actions/aiHealthQuests.ts` | ✏️ MODIFIED - HealthProfileInput genişletildi |
-| `actions/wizardAI.ts` | ✏️ MODIFIED - fetchHealthProfile + buildAIContext |
-| `GoalQuestionsStep.tsx` | ✏️ MODIFIED - Unified profile kontrolü |
-| `healthCouncil.ts` | ✏️ MODIFIED - UserHealthContext + buildUnifiedProfileSection |
+| `Health/index.ts` | ✏️ `UnifiedHealthProfileWizard` + `ProfileEditButton` export |
+| `GoalCreationWizard.tsx` | ✏️ 7-step wizard kullanımı, initialData genişletildi |
+| `HealthProfileWizard.tsx` | ✏️ `isEditMode` prop eklendi |
+| `ProfileEditButton.tsx` | 🆕 YENİ - Reusable edit button |
 
-**Yeni AI Context Bölümleri:**
-- 🏋️ ANTRENMAN PROFİLİ (deneyim, ekipman, tercih edilen antrenman)
-- 🍽️ BESLENME ALIŞKANLIKLARI (öğün sayısı, evde yemek, fast food)
-- 💧 HİDRASYON & ŞEKER (su tüketimi, şekerli içecek, craving trigger)
-- 😴 UYKU & STRES (uyku saati, kalite, stres seviyesi)
+**Aktif Wizard Değişikliği:**
+```
+ESKİ: HealthProfileWizard (5-step)
+    → Temel, Aktivite, Sağlık, Beslenme, Hedef
+
+YENİ: UnifiedHealthProfileWizard (7-step)
+    → Temel (zorunlu), Aktivite (zorunlu), Antrenman (opsiyonel),
+      Beslenme (opsiyonel), Su & Şeker (opsiyonel), Uyku (opsiyonel),
+      Hedef (zorunlu)
+```
 
 ---
 
@@ -69,9 +74,9 @@
 |-------|-------------|
 | `active_context.md` | ✅ |
 | `project_structure.md` | ✅ |
-| `database_schema.md` | ✅ |
-| `api_contracts.md` | ✅ |
-| `ADR.md` | ✅ (ADR-023 eklendi) |
+| `database_schema.md` | ⏭️ Değişiklik yok |
+| `api_contracts.md` | ⏭️ Değişiklik yok |
+| `ADR.md` | ⏭️ Değişiklik yok (ADR-023 mevcut) |
 | `tech_stack.md` | ⏭️ Değişiklik yok |
 
 ---
@@ -84,21 +89,20 @@
 3. [ ] `/reset-password` sayfası
 
 ### Alternatif Öncelikler
-- [ ] UnifiedHealthProfileWizard'ı production'da test et
-- [ ] Mobile responsiveness doğrulama
-- [ ] Mevcut kullanıcı migration akışı testi
+- [ ] 7-step wizard'ı production'da test et
+- [ ] "Atla" butonlarının çalışmasını doğrula
+- [ ] Profil verilerinin DB'ye yazılmasını test et
 
 ---
 
 ## Build Status
 ```
 ✅ npx tsc --noEmit --skipLibCheck → 0 hata
-✅ npm run build → Exit code 0
+✅ npm run dev → Çalışıyor
 ✅ TypeScript strict mode compliant
-✅ Migration: Supabase'e başarıyla uygulandı
 ```
 
 ---
 
-**Son Güncelleme:** 2026-01-14 21:00 UTC+3
-**Phase 8.40 TAMAMLANDI - Migration Applied!**
+**Son Güncelleme:** 2026-01-14 21:36 UTC+3
+**Phase 8.41 TAMAMLANDI - UnifiedHealthProfileWizard Entegre!**

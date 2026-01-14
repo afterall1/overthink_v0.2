@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     X, ChevronRight, ChevronLeft, Check,
     Target, Heart, Calendar, Flag,
-    Lightbulb, Zap, Star, Timer, ClipboardList
+    Lightbulb, Zap, Star, Timer, ClipboardList, Pencil
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { GoalPeriod, Category, QuestTemplate, CategorySlug, GoalTemplate } from '@/types/database.types'
@@ -19,7 +19,7 @@ import {
     type GoalCalculation,
     type SafeDateSuggestion
 } from '@/lib/goalCalculator'
-import { HealthProfileBanner, HealthProfileWizard } from '@/components/hud/Health'
+import { HealthProfileBanner, UnifiedHealthProfileWizard } from '@/components/hud/Health'
 import useHealthProfile from '@/hooks/useHealthProfile'
 import { getGoalContextType, requiresHealthProfile } from '@/lib/goalContextTypes'
 import GoalQuestionsStep from './GoalQuestionsStep'
@@ -1101,6 +1101,20 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
                                                                     </p>
                                                                 </div>
                                                             </div>
+
+                                                            {/* Edit Profile Button */}
+                                                            <div className="mt-3 pt-3 border-t border-emerald-200">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setIsHealthWizardOpen(true)}
+                                                                    className="w-full py-2.5 px-4 rounded-xl bg-white/80 border border-emerald-300 
+                                                                             text-emerald-700 font-medium text-sm flex items-center justify-center gap-2
+                                                                             hover:bg-emerald-50 active:scale-[0.98] transition-all"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                    Profili Düzenle
+                                                                </button>
+                                                            </div>
                                                         </div>
 
                                                         {/* Instant Calculation Preview */}
@@ -1255,13 +1269,95 @@ function Step2What({ formData, updateField, errors, categories, onTemplateSelect
                 </div>
             )}
 
-            {/* Health Profile Wizard Modal */}
-            <HealthProfileWizard
+            {/* Health Profile Wizard Modal - Unified 7-step */}
+            <UnifiedHealthProfileWizard
                 isOpen={isHealthWizardOpen}
                 onClose={() => setIsHealthWizardOpen(false)}
+                goalSlug={expandedTemplateId ? goalTemplates.find(t => t.id === expandedTemplateId)?.slug : undefined}
+                initialData={profile ? {
+                    // Basic
+                    weight_kg: profile.weight_kg,
+                    height_cm: profile.height_cm,
+                    birth_date: profile.birth_date ?? '',
+                    biological_sex: profile.biological_sex as 'male' | 'female',
+                    // Activity
+                    activity_level: profile.activity_level,
+                    current_steps_avg: profile.current_steps_avg ?? undefined,
+                    work_environment: profile.work_environment ?? undefined,
+                    // Training
+                    training_experience: profile.training_experience ?? undefined,
+                    training_types: (profile.training_types ?? undefined) as import('@/types/unifiedHealthProfile.types').TrainingType[] | undefined,
+                    gym_access: profile.gym_access ?? undefined,
+                    // Nutrition
+                    meals_per_day: profile.meals_per_day ?? undefined,
+                    cooks_at_home: profile.cooks_at_home ?? undefined,
+                    daily_vegetables: profile.daily_vegetables ?? undefined,
+                    fast_food_frequency: profile.fast_food_frequency ?? undefined,
+                    // Hydration & Sugar
+                    current_water_intake_liters: profile.current_water_intake_liters ?? undefined,
+                    sugar_drinks_per_day: profile.sugar_drinks_per_day ?? undefined,
+                    sugar_craving_trigger: profile.sugar_craving_trigger ?? undefined,
+                    // Sleep
+                    sleep_hours_avg: profile.sleep_hours_avg ?? undefined,
+                    sleep_quality: profile.sleep_quality ?? undefined,
+                    stress_level: profile.stress_level ?? undefined,
+                    // Health
+                    health_conditions: profile.health_conditions ?? [],
+                    dietary_restrictions: profile.dietary_restrictions ?? [],
+                    allergies: profile.allergies ?? [],
+                    // Goals
+                    primary_goal: profile.primary_goal,
+                    target_weight_kg: profile.target_weight_kg,
+                    goal_pace: profile.goal_pace
+                } : undefined}
                 onComplete={async () => {
                     setIsHealthWizardOpen(false)
+                    // Refresh profile to get updated values
                     await refreshProfile()
+
+                    // Re-trigger template selection to recalculate with new profile
+                    if (expandedTemplateId) {
+                        const currentTemplate = goalTemplates.find(t => t.id === expandedTemplateId)
+                        if (currentTemplate) {
+                            const isWeightLossTemplate = currentTemplate.slug?.includes('lose_weight') ||
+                                currentTemplate.slug?.includes('kilo_ver') ||
+                                currentTemplate.slug?.includes('lose_fat')
+                            const isWeightGainTemplate = currentTemplate.slug?.includes('gain_muscle') ||
+                                currentTemplate.slug?.includes('kilo_al')
+
+                            // Force recalculation by fetching fresh profile
+                            const freshProfileResult = await import('@/actions/aiHealthQuests').then(m => m.getHealthProfile())
+                            if (freshProfileResult.success && freshProfileResult.profile) {
+                                const freshProfile = freshProfileResult.profile
+                                const currentWeight = freshProfile.weight_kg
+                                const targetWeight = freshProfile.target_weight_kg
+
+                                if (currentWeight && targetWeight && (isWeightLossTemplate || isWeightGainTemplate)) {
+                                    const weightDiff = isWeightLossTemplate
+                                        ? currentWeight - targetWeight
+                                        : targetWeight - currentWeight
+
+                                    if (weightDiff > 0) {
+                                        updateField('target_value', weightDiff)
+
+                                        const weeklyRate = freshProfile.goal_pace === 'slow' ? 0.3
+                                            : freshProfile.goal_pace === 'aggressive' ? 0.75
+                                                : 0.5
+                                        const estimatedWeeks = Math.ceil(weightDiff / weeklyRate)
+                                        const estimatedDays = estimatedWeeks * 7
+
+                                        const startDate = new Date(formData.start_date || new Date())
+                                        const endDate = new Date(startDate)
+                                        endDate.setDate(endDate.getDate() + estimatedDays)
+                                        updateField('end_date', endDate.toISOString().split('T')[0])
+
+                                        // Keep autoPopulated true to maintain the edit button visibility
+                                        setAutoPopulated(true)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }}
             />
         </div>
