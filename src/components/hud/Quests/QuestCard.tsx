@@ -10,8 +10,11 @@ import {
     Sparkles,
     AlertCircle,
     ChevronRight,
+    ChevronDown,
     Zap,
-    Link2
+    Link2,
+    Timer,
+    Lightbulb
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import type { DailyQuest, Goal } from '@/types/database.types'
@@ -40,8 +43,15 @@ export interface LinkedGoalInfo {
     contribution_weight: number
 }
 
+// Extended DailyQuest type for QuestCard with optional AI-generated fields
+interface ExtendedDailyQuest extends DailyQuest {
+    calorie_impact?: number
+    estimated_minutes?: number
+    scientific_rationale?: string
+}
+
 export interface QuestCardProps {
-    quest: DailyQuest
+    quest: ExtendedDailyQuest
     goal?: QuestCardGoalInfo | null
     additionalGoals?: LinkedGoalInfo[]  // NEW: Multi-goal contributions
     streakCount?: number
@@ -124,6 +134,7 @@ export default function QuestCard({
     const [isCompleting, setIsCompleting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
     const [prevProgress, setPrevProgress] = useState<number | null>(null)
+    const [isExpanded, setIsExpanded] = useState(false)
 
     // Determine current state
     const getState = (): QuestState => {
@@ -221,31 +232,37 @@ export default function QuestCard({
                 onClick={handleClick}
                 whileTap={isInteractive ? { scale: 0.98 } : undefined}
                 className={twMerge(
-                    "relative backdrop-blur-xl border rounded-2xl p-4 cursor-pointer",
+                    // Premium glassmorphism base
+                    "relative backdrop-blur-xl border rounded-3xl p-4 cursor-pointer",
                     "transition-all duration-300",
-                    config.bg,
-                    config.border,
-                    config.glow && `shadow-lg ${config.glow}`,
-                    isInteractive && "hover:shadow-lg hover:border-violet-200/50",
-                    state === 'completed' && "opacity-80"
+                    // State-based backgrounds with enhanced opacity
+                    state === 'pending' && "bg-white/80 border-white/60 shadow-lg shadow-violet-500/5",
+                    state === 'completed' && "bg-gradient-to-br from-emerald-50/90 to-green-50/80 border-emerald-200/60 shadow-lg shadow-emerald-500/10",
+                    state === 'skipped' && "bg-slate-50/70 border-slate-200/50",
+                    state === 'at_risk' && "bg-gradient-to-br from-amber-50/90 to-orange-50/80 border-amber-200/60 shadow-lg shadow-amber-500/10",
+                    state === 'loading' && "bg-white/70 border-violet-200/60",
+                    // Hover effects
+                    isInteractive && "hover:shadow-xl hover:shadow-violet-500/10 hover:border-violet-300/60 hover:-translate-y-0.5",
+                    state === 'completed' && "opacity-85"
                 )}
             >
-                <div className="flex items-start gap-3">
-                    {/* Status/Emoji Icon */}
+                <div className="flex items-start gap-4">
+                    {/* Premium Emoji Container with Gradient */}
                     <div className={twMerge(
-                        "flex-none w-10 h-10 rounded-xl flex items-center justify-center text-lg",
+                        "flex-none w-14 h-14 rounded-2xl flex items-center justify-center text-2xl",
                         "transition-all duration-300",
-                        state === 'pending' && "bg-white/80 border border-slate-100",
-                        state === 'completed' && "bg-emerald-100 border border-emerald-200",
-                        state === 'at_risk' && "bg-amber-100 border border-amber-200",
-                        state === 'loading' && "bg-violet-100 border border-violet-200 animate-pulse"
+                        // Gradient backgrounds based on state
+                        state === 'pending' && "bg-gradient-to-br from-violet-50 to-purple-100/80 border border-violet-100/80 shadow-lg shadow-violet-200/40",
+                        state === 'completed' && "bg-gradient-to-br from-emerald-100 to-green-100/80 border border-emerald-200/80 shadow-lg shadow-emerald-200/40",
+                        state === 'at_risk' && "bg-gradient-to-br from-amber-100 to-orange-100/80 border border-amber-200/80 shadow-lg shadow-amber-200/40",
+                        state === 'loading' && "bg-gradient-to-br from-violet-100 to-purple-100/80 border border-violet-200/80 animate-pulse"
                     )}>
                         {isCompleting ? (
                             <motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             >
-                                <Zap className="w-5 h-5 text-violet-500" />
+                                <Zap className="w-6 h-6 text-violet-500" />
                             </motion.div>
                         ) : state === 'completed' ? (
                             <motion.div
@@ -253,10 +270,10 @@ export default function QuestCard({
                                 animate={{ scale: 1 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 15 }}
                             >
-                                <Check className="w-5 h-5 text-emerald-500" strokeWidth={3} />
+                                <Check className="w-6 h-6 text-emerald-500" strokeWidth={3} />
                             </motion.div>
                         ) : (
-                            <span>{quest.emoji}</span>
+                            <span className="drop-shadow-sm">{quest.emoji}</span>
                         )}
                     </div>
 
@@ -270,30 +287,40 @@ export default function QuestCard({
                             )}>
                                 {quest.title}
                             </h3>
+                            {/* Premium XP Badge */}
                             <div className={twMerge(
-                                "flex-none px-2 py-0.5 rounded-full text-xs font-bold",
-                                "bg-gradient-to-r from-violet-500 to-indigo-500 text-white",
-                                "shadow-sm shadow-violet-500/30"
+                                "flex items-center gap-1 flex-none px-3 py-1 rounded-full text-xs font-bold",
+                                "bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 text-white",
+                                "shadow-lg shadow-violet-500/40"
                             )}>
+                                <Sparkles className="w-3 h-3" />
                                 +{quest.xp_reward} XP
                             </div>
                         </div>
 
-                        {/* Meta Row */}
-                        <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                        {/* Premium Meta Row */}
+                        <div className="flex items-center gap-2 text-xs flex-wrap mt-2">
+                            {/* Estimated Duration - Pill Badge */}
+                            {quest.estimated_minutes && quest.estimated_minutes > 0 && (
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 text-slate-600 border border-slate-200/60 shadow-sm">
+                                    <Timer className="w-3.5 h-3.5 text-slate-500" />
+                                    {quest.estimated_minutes} dk
+                                </span>
+                            )}
+
+                            {/* Goal Link - Premium Pill */}
+                            {goal && (
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-100 to-purple-50 text-violet-700 border border-violet-200/60 shadow-sm">
+                                    <Target className="w-3.5 h-3.5" />
+                                    {goal.title.length > 12 ? `${goal.title.slice(0, 12)}...` : goal.title}
+                                </span>
+                            )}
+
                             {/* Time */}
                             {quest.scheduled_time && (
                                 <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {formatQuestTime(quest.scheduled_time)}
-                                </span>
-                            )}
-
-                            {/* Goal Link */}
-                            {goal && (
-                                <span className="flex items-center gap-1 text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md">
-                                    <Target className="w-3 h-3" />
-                                    {goal.title.length > 15 ? `${goal.title.slice(0, 15)}...` : goal.title}
                                 </span>
                             )}
 
@@ -304,9 +331,16 @@ export default function QuestCard({
                                 </span>
                             )}
 
-                            {/* Difficulty */}
-                            <span className={getDifficultyColor(quest.difficulty)}>
-                                {quest.difficulty === 'hard' ? '🔥' : quest.difficulty === 'medium' ? '⚡' : '✨'}
+                            {/* Difficulty - Premium Pill */}
+                            <span className={twMerge(
+                                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm",
+                                quest.difficulty === 'easy' && 'bg-gradient-to-r from-emerald-100 to-green-50 text-emerald-700 border border-emerald-200/60',
+                                quest.difficulty === 'medium' && 'bg-gradient-to-r from-blue-100 to-sky-50 text-blue-700 border border-blue-200/60',
+                                quest.difficulty === 'hard' && 'bg-gradient-to-r from-red-100 to-orange-50 text-red-700 border border-red-200/60'
+                            )}>
+                                {quest.difficulty === 'easy' && '🌱 Kolay'}
+                                {quest.difficulty === 'medium' && '💪 Orta'}
+                                {quest.difficulty === 'hard' && '🔥 Zor'}
                             </span>
 
                             {/* Streak */}
@@ -323,22 +357,103 @@ export default function QuestCard({
                                 </span>
                             )}
 
-                            {/* AI Suggested Badge */}
+                            {/* AI Suggested Badge - Premium */}
                             {quest.is_ai_suggested && (
-                                <span className="flex items-center gap-1 text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-md">
-                                    <Sparkles className="w-3 h-3" />
+                                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-100 to-violet-50 text-indigo-700 border border-indigo-200/60 shadow-sm">
+                                    <Sparkles className="w-3.5 h-3.5" />
                                     AI
                                 </span>
                             )}
 
-                            {/* Multi-Goal Badge (NEW) */}
+                            {/* Multi-Goal Badge - Premium */}
                             {additionalGoals.length > 0 && (
-                                <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md" title={`${additionalGoals.length + 1} hedefe katkı sağlıyor`}>
-                                    <Link2 className="w-3 h-3" />
-                                    <span className="text-[10px] font-bold">+{additionalGoals.length}</span>
+                                <span
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-100 to-green-50 text-emerald-700 border border-emerald-200/60 shadow-sm"
+                                    title={`${additionalGoals.length + 1} hedefe katkı sağlıyor`}
+                                >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                    <span className="font-bold">+{additionalGoals.length}</span>
                                 </span>
                             )}
+
+                            {/* Calorie Impact Badge - Premium Pill */}
+                            {quest.calorie_impact !== undefined && quest.calorie_impact !== 0 && (() => {
+                                // Determine quest type from emoji or title
+                                const exerciseIndicators = ['🏃', '💪', '🚴', '🏋️', '🏊', '🧘', '🚶', '⚡', '🔥', '🏃‍♂️', '🏃‍♀️', '🏋️‍♂️', '🏋️‍♀️']
+                                const isExercise = exerciseIndicators.some(e => quest.emoji?.includes(e)) ||
+                                    quest.title?.toLowerCase().includes('egzersiz') ||
+                                    quest.title?.toLowerCase().includes('koş') ||
+                                    quest.title?.toLowerCase().includes('yürü') ||
+                                    quest.title?.toLowerCase().includes('antrenman') ||
+                                    quest.title?.toLowerCase().includes('spor')
+
+                                const absValue = Math.abs(quest.calorie_impact)
+
+                                return (
+                                    <span className={twMerge(
+                                        "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm",
+                                        isExercise
+                                            ? "bg-gradient-to-r from-orange-100 to-amber-50 text-orange-700 border border-orange-200/60"
+                                            : "bg-gradient-to-r from-teal-100 to-cyan-50 text-teal-700 border border-teal-200/60"
+                                    )}>
+                                        <Flame className="w-3.5 h-3.5" />
+                                        {isExercise
+                                            ? `${absValue} kcal yakılacak`
+                                            : `${absValue} kcal tasarruf`}
+                                    </span>
+                                )
+                            })()}
                         </div>
+
+                        {/* Expandable Description Toggle */}
+                        {(quest.description || quest.scientific_rationale) && state !== 'completed' && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setIsExpanded(!isExpanded)
+                                }}
+                                className="mt-2 flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <ChevronDown className={twMerge(
+                                    "w-3 h-3 transition-transform",
+                                    isExpanded && "rotate-180"
+                                )} />
+                                {isExpanded ? 'Küçült' : 'Detaylar'}
+                            </button>
+                        )}
+
+                        {/* Expandable Content */}
+                        <AnimatePresence>
+                            {isExpanded && (quest.description || quest.scientific_rationale) && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="mt-2 pt-2 border-t border-slate-100/50 space-y-2">
+                                        {/* Description */}
+                                        {quest.description && (
+                                            <p className="text-xs text-slate-600 leading-relaxed">
+                                                {quest.description}
+                                            </p>
+                                        )}
+
+                                        {/* Scientific Rationale */}
+                                        {quest.scientific_rationale && (
+                                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-amber-50/50 border border-amber-100">
+                                                <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                <p className="text-[10px] text-amber-700 leading-relaxed">
+                                                    {quest.scientific_rationale}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Completion Time (if completed) */}
                         {state === 'completed' && quest.completed_at && (
@@ -393,123 +508,125 @@ export default function QuestCard({
                         </motion.button>
                     )}
                 </div>
-            </motion.div>
+            </motion.div >
 
             {/* Success Celebration Overlay with Progress Impact */}
             <AnimatePresence>
-                {showSuccess && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl
+                {
+                    showSuccess && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl
                                    flex flex-col items-center justify-center pointer-events-none p-4"
-                    >
-                        {/* Success Badge */}
-                        <motion.div
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                            className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 
+                        >
+                            {/* Success Badge */}
+                            <motion.div
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                                className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 
                                        flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-2"
-                        >
-                            <Check className="w-6 h-6 text-white" strokeWidth={3} />
-                        </motion.div>
+                            >
+                                <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                            </motion.div>
 
-                        {/* XP Reward */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-lg font-bold text-emerald-600 mb-2"
-                        >
-                            +{quest.xp_reward} XP
-                        </motion.div>
-
-                        {/* Goal Progress Impact */}
-                        {goal && prevProgress !== null && contributionPercent && (
+                            {/* XP Reward */}
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.4 }}
-                                className="w-full max-w-[180px]"
+                                transition={{ delay: 0.2 }}
+                                className="text-lg font-bold text-emerald-600 mb-2"
                             >
-                                <p className="text-[10px] text-slate-500 text-center mb-1 flex items-center justify-center gap-1">
-                                    <Target className="w-3 h-3 text-violet-500" />
-                                    {goal.title}
-                                </p>
-
-                                {/* Animated Progress Bar */}
-                                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: `${prevProgress}%` }}
-                                        animate={{ width: `${Math.min(100, prevProgress + contributionPercent)}%` }}
-                                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
-                                        className="absolute h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
-                                    />
-                                </div>
-
-                                {/* Progress Numbers */}
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.6 }}
-                                    className="flex items-center justify-center gap-2 mt-1"
-                                >
-                                    <span className="text-xs text-slate-400">{prevProgress.toFixed(1)}%</span>
-                                    <span className="text-xs text-teal-500">→</span>
-                                    <span className="text-xs font-bold text-teal-600">
-                                        {Math.min(100, prevProgress + contributionPercent).toFixed(1)}%
-                                    </span>
-                                </motion.div>
+                                +{quest.xp_reward} XP
                             </motion.div>
-                        )}
 
-                        {/* Multi-Goal Celebration (NEW) */}
-                        {additionalGoals.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.8 }}
-                                className="mt-3 w-full max-w-[200px]"
-                            >
-                                <div className="flex items-center justify-center gap-1 mb-2">
-                                    <Link2 className="w-3 h-3 text-emerald-500" />
-                                    <span className="text-[10px] font-medium text-emerald-600">
-                                        +{additionalGoals.length} hedefe daha katkı!
-                                    </span>
-                                </div>
-                                <div className="flex flex-wrap justify-center gap-1">
-                                    {additionalGoals.slice(0, 3).map((g, idx) => (
+                            {/* Goal Progress Impact */}
+                            {goal && prevProgress !== null && contributionPercent && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="w-full max-w-[180px]"
+                                >
+                                    <p className="text-[10px] text-slate-500 text-center mb-1 flex items-center justify-center gap-1">
+                                        <Target className="w-3 h-3 text-violet-500" />
+                                        {goal.title}
+                                    </p>
+
+                                    {/* Animated Progress Bar */}
+                                    <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
                                         <motion.div
-                                            key={g.id}
-                                            initial={{ opacity: 0, scale: 0.5 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: 0.9 + idx * 0.1 }}
-                                            className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${g.synergy_type === 'SYNERGISTIC'
+                                            initial={{ width: `${prevProgress}%` }}
+                                            animate={{ width: `${Math.min(100, prevProgress + contributionPercent)}%` }}
+                                            transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+                                            className="absolute h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+                                        />
+                                    </div>
+
+                                    {/* Progress Numbers */}
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: 0.6 }}
+                                        className="flex items-center justify-center gap-2 mt-1"
+                                    >
+                                        <span className="text-xs text-slate-400">{prevProgress.toFixed(1)}%</span>
+                                        <span className="text-xs text-teal-500">→</span>
+                                        <span className="text-xs font-bold text-teal-600">
+                                            {Math.min(100, prevProgress + contributionPercent).toFixed(1)}%
+                                        </span>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+
+                            {/* Multi-Goal Celebration (NEW) */}
+                            {additionalGoals.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.8 }}
+                                    className="mt-3 w-full max-w-[200px]"
+                                >
+                                    <div className="flex items-center justify-center gap-1 mb-2">
+                                        <Link2 className="w-3 h-3 text-emerald-500" />
+                                        <span className="text-[10px] font-medium text-emerald-600">
+                                            +{additionalGoals.length} hedefe daha katkı!
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap justify-center gap-1">
+                                        {additionalGoals.slice(0, 3).map((g, idx) => (
+                                            <motion.div
+                                                key={g.id}
+                                                initial={{ opacity: 0, scale: 0.5 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ delay: 0.9 + idx * 0.1 }}
+                                                className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${g.synergy_type === 'SYNERGISTIC'
                                                     ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                                                     : 'bg-blue-100 text-blue-700 border border-blue-200'
-                                                }`}
-                                        >
-                                            {g.title.length > 12 ? `${g.title.slice(0, 12)}...` : g.title}
-                                        </motion.div>
-                                    ))}
-                                    {additionalGoals.length > 3 && (
-                                        <motion.span
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: 1.2 }}
-                                            className="text-[9px] text-slate-400"
-                                        >
-                                            +{additionalGoals.length - 3} daha
-                                        </motion.span>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                                                    }`}
+                                            >
+                                                {g.title.length > 12 ? `${g.title.slice(0, 12)}...` : g.title}
+                                            </motion.div>
+                                        ))}
+                                        {additionalGoals.length > 3 && (
+                                            <motion.span
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{ delay: 1.2 }}
+                                                className="text-[9px] text-slate-400"
+                                            >
+                                                +{additionalGoals.length - 3} daha
+                                            </motion.span>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+        </div >
     )
 }

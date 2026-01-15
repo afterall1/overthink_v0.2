@@ -288,7 +288,10 @@ function buildAIContext(
             sleep_hours_avg: extendedProfile.sleep_hours_avg as number | undefined,
             sleep_quality: extendedProfile.sleep_quality as UserHealthContext['sleep_quality'],
             stress_level: extendedProfile.stress_level as UserHealthContext['stress_level'],
-            sections_completed: extendedProfile.sections_completed as string[] | undefined
+            sections_completed: extendedProfile.sections_completed as string[] | undefined,
+            // === PSYCHOLOGICAL CONTEXT (from Wizard Step 1) ===
+            motivation: wizard.motivation || undefined,
+            identity_statement: wizard.identity_statement || undefined
         }
     }
 
@@ -323,7 +326,10 @@ function buildAIContext(
         health_conditions: [],
         dietary_restrictions: [],
         allergies: [],
-        days_since_start: 0
+        days_since_start: 0,
+        // === PSYCHOLOGICAL CONTEXT (from Wizard Step 1) ===
+        motivation: wizard.motivation || undefined,
+        identity_statement: wizard.identity_statement || undefined
     }
 }
 

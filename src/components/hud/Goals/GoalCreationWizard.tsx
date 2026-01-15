@@ -1835,16 +1835,23 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                                             <span className="text-xs font-bold text-amber-600">
                                                 +{quest.xp_reward} XP
                                             </span>
-                                            {quest.calorie_impact !== 0 && quest.calorie_impact !== undefined && (
-                                                <span className={clsx(
-                                                    'text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5',
-                                                    quest.calorie_impact < 0
-                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                        : 'bg-blue-100 text-blue-700'
-                                                )}>
-                                                    🔥 {quest.calorie_impact > 0 ? '+' : ''}{quest.calorie_impact} kcal
-                                                </span>
-                                            )}
+                                            {quest.calorie_impact !== 0 && quest.calorie_impact !== undefined && (() => {
+                                                // Determine quest type from category or emoji
+                                                const isExercise = quest.category === 'exercise' ||
+                                                    ['🏃', '💪', '🚴', '🏋️', '🏊', '🧘', '🚶'].some(e => quest.emoji?.includes(e))
+                                                const absValue = Math.abs(quest.calorie_impact)
+
+                                                return (
+                                                    <span className={clsx(
+                                                        'text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5',
+                                                        isExercise
+                                                            ? 'bg-orange-100 text-orange-700'
+                                                            : 'bg-teal-100 text-teal-700'
+                                                    )}>
+                                                        🔥 {absValue} kcal {isExercise ? 'yakılacak' : 'tasarruf'}
+                                                    </span>
+                                                )
+                                            })()}
                                         </div>
                                     </div>
 

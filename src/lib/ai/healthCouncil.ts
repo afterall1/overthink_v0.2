@@ -80,6 +80,11 @@ export interface UserHealthContext {
 
     // Profile completeness
     sections_completed?: string[]
+
+    // === PSYCHOLOGICAL CONTEXT ===
+    // From Goal Wizard Step 1 - used for personalization
+    motivation?: string       // "Çocuklarımla oynayabilmek için"
+    identity_statement?: string  // "Sağlıklı yaşayan biri"
 }
 
 export interface AIGeneratedQuest {
@@ -634,7 +639,7 @@ ${context.target_weight_kg ? `- Hedef Kilo: ${context.target_weight_kg} kg` : ''
 ${context.health_conditions.length > 0 ? `- Sağlık Koşulları: ${context.health_conditions.join(', ')}` : '- Sağlık Koşulları: Bilinen yok'}
 ${context.dietary_restrictions.length > 0 ? `- Diyet Kısıtlamaları: ${context.dietary_restrictions.join(', ')}` : '- Diyet Kısıtlamaları: Yok'}
 ${context.allergies.length > 0 ? `- Alerjiler: ${context.allergies.join(', ')}` : '- Alerjiler: Yok'}
-${buildUnifiedProfileSection(context)}
+${buildPsychologicalContext(context)}${buildUnifiedProfileSection(context)}
 ${context.days_since_start ? `## İLERLEME:
 - Başlangıçtan bu yana: ${context.days_since_start} gün
 - Kilo değişimi: ${context.weight_change_kg || 0} kg` : ''}
@@ -644,6 +649,33 @@ Lütfen bu kullanıcı için kişiselleştirilmiş günlük görevler ve beslenm
 🚨 ${minBudget} kcal altında üretim KABUL EDİLMEYECEK!
 ${context.safety_adjusted ? '🛡️ SAĞLIK KORUYUCU GÖREVLER EKLEMEYI UNUTMA!' : ''}
 `
+}
+
+/**
+ * Build psychological context for AI
+ * Uses motivation and identity from Goal Wizard Step 1 for personalization
+ */
+function buildPsychologicalContext(context: UserHealthContext): string {
+    if (!context.motivation && !context.identity_statement) {
+        return ''
+    }
+
+    const lines = ['## 🧠 PSİKOLOJİK BAĞLAM (ÖNEMLİ - KİŞİSELLEŞTİRME İÇİN KULLAN):']
+
+    if (context.motivation) {
+        lines.push(`- Motivasyonu: "${context.motivation}"`)
+        lines.push(`  → Bu motivasyona hitap eden görevler ve mesajlar üret`)
+    }
+
+    if (context.identity_statement) {
+        lines.push(`- Kimlik İfadesi: "Ben ${context.identity_statement}"`)
+        lines.push(`  → Görev açıklamalarında bu kimliği pekiştir (örn: "Sağlıklı yaşayan biri olarak...")`)
+    }
+
+    lines.push('')
+    lines.push('🎯 UYGULAMA: AI yanıtlarında motivasyonu hatırlat ve kimlik ifadesini pekiştir!')
+
+    return lines.join('\n') + '\n\n'
 }
 
 /**
