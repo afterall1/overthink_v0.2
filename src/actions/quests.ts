@@ -700,6 +700,53 @@ export async function undoQuestCompletion(
             await updateUserXpStats(user.id, -(completion.xp_earned || 0))
         }
 
+        // Get quest to check if linked to goal for progress rollback
+        const { data: quest } = await supabase
+            .from('daily_quests')
+            .select('goal_id, progress_contribution')
+            .eq('id', questId)
+            .eq('user_id', user.id)
+            .single()
+
+        // Rollback goal progress if quest was linked to a goal
+        if (quest?.goal_id && completion) {
+            const progressToRollback = quest.progress_contribution ?? 1
+            const { data: goal } = await supabase
+                .from('goals')
+                .select('current_value')
+                .eq('id', quest.goal_id)
+                .single()
+
+            if (goal) {
+                await supabase
+                    .from('goals')
+                    .update({
+                        current_value: Math.max(0, (goal.current_value ?? 0) - progressToRollback),
+                        is_completed: false,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', quest.goal_id)
+            }
+        }
+
+        // Decrement quests_completed_count
+        if (completion) {
+            const { data: stats } = await supabase
+                .from('user_xp_stats')
+                .select('quests_completed_count')
+                .eq('user_id', user.id)
+                .single()
+
+            if (stats) {
+                await supabase
+                    .from('user_xp_stats')
+                    .update({
+                        quests_completed_count: Math.max(0, (stats.quests_completed_count ?? 0) - 1)
+                    })
+                    .eq('user_id', user.id)
+            }
+        }
+
         // Delete completion
         const { error } = await supabase
             .from('quest_completions')
@@ -866,10 +913,10 @@ export async function getDailySummary(date?: string): Promise<ActionResult<{
         const hours = now.getHours()
 
         if (questsCompleted === 0) {
-            if (hours >= 20) {
-                streakStatus = 'at_risk'
-            } else if (hours >= 23) {
+            if (hours >= 23) {
                 streakStatus = 'broken'
+            } else if (hours >= 20) {
+                streakStatus = 'at_risk'
             }
         }
 

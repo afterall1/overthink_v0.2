@@ -10,60 +10,41 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.44: Smart Hybrid Quest Recalibration - TAMAMLANDI ✅            ║
+║  PHASE 8.45: Bug Hunt & Critical Fixes - TAMAMLANDI ✅                   ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  Sağlık profili değiştiğinde quest'lerin otomatik yeniden üretimi        ║
+║  quests.ts'deki 3 kritik bug düzeltildi                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.43: Weekly Quest Generation | ✅ Tamamlandı | 100% |
-| **Phase 8.44: Smart Hybrid Recalibration** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.44: Smart Hybrid Recalibration | ✅ Tamamlandı | 100% |
+| **Phase 8.45: Bug Hunt & Fixes** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-14/15 (Oturum 15)
+## Session Summary: 2026-01-15 (Oturum 16)
 
-### ✅ Phase 8.44 - Smart Hybrid Quest Recalibration (TAMAMLANDI)
+### ✅ Phase 8.45 - Bug Hunt & Critical Fixes (TAMAMLANDI)
 
-**Amaç:** Kullanıcı sağlık profilini güncellediğinde, mevcut quest'lerin yeni kalori hedeflerine göre otomatik olarak yeniden üretilmesi.
-
-**Problem:** Weekly quest batch'ler eski profilin kalori parametrelerine göre üretilmiş olabilir. Profil değişince quest'ler tutarsız kalıyor.
-
-**Çözüm:** Smart Hybrid yaklaşımı - eşik değerlerini aşan değişikliklerde sadece KALAN günler yeniden üretilir.
+**Amaç:** Kapsamlı bug hunt - tüm sistemlerde potansiyel hataların tespiti ve düzeltilmesi.
 
 **Yapılan İşler:**
 
-| Aşama | Durum | Dosya | Açıklama |
-|-------|-------|-------|----------|
-| 1. Analiz | ✅ | implementation_plan.md | 4 çözüm alternatifi değerlendirildi |
-| 2. Delta Detection | ✅ | `profileDelta.ts` | Eşik tabanlı değişiklik algılama modülü |
-| 3. Regeneration | ✅ | `questRegeneration.ts` | Kalan günler için AI regeneration |
-| 4. Integration | ✅ | `aiHealthQuests.ts` | upsertHealthProfile'a delta + regen entegrasyonu |
-| 5. Cleanup | ✅ | `weeklyQuests.ts` | Circular dependency temizliği |
-| 6. Build | ✅ | - | npm run build başarılı |
-| 7. Git | ✅ | - | Commit & Push tamamlandı |
+| Bug ID | Severity | Düzeltme | Dosya |
+|--------|----------|----------|-------|
+| BUG-001 | Medium | Streak status logic fix (unreachable code) | `quests.ts` |
+| BUG-002 | High | `undoQuestCompletion` goal rollback eklendi | `quests.ts` |
+| BUG-006 | High | `quests_completed_count` decrement eklendi | `quests.ts` |
 
-**Oluşturulan Dosyalar:**
+**Güncellenen Dosyalar:**
 
-| Dosya | Tipi |
-|-------|------|
-| `src/actions/profileDelta.ts` | 🆕 NEW |
-| `src/actions/questRegeneration.ts` | 🆕 NEW |
-| `src/actions/aiHealthQuests.ts` | ✏️ MODIFIED |
-| `src/actions/weeklyQuests.ts` | ✏️ MODIFIED |
+| Dosya | Değişiklik |
+|-------|------------|
+| `src/actions/quests.ts` | ✏️ 3 bug fix (+47 lines) |
 
-**Significance Thresholds (Eşik Değerleri):**
-
-| Parametre | Eşik | Gerekçe |
-|-----------|------|---------|
-| `daily_adjustment` | ±100 kcal | Anlamlı kalori farkı |
-| `weight_kg` | ±2 kg | BMR hesabı anlamlı değişir |
-| `activity_level` | Herhangi değişiklik | TDEE çarpanı değişir |
-| `target_weight_kg` | Herhangi değişiklik | Hedef tempo değişir |
-| `goal_pace` | Herhangi değişiklik | Açık/fazla miktarı değişir |
+**Build:** ✅ Başarılı
 
 ---
 
@@ -72,11 +53,9 @@
 | Dosya | Güncellendi |
 |-------|-------------|
 | `active_context.md` | ✅ |
-| `project_structure.md` | ✅ (yeni dosyalar eklendi) |
-| `api_contracts.md` | ✅ (yeni exports eklendi) |
-| `ADR.md` | ✅ (ADR-026 eklendi) |
+| `project_structure.md` | ⏭️ Değişiklik yok |
+| `api_contracts.md` | ⏭️ Değişiklik yok |
 | `database_schema.md` | ⏭️ Değişiklik yok |
-| `tech_stack.md` | ⏭️ Değişiklik yok |
 
 ---
 
@@ -89,4 +68,4 @@
 
 ---
 
-**Son Güncelleme:** 2026-01-15 13:45 UTC+3
+**Son Güncelleme:** 2026-01-15 14:02 UTC+3
