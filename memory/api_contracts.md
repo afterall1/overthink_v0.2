@@ -689,6 +689,83 @@ Süresi geçmiş batch'leri expire eder (cron job için).
 
 ---
 
-**Son Güncelleme:** 2026-01-14 23:45 UTC+3
-**Versiyon:** 1.6.0 (Weekly Quest Batches API eklendi)
+## 🆕 Actions: Profile Delta (`src/actions/profileDelta.ts`)
+
+### `calculateProfileDelta(oldMetrics, newMetrics)`
+İki profil arasındaki anlamlı değişikliği hesaplar.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `oldMetrics` | ProfileMetricsSnapshot | ✅ | Eski profil metrikleri |
+| `newMetrics` | ProfileMetricsSnapshot | ✅ | Yeni profil metrikleri |
+
+**Return:** `ProfileDelta`
+
+```typescript
+interface ProfileMetricsSnapshot {
+    daily_adjustment: number
+    weight_kg: number
+    activity_level: string
+    target_weight_kg?: number | null
+    goal_pace?: string | null
+}
+
+interface ProfileDelta {
+    isSignificant: boolean      // Anlamlı değişiklik var mı?
+    changes: {
+        daily_adjustment?: { old: number; new: number; delta: number }
+        weight_kg?: { old: number; new: number; delta: number }
+        activity_level?: { old: string; new: string }
+        target_weight_kg?: { old: number | null; new: number | null }
+        goal_pace?: { old: string | null; new: string | null }
+    }
+    summary: string             // Türkçe değişiklik özeti
+}
+```
+
+**Significance Thresholds:**
+| Parametre | Eşik |
+|-----------|------|
+| `daily_adjustment` | ±100 kcal |
+| `weight_kg` | ±2 kg |
+| `activity_level` | Herhangi değişiklik |
+| `target_weight_kg` | Herhangi değişiklik |
+| `goal_pace` | Herhangi değişiklik |
+
+---
+
+## 🆕 Actions: Quest Regeneration (`src/actions/questRegeneration.ts`)
+
+### `regenerateRemainingQuestDays(userId, newAIContext)`
+Profil değişikliğinden sonra kalan günlerin quest'lerini yeniden üretir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `userId` | string | ✅ | Kullanıcı ID |
+| `newAIContext` | UserHealthContext | ✅ | Yeni profil AI context'i |
+
+**Return:** `Promise<RegenerationResult>`
+
+```typescript
+interface RegenerationResult {
+    success: boolean
+    goalsAffected: number      // Etkilenen goal sayısı
+    batchesUpdated: number     // Güncellenen batch sayısı
+    daysRegenerated: number    // Yeniden üretilen gün sayısı
+    error?: string
+}
+```
+
+**Nasıl Çalışır:**
+1. Kullanıcının aktif `weekly_quest_batches` bulunur
+2. Bugünden itibaren kalan günler hesaplanır
+3. Her batch için yeni AI quest'ler üretilir
+4. Sadece kalan günler güncellenir (geçmiş günler korunur)
+5. Bugünkü `daily_quests` tablosu da güncellenir
+
+---
+
+**Son Güncelleme:** 2026-01-15 13:45 UTC+3
+**Versiyon:** 1.7.0 (Profile Delta & Quest Regeneration API eklendi)
+
 

@@ -1367,5 +1367,98 @@ Frontend (mevcut UI değişmedi)
 
 ---
 
-**Son Güncelleme:** 2026-01-14 23:35 UTC+3
-**Toplam ADR:** 25
+## ADR-026: Smart Hybrid Quest Recalibration
+
+**Tarih:** 2026-01-15  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Weekly Quest Batch sistemi (ADR-025) 7 günlük quest'leri önceden üretir. Ancak kullanıcı sağlık profilini güncellediğinde (kilo değişikliği, aktivite seviyesi değişikliği, hedef pace değişikliği) mevcut batch'lerdeki quest'ler eski kalori hedeflerine göre ayarlanmış durumda kalıyordu.
+
+**Problem:**
+- Kullanıcı profil güncelledi → Quest'ler değişmedi → Tutarsızlık
+- Bilimsel doğruluk kaybı (eskiyen kalori hesaplamaları)
+- Kullanıcı güveni erozyonu
+
+### Karar
+
+**Smart Hybrid Yaklaşımı** seçildi:
+1. Profil güncellendiğinde eski vs yeni metrikler karşılaştırılır
+2. Eşik değerlerini aşan değişiklikler "anlamlı" kabul edilir
+3. Anlamlı değişikliklerde sadece **kalan günler** yeniden üretilir
+4. Tamamlanmış günler ve geçmiş quest'ler **korunur**
+
+```
+                    ┌─────────────────────────────────┐
+                    │     upsertHealthProfile()       │
+                    └───────────────┬─────────────────┘
+                                    │
+                    ┌───────────────▼─────────────────┐
+                    │     calculateProfileDelta()     │
+                    │   (eski vs yeni metrikleri)     │
+                    └───────────────┬─────────────────┘
+                                    │
+                        ┌───────────┴───────────┐
+                        ▼                       ▼
+                isSignificant?              isSignificant?
+                   FALSE                       TRUE
+                        │                       │
+                        ▼                       ▼
+              [Sadece profil kaydet]  ┌─────────────────────┐
+                                      │regenerateRemainingQuestDays│
+                                      └─────────────────────┘
+                                                │
+                                      ┌─────────▼─────────┐
+                                      │ Kalan günler için │
+                                      │ AI quest üret     │
+                                      │ Batch'i güncelle  │
+                                      │ Daily quests      │
+                                      │ tablosunu güncelle│
+                                      └───────────────────┘
+```
+
+### Significance Thresholds (Eşik Değerleri)
+
+| Parametre | Eşik | Gerekçe |
+|-----------|------|---------|
+| `daily_adjustment` | ±100 kcal | Günlük kalori hedefinde anlamlı fark |
+| `weight_kg` | ±2 kg | BMR hesabı anlamlı değişir |
+| `activity_level` | Herhangi değişiklik | TDEE çarpanı değişir |
+| `target_weight_kg` | Herhangi değişiklik | Hedef tempo değişir |
+| `goal_pace` | Herhangi değişiklik | Açık/fazla miktarı değişir |
+
+### Alternatifler
+
+| Seçenek | UX | Maliyet | Sonuç |
+|---------|-----|---------|-------|
+| A: Eager (Anında Full Regen) | ⭐⭐⭐⭐⭐ | 🔴 Yüksek | ❌ Gereksiz token kullanımı |
+| B: Lazy (Gelecek Hafta) | ⭐⭐ | 🟢 Sıfır | ❌ Tutarsızlık 7 güne kadar |
+| **C: Smart Hybrid ✓** | ⭐⭐⭐⭐ | 🟡 Optimize | ✅ Seçildi |
+| D: Parameter Scaling | ⭐⭐⭐ | 🟢 Sıfır | ❌ AI kişiselleştirmesi kaybolur |
+
+### Sonuçlar
+
+**Pozitif:**
+- Sadece kalan günler regenerate → %50-70 maliyet tasarrufu
+- Tamamlanan quest'ler ve XP korunur
+- Kullanıcı güveni korunur (profil değiştirince görevler değişir)
+- Bilimsel doğruluk sağlanır
+
+**Negatif:**
+- İki yeni modül eklendi (profileDelta.ts, questRegeneration.ts)
+- Circular dependency riski (module separation ile çözüldü)
+- Regeneration süresi kullanıcıyı bekletebilir (arka plan işlem önerilir)
+
+**Dosyalar:**
+- `src/actions/profileDelta.ts` (🆕 NEW)
+- `src/actions/questRegeneration.ts` (🆕 NEW)
+- `src/actions/aiHealthQuests.ts` (MODIFIED - delta integration)
+- `src/actions/weeklyQuests.ts` (MODIFIED - cleanup)
+
+---
+
+**Son Güncelleme:** 2026-01-15 13:45 UTC+3
+**Toplam ADR:** 26
+

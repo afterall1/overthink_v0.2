@@ -198,9 +198,11 @@ overthink_v0.2/
 │   │   ├── categories.ts     # Fetch categories from Supabase
 │   │   ├── quests.ts         # Quest CRUD + XP management
 │   │   ├── ai.ts             # AI Council server actions
-│   │   ├── aiHealthQuests.ts # Health profile + AI quest generation
+│   │   ├── aiHealthQuests.ts # Health profile + AI quest generation + delta detection
+│   │   ├── profileDelta.ts   # 🆕 Profile değişiklik algılama (thresholds)
+│   │   ├── questRegeneration.ts # 🆕 Kalan günler için quest regeneration
 │   │   ├── wizardAI.ts       # Goal Wizard AI quest generation
-│   │   └── weeklyQuests.ts   # 🆕 Haftalık quest batch üretimi ve yönetimi
+│   │   └── weeklyQuests.ts   # Haftalık quest batch üretimi ve yönetimi
 │   │
 │   ├── 📁 hooks/             # Custom React hooks
 │   │   ├── useIsMobile.ts    # (Scene.tsx içinde şu an)
