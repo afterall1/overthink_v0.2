@@ -17,6 +17,14 @@ import {
     type UserHealthContext,
     type AIGeneratedQuest
 } from '@/lib/ai/healthCouncil'
+import {
+    calculateProfileDelta,
+    type ProfileDelta
+} from './profileDelta'
+import {
+    regenerateRemainingQuestDays,
+    type RegenerationResult
+} from './questRegeneration'
 
 // =====================================================
 // Types
@@ -115,10 +123,11 @@ export interface AIQuestsResult {
 
 /**
  * Create or update user health profile
+ * If significant changes are detected, regenerates remaining quest days
  */
 export async function upsertHealthProfile(
     input: HealthProfileInput
-): Promise<HealthProfileResult> {
+): Promise<HealthProfileResult & { regeneration?: RegenerationResult; delta?: ProfileDelta }> {
     try {
         const supabase = await createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -127,7 +136,14 @@ export async function upsertHealthProfile(
             return { success: false, error: 'Oturum açmanız gerekiyor.' }
         }
 
-        // Calculate health metrics
+        // Fetch existing profile for delta comparison
+        const { data: existingProfile } = await supabase
+            .from('user_health_profiles')
+            .select('weight_kg, activity_level, target_weight_kg, goal_pace, tdee_kcal, target_daily_kcal')
+            .eq('user_id', user.id)
+            .single()
+
+        // Calculate health metrics for new input
         const healthProfile: HealthProfile = {
             weight_kg: input.weight_kg,
             height_cm: input.height_cm,
@@ -142,6 +158,29 @@ export async function upsertHealthProfile(
         }
 
         const metrics = calculateHealthMetrics(healthProfile)
+
+        // Calculate delta if existing profile exists
+        let delta: ProfileDelta | undefined
+        if (existingProfile) {
+            const oldDailyAdjustment = (existingProfile.target_daily_kcal ?? 0) - (existingProfile.tdee_kcal ?? 0)
+            delta = calculateProfileDelta(
+                {
+                    daily_adjustment: oldDailyAdjustment,
+                    weight_kg: existingProfile.weight_kg ?? 0,
+                    activity_level: existingProfile.activity_level ?? 'moderate',
+                    target_weight_kg: existingProfile.target_weight_kg,
+                    goal_pace: existingProfile.goal_pace
+                },
+                {
+                    daily_adjustment: metrics.daily_adjustment,
+                    weight_kg: input.weight_kg,
+                    activity_level: input.activity_level,
+                    target_weight_kg: input.target_weight_kg,
+                    goal_pace: input.goal_pace
+                }
+            )
+            console.log('[upsertHealthProfile] Profile delta:', delta)
+        }
 
         // Prepare data for upsert - include all unified profile fields
         const profileData = {
@@ -220,6 +259,50 @@ export async function upsertHealthProfile(
             return { success: false, error: `Profil kaydedilemedi: ${error.message}` }
         }
 
+        // If significant changes detected, regenerate remaining quest days
+        let regeneration: RegenerationResult | undefined
+        if (delta?.isSignificant) {
+            console.log('[upsertHealthProfile] Significant changes detected, regenerating quests...')
+            console.log('[upsertHealthProfile] Changes:', delta.summary)
+
+            // Build AI context for regeneration
+            const age = calculateAge(input.birth_date)
+            const aiContext: UserHealthContext = {
+                age_years: age,
+                biological_sex: input.biological_sex,
+                weight_kg: input.weight_kg,
+                height_cm: input.height_cm,
+                activity_level: input.activity_level,
+                bmr_kcal: metrics.bmr_kcal,
+                tdee_kcal: metrics.tdee_kcal,
+                target_daily_kcal: metrics.target_daily_kcal,
+                daily_adjustment: metrics.daily_adjustment,
+                protein_g: metrics.macros.protein_g,
+                carbs_g: metrics.macros.carbs_g,
+                fat_g: metrics.macros.fat_g,
+                water_liters: metrics.water_liters,
+                primary_goal: input.primary_goal,
+                target_weight_kg: input.target_weight_kg,
+                goal_pace: input.goal_pace,
+                health_conditions: input.health_conditions || [],
+                dietary_restrictions: input.dietary_restrictions || [],
+                allergies: input.allergies || [],
+                training_experience: input.training_experience,
+                training_types: input.training_types,
+                gym_access: input.gym_access,
+                meals_per_day: input.meals_per_day,
+                cooks_at_home: input.cooks_at_home,
+                fast_food_frequency: input.fast_food_frequency,
+                current_water_intake_liters: input.current_water_intake_liters,
+                sugar_drinks_per_day: input.sugar_drinks_per_day,
+                sleep_quality: input.sleep_quality,
+                stress_level: input.stress_level
+            }
+
+            regeneration = await regenerateRemainingQuestDays(user.id, aiContext)
+            console.log('[upsertHealthProfile] Regeneration result:', regeneration)
+        }
+
         return {
             success: true,
             profile: {
@@ -228,7 +311,9 @@ export async function upsertHealthProfile(
                 bmr_kcal: metrics.bmr_kcal,
                 tdee_kcal: metrics.tdee_kcal,
                 target_daily_kcal: metrics.target_daily_kcal
-            }
+            },
+            delta,
+            regeneration
         }
 
     } catch (error) {
