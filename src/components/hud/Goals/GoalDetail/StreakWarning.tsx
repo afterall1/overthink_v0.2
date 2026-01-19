@@ -15,6 +15,10 @@ interface StreakWarningProps {
     lastActivityDate: string | null
     hasActivityToday: boolean
     onActionClick?: () => void
+    /** User's identity statement for personalized messaging */
+    identityStatement?: string | null
+    /** User's motivation for additional context */
+    motivation?: string | null
 }
 
 // =====================================================
@@ -36,8 +40,12 @@ const STATUS_CONFIG = {
         gradient: 'from-amber-500 to-orange-500',
         iconColor: 'text-white',
         title: 'Streak Risk Altında!',
-        message: (streak: number) =>
-            `Bugün en az 1 görev tamamlamazsan ${streak} günlük streak'in sıfırlanacak!`
+        message: (streak: number, identity?: string | null) => {
+            if (identity) {
+                return `Sen "${identity}" olan birisin! ${streak} günlük streak'ini korumak için bugün bir görev tamamla.`
+            }
+            return `Bugün en az 1 görev tamamlamazsan ${streak} günlük streak'in sıfırlanacak!`
+        }
     },
     broken: {
         show: true,
@@ -45,7 +53,7 @@ const STATUS_CONFIG = {
         gradient: 'from-red-500 to-rose-600',
         iconColor: 'text-white',
         title: 'Streak Kırıldı',
-        message: () => 'Streak\'ini kaybettin ama yeniden başlayabilirsin!'
+        message: (_streak: number, _identity?: string | null) => 'Streak\'ini kaybettin ama yeniden başlayabilirsin!'
     },
     frozen: {
         show: true,
@@ -53,7 +61,7 @@ const STATUS_CONFIG = {
         gradient: 'from-blue-500 to-indigo-500',
         iconColor: 'text-white',
         title: 'Streak Donduruldu',
-        message: () => 'Streak freeze aktif. Bugün dinlenebilirsin.'
+        message: (_streak: number, _identity?: string | null) => 'Streak freeze aktif. Bugün dinlenebilirsin.'
     }
 } as const
 
@@ -66,7 +74,9 @@ export default function StreakWarning({
     status,
     lastActivityDate,
     hasActivityToday,
-    onActionClick
+    onActionClick,
+    identityStatement,
+    motivation
 }: StreakWarningProps) {
     const config = STATUS_CONFIG[status]
 
@@ -78,7 +88,8 @@ export default function StreakWarning({
     const getMessage = (): string => {
         const msgConfig = config.message
         if (typeof msgConfig === 'function') {
-            return msgConfig(streak)
+            // Pass identity statement for at_risk personalization
+            return msgConfig(streak, identityStatement)
         }
         return msgConfig
     }

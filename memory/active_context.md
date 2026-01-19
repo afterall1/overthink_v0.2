@@ -10,50 +10,50 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.50: Project Migration & Verification - TAMAMLANDI ✅            ║
+║  PHASE 8.61: CalorieBudgetSummary Component - TAMAMLANDI ✅              ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  Proje OVERTHINK klasörüne taşındı ve doğrulandı                         ║
+║  Günlük kalori bütçesi takibi food/sport hedeflerinde                    ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.48: QuestCard Detail Enhancement | ✅ Tamamlandı | 100% |
-| Phase 8.49: QuestCard Premium Redesign | ✅ Tamamlandı | 100% |
-| **Phase 8.50: Project Migration & Verification** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.50: Project Migration & Verification | ✅ Tamamlandı | 100% |
+| Phase 8.60: Motivation & Identity UI | ✅ Tamamlandı | 100% |
+| **Phase 8.61: CalorieBudgetSummary** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-19 (Oturum 17)
+## Session Summary: 2026-01-19 (Oturum 18)
 
-### ✅ Phase 8.50 - Proje Taşıma ve Doğrulama
+### ✅ Phase 8.60 - Motivation & Identity UI Integration
 
-**Durum:** Proje `c:\Users\PC15\Desktop\Projelerim\OVERTHINK` konumuna taşındı.
+**Uygulanan İyileştirmeler:**
 
-**Yapılan Analizler:**
+| # | İyileştirme | Dosya | Satır |
+|---|-------------|-------|-------|
+| 1 | MotivationCard Component | `GoalDetail/MotivationCard.tsx` | +260 |
+| 2 | StreakWarning Identity Enhancement | `GoalDetail/StreakWarning.tsx` | +25 |
 
-| Kontrol | Sonuç |
-|---------|-------|
-| Hardcoded path taraması (`C:\`) | ✅ Temiz - 0 sonuç |
-| TypeScript aliases | ✅ Göreceli: `@/*` → `./src/*` |
-| Environment değişkenleri | ✅ URL tabanlı, path bağımsız |
-| Konfigürasyon dosyaları | ✅ Hepsi path-agnostic |
+**MotivationCard Özellikleri:**
+- Identity statement gösterimi: "Ben ... olan biriyim"
+- Motivation text (expand/collapse)
+- Kategori bazlı tema desteği
+- Streak teşvik mesajları
 
-**Doğrulama Adımları:**
+**StreakWarning Enhancement:**
+- `identityStatement` ve `motivation` props eklendi
+- at_risk durumunda: "Sen '...' olan birisin! Streak'ini koru..."
+
+**Doğrulama:**
 
 | Komut | Sonuç |
 |-------|-------|
-| `npm install` | ✅ 0 vulnerabilities |
 | `npm run build` | ✅ Exit code: 0 |
-| `npm run lint --fix` | ✅ Auto-fix uygulandı |
+| `npm run lint` | ✅ 114 warning (önceden mevcut) |
 
-**Supabase Durumu:**
-- Tarayıcıda farklı proje açık (`mcduzsjkyuzdpgbcjzty`)
-- `.env.local` mevcut projeyi kullanıyor (`dumeeetkozusqfnsnzzr`)
-- **Karar:** Mevcut yapılandırma korundu
-
-**Sonuç:** Proje tamamen path-agnostic ve taşıma sonrası fonksiyonel.
+**Ertelenen:** CalorieBudgetSummary (Phase 10+ - altyapı eksik)
 
 ---
 
@@ -62,11 +62,11 @@
 | Dosya | Güncellendi |
 |-------|-------------|
 | `active_context.md` | ✅ |
-| `project_structure.md` | ⏭️ Değişiklik yok (yeni dosya eklenmedi) |
-| `api_contracts.md` | ⏭️ Değişiklik yok (yeni action eklenmedi) |
-| `database_schema.md` | ⏭️ Değişiklik yok (schema değişmedi) |
-| `tech_stack.md` | ⏭️ Değişiklik yok (paket eklenmedi) |
-| `ADR.md` | ⏭️ Değişiklik yok (mimari karar yok) |
+| `project_structure.md` | ⚠️ Güncellenmeli (MotivationCard.tsx eklendi) |
+| `api_contracts.md` | ⏭️ Değişiklik yok |
+| `database_schema.md` | ⏭️ Değişiklik yok |
+| `tech_stack.md` | ⏭️ Değişiklik yok |
+| `ADR.md` | ⏭️ Değişiklik yok |
 
 ---
 
@@ -90,12 +90,11 @@ c:\Users\PC15\Desktop\Projelerim\OVERTHINK
 2. [ ] Apple Sign-In entegrasyonu
 3. [ ] Password reset flow
 
-### Potansiyel İyileştirmeler
-- [ ] GoalDetailSheet'e motivation kartı ekleme
-- [ ] CalorieBudgetSummary component (günlük özet)
-- [ ] Streak at-risk notification with identity reminder
+### Potansiyel İyileştirmeler (Gelecek)
+- [x] ~~GoalDetailSheet'e motivation kartı ekleme~~ ✅
+- [x] ~~Streak at-risk notification with identity reminder~~ ✅
+- [ ] CalorieBudgetSummary component (Phase 10+ - altyapı gerekli)
 
 ---
 
-**Son Güncelleme:** 2026-01-19 19:12 UTC+3
-
+**Son Güncelleme:** 2026-01-19 23:55 UTC+3

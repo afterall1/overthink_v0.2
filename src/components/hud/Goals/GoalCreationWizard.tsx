@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     X, ChevronRight, ChevronLeft, Check,
@@ -1631,7 +1631,11 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
     const [isGenerating, setIsGenerating] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [fallbackUsed, setFallbackUsed] = useState(false)
-    const [hasGenerated, setHasGenerated] = useState(false)
+
+    // FIX: useRef guards prevent race conditions
+    // useState would cause re-triggers due to async timing
+    const hasGeneratedRef = useRef(false)
+    const generationInProgressRef = useRef(false)
 
     // Get selected category from form data
     const getSelectedCategorySlug = (): string | null => {
@@ -1643,9 +1647,13 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
         return null
     }
 
-    // Generate AI quests on mount
+    // Generate AI quests on mount - FIXED: useRef guard prevents double-generation
     useEffect(() => {
-        if (hasGenerated) return
+        // Synchronous ref check - no race condition possible
+        if (hasGeneratedRef.current || generationInProgressRef.current) {
+            return
+        }
+        generationInProgressRef.current = true
 
         const generateQuests = async () => {
             setIsGenerating(true)
@@ -1667,11 +1675,10 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                     start_date: formData.start_date,
                     end_date: formData.end_date || null,
                     // KRITIK: SafeDateModal'dan gelen kalori açığını AI'a ilet
-                    // Bu değer AI görev üretiminde kullanılacak (kalori bütçesi)
                     daily_calorie_deficit: formData.calculated_daily_deficit
                 }
 
-                console.log('[Step4AIQuests] Context daily_calorie_deficit:', formData.calculated_daily_deficit ?? 'not set')
+                console.log('[Step4AIQuests] Generating quests (single run guaranteed)')
 
                 const result = await generateWizardQuests(context)
 
@@ -1681,23 +1688,66 @@ function Step4AIQuests({ formData, updateField }: Step4AIQuestsProps) {
                     setFallbackUsed(result.fallback_used || false)
                 } else {
                     setError(result.error || 'Görevler oluşturulamadı')
-                    // Show empty state - user can still proceed
                 }
             } catch (err) {
                 console.error('[Step4AIQuests] Error:', err)
                 setError('AI servisi geçici olarak kullanılamıyor')
             } finally {
                 setIsGenerating(false)
-                setHasGenerated(true)
+                hasGeneratedRef.current = true
+                generationInProgressRef.current = false
             }
         }
 
         generateQuests()
-    }, [formData.goal_template_id, formData.title, hasGenerated])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Empty deps - run only once on mount
 
-    // Regenerate quests
+    // Regenerate quests - reset ref to allow new generation
     const handleRegenerate = () => {
-        setHasGenerated(false)
+        hasGeneratedRef.current = false
+        generationInProgressRef.current = false
+        setIsGenerating(true)
+        setAiQuests([])
+        // Trigger re-mount by forcing state update
+        setError(null)
+        // Re-run generation
+        const runGeneration = async () => {
+            generationInProgressRef.current = true
+            try {
+                const { generateWizardQuests } = await import('@/actions/wizardAI')
+                const context = {
+                    motivation: formData.motivation,
+                    identity_statement: formData.identity_statement,
+                    goal_title: formData.title,
+                    goal_description: formData.description,
+                    target_value: formData.target_value ?? null,
+                    unit: formData.unit,
+                    period: formData.period,
+                    category_slug: getSelectedCategorySlug(),
+                    goal_template_id: formData.goal_template_id,
+                    start_date: formData.start_date,
+                    end_date: formData.end_date || null,
+                    daily_calorie_deficit: formData.calculated_daily_deficit
+                }
+                const result = await generateWizardQuests(context)
+                if (result.success && result.quests && result.quests.length > 0) {
+                    setAiQuests(result.quests)
+                    updateField('ai_generated_quests', result.quests)
+                    setFallbackUsed(result.fallback_used || false)
+                } else {
+                    setError(result.error || 'Görevler oluşturulamadı')
+                }
+            } catch (err) {
+                console.error('[Step4AIQuests] Regenerate Error:', err)
+                setError('AI servisi geçici olarak kullanılamıyor')
+            } finally {
+                setIsGenerating(false)
+                hasGeneratedRef.current = true
+                generationInProgressRef.current = false
+            }
+        }
+        runGeneration()
     }
 
     // Toggle quest selection

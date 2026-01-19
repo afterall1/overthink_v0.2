@@ -25,6 +25,8 @@ import JourneyPath from './JourneyPath'
 import StatsGrid from './StatsGrid'
 import StreakWarning from './StreakWarning'
 import ContributionHeatmap from './ContributionHeatmap'
+import MotivationCard from './MotivationCard'
+import CalorieBudgetSummary from './CalorieBudgetSummary'
 import ConfettiCelebration from '../ConfettiCelebration'
 
 import {
@@ -419,12 +421,23 @@ export default function GoalDetail({
                         isCompleted={isCompleted}
                     />
 
+                    {/* Motivation Card - Shows user's "why" and identity */}
+                    <MotivationCard
+                        motivation={(goal as GoalWithDetails & { motivation?: string | null }).motivation ?? null}
+                        identityStatement={(goal as GoalWithDetails & { identity_statement?: string | null }).identity_statement ?? null}
+                        goalTitle={goal.title}
+                        streakDays={streakInfo.currentStreak}
+                        categorySlug={goal.categories?.slug}
+                    />
+
                     {/* Streak Warning - Shows only when at risk */}
                     <StreakWarning
                         streak={streakInfo.currentStreak}
                         status={streakStatus}
                         lastActivityDate={lastActivityDate}
                         hasActivityToday={hasActivityToday}
+                        identityStatement={(goal as GoalWithDetails & { identity_statement?: string | null }).identity_statement}
+                        motivation={(goal as GoalWithDetails & { motivation?: string | null }).motivation}
                     />
 
                     {/* Stats Grid - Performance Analytics */}
@@ -444,6 +457,14 @@ export default function GoalDetail({
                         activities={activityData}
                         days={30}
                     />
+
+                    {/* Calorie Budget Summary - Only for food/sport goals with health profile */}
+                    {(goal.categories?.slug === 'food' || goal.categories?.slug === 'sport') && (
+                        <CalorieBudgetSummary
+                            goalId={goal.id}
+                            hasHealthProfile={hasHealthProfile ?? false}
+                        />
+                    )}
 
                     {/* Linked Quests Panel */}
                     {(linkedQuests.length > 0 || (goal.categories?.slug === 'food' || goal.categories?.slug === 'sport')) && onCompleteQuest && onSkipQuest && (
