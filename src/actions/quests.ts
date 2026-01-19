@@ -20,6 +20,8 @@ import {
     QUEST_XP,
     getTodayDateString
 } from '@/lib/questEngine'
+import { getCurrentDate } from '@/lib/timeService'
+import { generateWeeklyBatch } from './weeklyQuests'
 
 // =====================================================
 // Types
@@ -84,15 +86,40 @@ export async function createQuest(
 
 /**
  * Get all quests for today (including recurring ones that apply)
+ * 
+ * IMPORTANT: This function now includes Weekly Batch Daily Distribution.
+ * When called, it checks if today's quests from weekly_quest_batches have been
+ * distributed to daily_quests. If not, it distributes them automatically.
+ * This enables the "different quests each day" feature from ADR-025.
+ * 
+ * @param targetDate - Optional date string (YYYY-MM-DD) for Time Travel testing.
+ *                     If provided, uses this date instead of the real date.
  */
-export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
+export async function getQuestsForToday(targetDate?: string): Promise<ActionResult<DailyQuest[]>> {
     try {
         const { user } = await getAuthenticatedClient()
         const supabase = createAdminClient()
-        const today = getTodayDateString()
-        const dayOfWeek = new Date().getDay()
+        // Use targetDate if provided (for Time Travel), otherwise use real today
+        const today = targetDate || getTodayDateString()
+        // Calculate day of week from the target date
+        const targetDateObj = targetDate ? new Date(targetDate + 'T12:00:00') : getCurrentDate()
+        const dayOfWeek = targetDateObj.getDay()
 
-        // Get one-time quests scheduled for today
+        // ============================================================
+        // PHASE 0: Auto-Regenerate Expired Weekly Batches
+        // If a new week has started, generate fresh batches
+        // ============================================================
+        await checkAndRegenerateWeeklyBatches(user.id, today, supabase)
+
+        // ============================================================
+        // PHASE 1: Weekly Batch Daily Distribution
+        // Check if today's quests from weekly batches need to be distributed
+        // ============================================================
+        await distributeWeeklyBatchQuestsForToday(user.id, today, supabase)
+
+        // ============================================================
+        // PHASE 2: Get one-time quests scheduled for today
+        // ============================================================
         const { data: scheduledQuests, error: scheduledError } = await supabase
             .from('daily_quests')
             .select('*')
@@ -104,7 +131,11 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
             return { data: null, error: scheduledError.message }
         }
 
-        // Get recurring quests
+        // ============================================================
+        // PHASE 3: Get recurring quests (legacy support)
+        // NOTE: New architecture uses is_recurring: false for all quests
+        // This section remains for backward compatibility with older quests
+        // ============================================================
         const { data: recurringQuests, error: recurringError } = await supabase
             .from('daily_quests')
             .select('*')
@@ -116,7 +147,6 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         }
 
         // Filter recurring quests based on pattern
-        // FIX: If is_recurring is true but no pattern defined, default to 'daily'
         const activeRecurring = (recurringQuests || []).filter((quest: DailyQuest) => {
             const pattern = quest.recurrence_pattern || 'daily'
             switch (pattern) {
@@ -133,12 +163,13 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
                 case 'custom':
                     return quest.recurrence_days?.includes(dayOfWeek) ?? false
                 default:
-                    return true  // FIX: Show quest as fallback
+                    return true
             }
         })
 
-        // CRITICAL: Filter out quests whose linked goal has ended
-        // This prevents recurring quests from showing after goal's end_date
+        // ============================================================
+        // PHASE 4: Filter out quests whose linked goal has ended
+        // ============================================================
         const goalLinkedQuestIds = [...(scheduledQuests || []), ...activeRecurring]
             .filter(q => q.goal_id)
             .map(q => q.goal_id as string)
@@ -163,13 +194,13 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
             !q.goal_id || activeGoalIds.has(q.goal_id)
         )
 
-        // Check completion status for today
-        // Use filtered quests that exclude expired goals
+        // ============================================================
+        // PHASE 5: Check completion status for today
+        // ============================================================
         const allQuests = [...filteredScheduled, ...filteredRecurring]
         const questIds = allQuests.map(q => q.id)
 
         if (questIds.length > 0) {
-            // Fetch completions with timestamp for proper stats display
             const { data: completions } = await supabase
                 .from('quest_completions')
                 .select('quest_id, completed_at')
@@ -177,7 +208,6 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
                 .eq('completed_date', today)
                 .in('quest_id', questIds)
 
-            // Build a map of quest_id -> completed_at for quick lookup
             const completionMap = new Map<string, string>()
             for (const c of completions || []) {
                 if (c.completed_at) {
@@ -185,16 +215,25 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
                 }
             }
 
-            // Update status and completed_at for completed quests
-            // This is critical for GoalDetail stats (XP, heatmap, last activity)
             return {
                 data: allQuests.map(quest => {
                     const completedAt = completionMap.get(quest.id)
                     if (completedAt) {
+                        // Quest was completed today
                         return {
                             ...quest,
                             status: 'completed' as const,
                             completed_at: completedAt
+                        }
+                    }
+                    // CRITICAL FIX: For recurring quests, always reset status to 'pending'
+                    // The DB may have stale 'completed' status from previous days
+                    // The source of truth for recurring quests is quest_completions table
+                    if (quest.is_recurring) {
+                        return {
+                            ...quest,
+                            status: 'pending' as const,
+                            completed_at: null
                         }
                     }
                     return quest
@@ -210,6 +249,200 @@ export async function getQuestsForToday(): Promise<ActionResult<DailyQuest[]>> {
         }
         const message = error instanceof Error ? error.message : 'Questler yüklenirken hata oluştu'
         return { data: null, error: message }
+    }
+}
+
+/**
+ * Distribute today's quests from weekly_quest_batches to daily_quests
+ * This is the core mechanism for "different quests each day" feature
+ * 
+ * @param userId - User ID
+ * @param today - Today's date string (YYYY-MM-DD)
+ * @param supabase - Supabase client
+ */
+async function distributeWeeklyBatchQuestsForToday(
+    userId: string,
+    today: string,
+    supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+    try {
+        // Get day of week key (monday, tuesday, etc.)
+        // Calculate from the passed today parameter for Time Travel support
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
+        type DayOfWeekKey = typeof dayNames[number]
+        const todayDateObj = new Date(today + 'T12:00:00') // Add time to avoid timezone issues
+        const todayDayKey: DayOfWeekKey = dayNames[todayDateObj.getDay()]
+
+        // Find active weekly batches for this user
+        const { data: activeBatches, error: batchError } = await (supabase as ReturnType<typeof createAdminClient>)
+            .from('weekly_quest_batches' as 'goals') // Type assertion for custom table
+            .select('id, goal_id, quests_data, week_start, week_end')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .lte('week_start', today)
+            .gte('week_end', today)
+
+        if (batchError || !activeBatches || activeBatches.length === 0) {
+            return // No active batches, nothing to distribute
+        }
+
+        // For each active batch, check if today's quests are already distributed
+        for (const batch of activeBatches) {
+            const typedBatch = batch as unknown as {
+                id: string
+                goal_id: string
+                quests_data: Record<DayOfWeekKey, {
+                    quests: Array<{
+                        title: string
+                        description: string
+                        emoji: string
+                        difficulty: 'easy' | 'medium' | 'hard'
+                        xp_reward: number
+                        calorie_impact?: number
+                        estimated_minutes?: number
+                        scientific_rationale?: string
+                        category?: string
+                    }>
+                }>
+            }
+
+            // Check if quests for this goal+date already exist
+            const { data: existingQuests } = await supabase
+                .from('daily_quests')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('goal_id', typedBatch.goal_id)
+                .eq('scheduled_date', today)
+                .eq('is_ai_suggested', true)
+                .limit(1)
+
+            if (existingQuests && existingQuests.length > 0) {
+                continue // Already distributed for today
+            }
+
+            // Get today's quests from the batch
+            const todayQuests = typedBatch.quests_data?.[todayDayKey]?.quests
+
+            if (!todayQuests || todayQuests.length === 0) {
+                continue // No quests for today in this batch
+            }
+
+            // Create daily quests from weekly batch (is_recurring: false!)
+            const questInserts = todayQuests.map((quest, index) => ({
+                user_id: userId,
+                goal_id: typedBatch.goal_id,
+                title: quest.title,
+                description: quest.description || '',
+                emoji: quest.emoji || '🎯',
+                difficulty: quest.difficulty || 'medium',
+                xp_reward: quest.xp_reward || 20,
+                calorie_impact: quest.calorie_impact || 0,
+                estimated_minutes: quest.estimated_minutes || 15,
+                scientific_rationale: quest.scientific_rationale || '',
+                category: quest.category || 'habit',
+                scheduled_date: today,
+                is_recurring: false, // CRITICAL: Each day gets unique quests
+                recurrence_pattern: null,
+                status: 'pending' as const,
+                is_ai_suggested: true,
+                sort_order: index
+            }))
+
+            // Insert quests
+            const { error: insertError } = await supabase
+                .from('daily_quests')
+                .insert(questInserts)
+
+            if (insertError) {
+                console.error(`[distributeWeeklyBatchQuestsForToday] Insert error for batch ${typedBatch.id}:`, insertError)
+            } else {
+                console.log(`[distributeWeeklyBatchQuestsForToday] Distributed ${questInserts.length} quests for ${todayDayKey}`)
+            }
+        }
+    } catch (error) {
+        // Non-blocking: Log error but don't fail the quest fetch
+        console.error('[distributeWeeklyBatchQuestsForToday] Error:', error)
+    }
+}
+
+/**
+     * Check if weekly batches need regeneration and regenerate if needed
+     * This ensures users always have fresh quests when a new week starts
+     * 
+     * @param userId - User ID
+     * @param targetDate - Target date string (YYYY-MM-DD)
+     * @param supabase - Supabase client
+     */
+async function checkAndRegenerateWeeklyBatches(
+    userId: string,
+    targetDate: string,
+    supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+    try {
+        // 1. Get user's active goals that might need weekly batches
+        const { data: activeGoals, error: goalsError } = await supabase
+            .from('goals')
+            .select('id, title')
+            .eq('user_id', userId)
+            .or(`end_date.is.null,end_date.gte.${targetDate}`)
+
+        if (goalsError || !activeGoals || activeGoals.length === 0) {
+            return // No active goals, nothing to regenerate
+        }
+
+        // 2. Check each goal for expired or missing batches
+        for (const goal of activeGoals) {
+            // Check if there's an active batch for this goal
+            const { data: existingBatch, error: batchError } = await (supabase as ReturnType<typeof createAdminClient>)
+                .from('weekly_quest_batches' as 'goals')
+                .select('id, week_end, status')
+                .eq('user_id', userId)
+                .eq('goal_id', goal.id)
+                .eq('status', 'active')
+                .single()
+
+            const typedBatch = existingBatch as unknown as {
+                id: string
+                week_end: string
+                status: string
+            } | null
+
+            // 3. Regenerate if batch is missing or week_end has passed
+            const needsRegeneration = !typedBatch ||
+                batchError ||
+                typedBatch.week_end < targetDate
+
+            if (needsRegeneration) {
+                console.log(`[checkAndRegenerateWeeklyBatches] Regenerating batch for goal "${goal.title}" (ID: ${goal.id})`)
+
+                // Expire old batch if exists
+                if (typedBatch) {
+                    // weekly_quest_batches is a custom table not in generated types
+                    // Use unknown conversion to avoid type errors
+                    const client = supabase as unknown as {
+                        from: (table: string) => {
+                            update: (data: Record<string, unknown>) => {
+                                eq: (column: string, value: string) => Promise<{ error: Error | null }>
+                            }
+                        }
+                    }
+                    await client.from('weekly_quest_batches').update({ status: 'expired' }).eq('id', typedBatch.id)
+                }
+
+                // Generate new batch - this is async but we don't wait for it
+                // The daily distribution will happen on the next call
+                try {
+                    const targetDateObj = new Date(targetDate + 'T12:00:00')
+                    await generateWeeklyBatch(goal.id, targetDateObj)
+                    console.log(`[checkAndRegenerateWeeklyBatches] Successfully regenerated batch for goal "${goal.title}"`)
+                } catch (genError) {
+                    console.error(`[checkAndRegenerateWeeklyBatches] Failed to regenerate batch for goal ${goal.id}:`, genError)
+                }
+            }
+        }
+    } catch (error) {
+        // Non-blocking: Log error but don't fail the quest fetch
+        console.error('[checkAndRegenerateWeeklyBatches] Error:', error)
     }
 }
 

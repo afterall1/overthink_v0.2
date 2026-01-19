@@ -22,3 +22,6 @@ export type { PerfectDayBadgeProps } from './PerfectDayBadge'
 
 export { default as QuestCreationModal } from './QuestCreationModal'
 export type { QuestCreationModalProps } from './QuestCreationModal'
+
+export { default as QuestCompletionCelebration } from './QuestCompletionCelebration'
+export type { QuestCompletionCelebrationProps } from './QuestCompletionCelebration'

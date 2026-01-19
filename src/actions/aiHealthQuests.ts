@@ -545,8 +545,10 @@ export async function saveAIGeneratedQuests(
             .eq('scheduled_date', today)
 
         // Prepare quest data
-        // CRITICAL FIX: AI-generated quests should be RECURRING to show every day until goal ends
-        // This enables the daily quest auto-generation feature without DB bloat
+        // ARCHITECTURE NOTE: This function is DEPRECATED for new quests.
+        // New architecture uses weekly_quest_batches for AI quests (ADR-025).
+        // Quests here are saved as ONE-TIME (is_recurring: false) for the requested date.
+        // Daily distribution is handled by distributeWeeklyBatchQuestsForToday().
         const questData = quests.map(quest => ({
             user_id: user.id,
             goal_id: goalId || null,
@@ -555,12 +557,12 @@ export async function saveAIGeneratedQuests(
             emoji: quest.emoji,
             difficulty: quest.difficulty,
             xp_reward: quest.xp_reward,
-            is_recurring: true,  // FIX: Changed from false to true
-            recurrence_pattern: 'daily' as const,  // FIX: Added daily pattern
-            scheduled_date: today,  // First appearance date
+            is_recurring: false, // UNIFIED ARCHITECTURE: One-time per day
+            recurrence_pattern: null, // No recurrence - daily distribution from weekly batch
+            scheduled_date: today, // Only for today
             status: 'pending' as const,
             is_ai_suggested: true,
-            progress_contribution: 1  // Each completion contributes to goal progress
+            progress_contribution: 1 // Each completion contributes to goal progress
         }))
 
         // Insert quests

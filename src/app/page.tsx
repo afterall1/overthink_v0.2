@@ -13,7 +13,7 @@ import CalendarPicker from "@/components/hud/CalendarPicker"
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
 import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard } from "@/components/hud/Goals"
-import { DailyQuestsPanel, QuestCreationModal } from "@/components/hud/Quests"
+import { DailyQuestsPanel, QuestCreationModal, QuestCompletionCelebration } from "@/components/hud/Quests"
 // Health module moved to GoalCreationWizard for context-aware integration
 import { AnimatePresence } from "framer-motion"
 import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails, DailyQuest, UserXpStats } from '@/types/database.types'
@@ -22,7 +22,7 @@ import { getLogsByDateRange, createLog, deleteLog } from "@/actions/logs"
 import { getActiveGoals, createGoal, updateGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
 import { getCategories } from "@/actions/categories"
 import { getQuestsForToday, completeQuest, skipQuest, getUserXpStats } from "@/actions/quests"
-import { startOfDay, endOfDay, addDays } from 'date-fns'
+import { startOfDay, endOfDay, addDays, format } from 'date-fns'
 import { getCurrentDate, subscribeToTimeChanges, isDevMode } from '@/lib/timeService'
 
 const MOCK_DAILY_STATUS = {
@@ -88,6 +88,15 @@ export default function Home() {
   const [isQuestsLoading, setIsQuestsLoading] = useState(false)
   const [isQuestCreationModalOpen, setIsQuestCreationModalOpen] = useState(false)
 
+  // Celebration state for quest completion
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationData, setCelebrationData] = useState<{
+    xpEarned: number
+    streakCount: number
+    streakBonus: number
+    isPerfectDay: boolean
+  } | null>(null)
+
   // Subscribe to Time Travel changes (dev mode only)
   useEffect(() => {
     if (!isDevMode()) return
@@ -101,8 +110,10 @@ export default function Home() {
   const fetchQuests = useCallback(async () => {
     setIsQuestsLoading(true)
     try {
+      // Pass the selected date as YYYY-MM-DD string for Time Travel support
+      const dateString = format(selectedDate, 'yyyy-MM-dd')
       const [questsResult, xpResult] = await Promise.all([
-        getQuestsForToday(),
+        getQuestsForToday(dateString),
         getUserXpStats()
       ])
       if (questsResult.data) setQuests(questsResult.data)
@@ -112,7 +123,7 @@ export default function Home() {
     } finally {
       setIsQuestsLoading(false)
     }
-  }, [])
+  }, [selectedDate])
 
   const fetchGoals = useCallback(async () => {
     setIsGoalsLoading(true)
@@ -293,7 +304,25 @@ export default function Home() {
               xpStats={xpStats}
               onCompleteQuest={async (questId) => {
                 try {
-                  await completeQuest(questId)
+                  const result = await completeQuest(questId)
+
+                  // Show celebration if we have XP data
+                  if (result.data) {
+                    const { xpBreakdown, newStreak, isPerfectDay } = result.data
+
+                    // Calculate total including streak
+                    const totalXp = xpBreakdown?.totalXp || 0
+                    const streakBonus = xpBreakdown?.streakBonus || 0
+
+                    setCelebrationData({
+                      xpEarned: totalXp,
+                      streakCount: newStreak || 0,
+                      streakBonus: streakBonus,
+                      isPerfectDay: isPerfectDay || false
+                    })
+                    setShowCelebration(true)
+                  }
+
                   await fetchQuests()
                 } catch (error) {
                   console.error('Failed to complete quest:', error)
@@ -594,6 +623,18 @@ export default function Home() {
         }}
       />
 
+      {/* Quest Completion Celebration */}
+      <QuestCompletionCelebration
+        isVisible={showCelebration}
+        xpEarned={celebrationData?.xpEarned || 0}
+        streakCount={celebrationData?.streakCount}
+        streakBonus={celebrationData?.streakBonus}
+        isPerfectDay={celebrationData?.isPerfectDay}
+        onComplete={() => {
+          setShowCelebration(false)
+          setCelebrationData(null)
+        }}
+      />
 
     </main>
   )

@@ -174,10 +174,18 @@ Yeni quest oluşturur.
 
 ---
 
-### `getQuestsForToday()`
+### `getQuestsForToday(targetDate?)`
 Bugünkü questleri getirir (recurring + scheduled).
 
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `targetDate` | string | ❌ | YYYY-MM-DD formatında tarih (Time Travel için) |
+
 **Return:** `Promise<ActionResult<DailyQuest[]>>`
+
+> **Önemli:** `targetDate` parametresi Time Travel test özelliği için eklenmiştir.
+> - Verilmezse: Gerçek bugünün tarihi kullanılır
+> - Verilirse: O tarih için quest'ler getirilir ve recurring quest'ler completion durumuna göre override edilir
 
 ---
 
@@ -765,7 +773,7 @@ interface RegenerationResult {
 
 ---
 
-**Son Güncelleme:** 2026-01-15 13:45 UTC+3
-**Versiyon:** 1.7.0 (Profile Delta & Quest Regeneration API eklendi)
+**Son Güncelleme:** 2026-01-20 01:50 UTC+3
+**Versiyon:** 1.8.0 (getQuestsForToday Time Travel support eklendi)
 
 

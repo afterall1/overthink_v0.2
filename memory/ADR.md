@@ -1459,8 +1459,68 @@ Weekly Quest Batch sistemi (ADR-025) 7 günlük quest'leri önceden üretir. Anc
 
 ---
 
-**Son Güncelleme:** 2026-01-20 00:31 UTC+3
-**Toplam ADR:** 27
+**Son Güncelleme:** 2026-01-20 00:55 UTC+3
+**Toplam ADR:** 28
+
+## ADR-028: Quest Architecture Unification
+
+**Tarih:** 2026-01-20  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** AI Expert Council, Proje Sahibi
+
+### Bağlam
+
+ADR-025 (Weekly Batch) ile ADR-026 (Smart Recalibration) tasarlandı ancak tam olarak tamamlanmadı:
+
+1. `generateWeeklyBatch()` sadece bugünün quest'lerini `daily_quests`'e yazıyordu
+2. Ertesi günler için dağıtım mekanizması **eksikti**
+3. Geçici çözüm olarak `saveAIGeneratedQuests`'te `is_recurring: true` yapıldı
+4. Sonuç: "Her gün" badge'i ve aynı quest'lerin tekrarı
+
+### Karar
+
+**Tek Kaynak + Günlük Dağıtım** mimarisi uygulandı:
+
+1. **`distributeWeeklyBatchQuestsForToday()`** fonksiyonu eklendi
+   - `getQuestsForToday()` çağrıldığında otomatik çalışır
+   - `weekly_quest_batches`'tan bugünün günü için quest'leri alır
+   - `daily_quests`'e `is_recurring: false` olarak yazar
+   - Zaten varsa atlar (idempotent)
+
+2. **`saveAIGeneratedQuests`** düzeltildi
+   - `is_recurring: true` → `is_recurring: false`
+   - Deprecation notu eklendi
+
+### Data Flow (Yeni)
+
+```
+Goal Oluştur
+     ↓
+generateWeeklyBatch() → 7 gün JSONB'ye kaydet
+     ↓
+[Her gün app açıldığında]
+     ↓
+getQuestsForToday() 
+     ↓
+distributeWeeklyBatchQuestsForToday()
+     ↓
+Bugünün günü (monday, tuesday...) için quest'ler daily_quests'e yaz
+     ↓
+is_recurring: false → "Her gün" badge'i YOK ✅
+```
+
+### Sonuçlar
+
+**Pozitif:**
+- Her gün FARKLI quest'ler ✅
+- "Her gün" badge'i kaldırıldı ✅
+- Time Travel ile test edilebilir ✅
+- Tek kaynak prensibi (weekly_quest_batches)
+
+**Dosyalar:**
+- `src/actions/quests.ts` (MODIFIED - distributeWeeklyBatchQuestsForToday eklendi)
+- `src/actions/aiHealthQuests.ts` (MODIFIED - is_recurring: false)
+
 
 ## ADR-027: Time Travel Test Architecture
 
@@ -1523,4 +1583,54 @@ Quest sistemi günlük bazlı çalışıyor (streak hesabı, scheduled_date, mil
 - `src/app/page.tsx` (MODIFIED)
 - `src/components/hud/EventTimeline.tsx` (MODIFIED)
 - `src/app/layout.tsx` (MODIFIED)
+
+---
+
+## ADR-029: Quest System Polish - Celebration Animations & Auto-Regeneration
+
+**Tarih:** 2026-01-20  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Quest tamamlama deneyimi temel seviyedeydi - sadece arka plan rengi değişikliği. Premium bir gamification deneyimi için konfeti, XP popup ve streak badge animasyonları gerekiyordu. Ayrıca hafta geçişlerinde weekly batch'ler otomatik yenilenmiyor, kullanıcı ilk günü boş quest listesiyle karşılaşıyordu.
+
+### Karar
+
+**1. Quest Completion Celebration Component:**
+- `QuestCompletionCelebration.tsx` - Full-screen overlay
+- 24 konfeti parçacığı, 6 renk paleti
+- Framer Motion ile tüm animasyonlar
+- Yeni paket eklenmedi
+
+**2. Weekly Batch Auto-Regeneration:**
+- `checkAndRegenerateWeeklyBatches()` fonksiyonu
+- `getQuestsForToday()` PHASE 0 olarak entegre
+- Expired batch'leri tespit edip yeni batch üretir
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **react-confetti-explosion** | Hazır, test edilmiş | Yeni paket bağımlılığı |
+| **Framer Motion + CSS ✓** | Mevcut stack, kontrol | Daha fazla kod |
+| **Lottie animations** | Ultra smooth | Büyük bundle size, yeni paket |
+
+### Sonuçlar
+
+**Pozitif:**
+- Premium gamification deneyimi
+- Zero new dependencies
+- iOS Safari 60fps
+- Server-side auto-regeneration
+
+**Negatif:**
+- ~280 satır yeni component kodu
+- Her completion'da full-screen overlay
+
+**Dosyalar:**
+- `src/components/hud/Quests/QuestCompletionCelebration.tsx` (🆕 NEW)
+- `src/actions/quests.ts` (MODIFIED - checkAndRegenerateWeeklyBatches)
+- `src/app/page.tsx` (MODIFIED - celebration state)
 

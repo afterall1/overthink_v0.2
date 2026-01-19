@@ -129,7 +129,8 @@ overthink_v0.2/
 │   │   │   │   ├── DailyQuestsPanel.tsx   # Goal-grouped list
 │   │   │   │   ├── XPProgressBar.tsx      # Level progress
 │   │   │   │   ├── QuestCompletionToast.tsx # Celebration toast
-│   │   │   │   ├── QuestCreationModal.tsx  # 🆕 Template selection modal
+│   │   │   │   ├── QuestCompletionCelebration.tsx # 🆕 Full-screen celebration
+│   │   │   │   ├── QuestCreationModal.tsx  # Template selection modal
 │   │   │   │   ├── RitualCard.tsx         # Habit stacking
 │   │   │   │   └── PerfectDayBadge.tsx    # Perfect day indicator
 │   │   │   │
@@ -402,5 +403,5 @@ lib/ai/
 
 ---
 
-**Son Güncelleme:** 2026-01-20 00:31 UTC+3
-**Versiyon:** 2.2.0 (Time Travel Test Architecture eklendi)
+**Son Güncelleme:** 2026-01-20 02:24 UTC+3
+**Versiyon:** 2.3.0 (QuestCompletionCelebration component eklendi)

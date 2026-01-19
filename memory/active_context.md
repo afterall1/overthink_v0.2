@@ -10,67 +10,72 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.70: Time Travel Test Architecture - TAMAMLANDI ✅              ║
+║  PHASE 8.80: Quest System Polish - TAMAMLANDI ✅                         ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  Tarih manipülasyonu ile hızlı test altyapısı                           ║
+║  Weekly Batch Auto-Regeneration + Quest Completion Celebrations          ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.50: Project Migration & Verification | ✅ Tamamlandı | 100% |
 | Phase 8.60: Motivation & Identity UI | ✅ Tamamlandı | 100% |
 | Phase 8.61: CalorieBudgetSummary | ✅ Tamamlandı | 100% |
-| Phase 8.62: AI Quest Double-Refresh Fix | ✅ Tamamlandı | 100% |
-| **Phase 8.70: Time Travel Test Architecture** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.70: Time Travel Test Architecture | ✅ Tamamlandı | 100% |
+| Phase 8.75: Quest Architecture Unification | ✅ Tamamlandı | 100% |
+| Phase 8.76: Quest Reset Bug Fix | ✅ Tamamlandı | 100% |
+| **Phase 8.80: Quest System Polish** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-20 (Oturum 19)
+## Session Summary: 2026-01-20 (Oturum 19 - Devam)
 
-### ✅ Phase 8.62 - AI Quest Double-Refresh Bug Fix
+### ✅ Phase 8.76 - Quest Reset Bug Fix
 
-**Problem:** AI quest'leri adım 5'te oluşturulduktan 2-3 saniye sonra yeniden oluşturuluyordu.
+**Problem:** Time Travel ile gün değiştiğinde quest'ler sıfırlanmıyordu.
+
+**Kök Nedenler:**
+1. `timeService` client-side, `getQuestsForToday()` server-side çalışıyor
+2. Server, client'ın simüle ettiği tarihe erişemiyordu
 
 **Çözüm:**
-- `useState(hasGenerated)` → `useRef(hasGeneratedRef)` değiştirildi
-- `generationInProgressRef` guard eklendi
-- Empty dependency array `[]` kullanıldı
-
-**Dosya:** `GoalCreationWizard.tsx` - Step4AIQuests component
+| # | Dosya | Değişiklik |
+|---|-------|------------|
+| 1 | `quests.ts` | `getQuestsForToday(targetDate?)` - opsiyonel tarih parametresi |
+| 2 | `page.tsx` | `fetchQuests` - `selectedDate`'i server'a gönderiyor |
+| 3 | `quests.ts` | Recurring quest'ler için status override |
 
 ---
 
-### ✅ Phase 8.70 - Time Travel Test Architecture
+### ✅ Phase 8.80 - Quest System Polish
 
-**Amaç:** Quest sistemi günlük bazlı çalışıyor, test için günlerin geçmesini beklemek verimsiz.
+#### Feature 1: Weekly Batch Auto-Regeneration
+**Problem:** Hafta geçişlerinde yeni batch otomatik üretilmiyordu.
 
-**Uygulanan Çözüm:** Centralized Time Service + DevTools Panel
+**Çözüm:** `checkAndRegenerateWeeklyBatches()` fonksiyonu:
+- Aktif goal'ları kontrol eder
+- Expired veya eksik batch'leri tespit eder
+- Otomatik yeni batch üretir
 
-| # | Dosya | Açıklama | Satır |
-|---|-------|----------|-------|
-| 1 | `lib/timeService.ts` | Merkezi zaman yönetimi | +195 (NEW) |
-| 2 | `components/dev/TimeControlPanel.tsx` | Floating DevTools panel | +300 (NEW) |
-| 3 | `lib/streakEngine.ts` | `getCurrentDate()` kullanımı | 8 değişiklik |
-| 4 | `lib/questEngine.ts` | `getCurrentDate()` kullanımı | 5 değişiklik |
-| 5 | `app/page.tsx` | Time subscription eklendi | +10 |
-| 6 | `components/hud/EventTimeline.tsx` | `getCurrentDate()` kullanımı | 3 değişiklik |
-| 7 | `app/layout.tsx` | TimeControlPanel entegrasyonu | +2 |
+#### Feature 2: Quest Completion Celebration
+**Yeni Component:** `QuestCompletionCelebration.tsx`
 
-**Özellikler:**
-- 🔒 Production-safe (`NODE_ENV` kontrolü)
-- 📱 Floating DevTools panel (sağ alt köşe)
-- ⏩ +1 Gün / -1 Gün navigasyonu
-- 📅 Hızlı atla: Dün, Bugün, Yarın, ±1 Hafta
-- 🔄 Router.refresh() ile app-wide re-render
+| Özellik | Açıklama |
+|---------|----------|
+| Konfeti | 24 parçacık, 6 renk, Framer Motion |
+| XP Popup | Merkezi badge, glow efekti |
+| Streak Badge | 2+ seriler için görünür |
+| Perfect Day | Tüm quest'ler tamamlandığında |
 
-**Doğrulama:**
+**Yeni Paket:** Yok (mevcut `framer-motion` kullanıldı)
 
-| Komut | Sonuç |
-|-------|-------|
-| `npm run build` | ✅ Exit code: 0 |
-| `npx tsc --noEmit` | ✅ Hata yok |
+---
+
+## 🚧 Tamamlanmamış Özellikler
+
+| Özellik | Durum |
+|---------|-------|
+| - | Tüm planlananlar tamamlandı ✅ |
 
 ---
 
@@ -79,24 +84,18 @@
 | Dosya | Güncellendi |
 |-------|-------------|
 | `active_context.md` | ✅ |
-| `project_structure.md` | ✅ (timeService, TimeControlPanel, dev/ klasörü) |
-| `api_contracts.md` | ⏭️ Değişiklik yok |
+| `project_structure.md` | ✅ (yeni component eklendi) |
+| `api_contracts.md` | ⏭️ Zaten güncel |
 | `database_schema.md` | ⏭️ Değişiklik yok |
 | `tech_stack.md` | ⏭️ Değişiklik yok |
-| `ADR.md` | ✅ (ADR-015: Time Travel Test Architecture) |
+| `ADR.md` | ✅ (ADR-029 eklendi) |
 
 ---
 
-## Önemli Notlar
-
-### Proje Konumu
+## Proje Konumu
 ```
 c:\Users\PC15\Desktop\Projelerim\OVERTHINK
 ```
-
-### Supabase Projesi
-- **Aktif Proje URL:** `https://dumeeetkozusqfnsnzzr.supabase.co`
-- **Proje Adı:** `overthink_v0.2` (package.json)
 
 ---
 
@@ -107,11 +106,13 @@ c:\Users\PC15\Desktop\Projelerim\OVERTHINK
 2. [ ] Apple Sign-In entegrasyonu
 3. [ ] Password reset flow
 
-### Time Travel ile Test Edilecekler
-- [ ] Streak hesaplaması (1 gün ileri → streak at_risk olmalı)
-- [ ] Quest scheduling (tarih değişince doğru quest'ler gösterilmeli)
-- [ ] Milestone tamamlama (tarih bazlı)
+### Alternatif İyileştirmeler
+1. [ ] Quest completion sound effects
+2. [ ] Weekly summary dashboard
+3. [ ] Goal milestone celebrations
 
 ---
 
-**Son Güncelleme:** 2026-01-20 00:31 UTC+3
+**Son Güncelleme:** 2026-01-20 02:24 UTC+3
+**Güncelleyen:** AI Assistant
+**Versiyon:** 8.80.0
