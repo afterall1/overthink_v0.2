@@ -543,7 +543,7 @@ export async function completeQuest(
 
             if (goal) {
                 // Calculate new current_value - ALWAYS add progress contribution on completion
-                let newValue = (goal.current_value ?? 0) + progressContribution
+                const newValue = (goal.current_value ?? 0) + progressContribution
                 const isNowCompleted = goal.target_value ? newValue >= goal.target_value : false
 
                 // Calculate streak

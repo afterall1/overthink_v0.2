@@ -143,7 +143,7 @@ export function calculateQuestXp(
     completedAt?: Date
 ): QuestXpBreakdown {
     // Base XP from quest
-    let baseXp = quest.xp_reward || QUEST_XP.COMPLETE_BASE
+    const baseXp = quest.xp_reward || QUEST_XP.COMPLETE_BASE
 
     // Difficulty bonus
     const difficultyBonus = quest.difficulty === 'hard'
