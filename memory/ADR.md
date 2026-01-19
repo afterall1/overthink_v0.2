@@ -1459,6 +1459,68 @@ Weekly Quest Batch sistemi (ADR-025) 7 günlük quest'leri önceden üretir. Anc
 
 ---
 
-**Son Güncelleme:** 2026-01-15 13:45 UTC+3
-**Toplam ADR:** 26
+**Son Güncelleme:** 2026-01-20 00:31 UTC+3
+**Toplam ADR:** 27
+
+## ADR-027: Time Travel Test Architecture
+
+**Tarih:** 2026-01-20  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Council
+
+### Bağlam
+
+Quest sistemi günlük bazlı çalışıyor (streak hesabı, scheduled_date, milestone kontrolü). Test için gerçek günlerin geçmesini beklemek verimsiz. Tarih manipülasyonu ile hızlı test yapabilecek bir altyapı gerekli.
+
+### Karar
+
+**Centralized Time Service + DevTools Panel** mimarisi uygulandı:
+
+1. **timeService.ts**: Tüm tarih işlemleri tek modülden geçer
+   - `getCurrentDate()`: Merkezi tarih sağlayıcı
+   - `setTestDate()`: Development-only override
+   - `advanceDays()` / `rewindDays()`: Gün navigasyonu
+   - Event subscription sistemi
+
+2. **TimeControlPanel.tsx**: Floating DevTools panel
+   - Production'da görünmez (`NODE_ENV` kontrolü)
+   - +1/-1 gün navigasyonu
+   - Hızlı atla butonları
+   - `router.refresh()` ile app-wide re-render
+
+3. **Engine Refactoring**: 
+   - `streakEngine.ts`: 8× `new Date()` → `getCurrentDate()`
+   - `questEngine.ts`: 5× `new Date()` → `getCurrentDate()`
+   - `page.tsx`: Time subscription eklendi
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Date.now() Global Mock** | Sıfır kod değişikliği | 3rd party lib'leri bozar, SSR sorunları |
+| **React Time Context** | React-native | Sadece client-side, büyük refactor |
+| **URL Parameter** | Zero refactor | Güvenlik riski, her page'de kontrol |
+| **Centralized Time Service ✓** | Production-safe, toggle edilebilir | Mevcut kodda değişiklik gerekti |
+
+### Sonuçlar
+
+**Pozitif:**
+- Test süresi: Günler → Saniyeler
+- Production güvenli (`NODE_ENV === 'development'` kontrolü)
+- Streak, quest scheduling, milestone hesaplama tamamen test edilebilir
+- DevTools panel ile görsel kontrol
+
+**Negatif:**
+- 7 dosyada değişiklik gerekti
+- `new Date()` → `getCurrentDate()` migration
+- Router.refresh() maliyeti
+
+**Dosyalar:**
+- `src/lib/timeService.ts` (🆕 NEW)
+- `src/components/dev/TimeControlPanel.tsx` (🆕 NEW)
+- `src/lib/streakEngine.ts` (MODIFIED)
+- `src/lib/questEngine.ts` (MODIFIED)
+- `src/app/page.tsx` (MODIFIED)
+- `src/components/hud/EventTimeline.tsx` (MODIFIED)
+- `src/app/layout.tsx` (MODIFIED)
 

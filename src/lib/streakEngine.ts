@@ -9,12 +9,12 @@ import {
     differenceInDays,
     parseISO,
     startOfDay,
-    isToday,
     isYesterday,
     isSameDay,
     format,
     subDays
 } from 'date-fns'
+import { getCurrentDate, isSimulatedToday, isSimulatedYesterday } from '@/lib/timeService'
 import type { GoalEntry, Goal } from '@/types/database.types'
 
 // =====================================================
@@ -136,12 +136,12 @@ export function calculateStreak(entries: GoalEntry[]): StreakInfo {
     }
 
     const lastActivity = activityDates[0]
-    const isActiveToday = isToday(lastActivity)
-    const wasActiveYesterday = isYesterday(lastActivity)
+    const isActiveToday = isSimulatedToday(lastActivity)
+    const wasActiveYesterday = isSimulatedYesterday(lastActivity)
 
     // Calculate current streak
     let currentStreak = 0
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
 
     // If active today, start counting from today
     // If active yesterday (but not today), streak is at risk
@@ -197,7 +197,7 @@ function countConsecutiveDays(sortedDates: Date[]): number {
     if (sortedDates.length === 0) return 0
 
     let streak = 1
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
     const firstDate = sortedDates[0]
 
     // Check if the streak should start from today or yesterday
@@ -408,7 +408,7 @@ function calculateMomentum(goal: Goal, entries: GoalEntry[]): number {
     }
 
     // Compare last 3 days activity vs previous 3 days
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
     const last3Days = getActivityInLastNDays(entries, 3)
 
     // Get activity from 4-7 days ago
@@ -436,7 +436,7 @@ function calculateMomentum(goal: Goal, entries: GoalEntry[]): number {
  * Get number of unique active days in last N days
  */
 function getActivityInLastNDays(entries: GoalEntry[], days: number): number {
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
     const cutoff = subDays(today, days)
 
     const recentDates = new Set<string>()
@@ -462,10 +462,10 @@ function getActivityInLastNDays(entries: GoalEntry[], days: number): number {
 export function calculateVelocity(goal: Goal, entries: GoalEntry[]): VelocityInfo {
     const currentValue = goal.current_value ?? 0
     const targetValue = goal.target_value ?? 100
-    const startDate = goal.start_date ? parseISO(goal.start_date) : new Date()
+    const startDate = goal.start_date ? parseISO(goal.start_date) : getCurrentDate()
     const endDate = goal.end_date ? parseISO(goal.end_date) : null
 
-    const today = new Date()
+    const today = getCurrentDate()
     const daysElapsed = Math.max(1, differenceInDays(today, startDate))
 
     // Current velocity (units per day)
@@ -584,7 +584,7 @@ export function getStreakMilestoneMessage(milestone: number): string {
 export function calculateXP(goal: Goal, entries: GoalEntry[], completedMilestones: number): XPInfo {
     let totalXP = 0
     let todayXP = 0
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
 
     // XP for each logged entry
     for (const entry of entries) {

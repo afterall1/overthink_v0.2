@@ -23,6 +23,7 @@ import { getActiveGoals, createGoal, updateGoal, deleteGoal, toggleMilestone, lo
 import { getCategories } from "@/actions/categories"
 import { getQuestsForToday, completeQuest, skipQuest, getUserXpStats } from "@/actions/quests"
 import { startOfDay, endOfDay, addDays } from 'date-fns'
+import { getCurrentDate, subscribeToTimeChanges, isDevMode } from '@/lib/timeService'
 
 const MOCK_DAILY_STATUS = {
   trade: false,
@@ -58,7 +59,8 @@ export default function Home() {
   const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [isLogDrawerOpen, setIsLogDrawerOpen] = useState(false)
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  // Use timeService for initial date (supports Time Travel in dev mode)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => getCurrentDate())
   const [dayEvents, setDayEvents] = useState<EventWithCategory[]>([])
   const [dayLogs, setDayLogs] = useState<LogDrawerEntry[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -86,8 +88,16 @@ export default function Home() {
   const [isQuestsLoading, setIsQuestsLoading] = useState(false)
   const [isQuestCreationModalOpen, setIsQuestCreationModalOpen] = useState(false)
 
+  // Subscribe to Time Travel changes (dev mode only)
+  useEffect(() => {
+    if (!isDevMode()) return
 
+    const unsubscribe = subscribeToTimeChanges((newDate) => {
+      setSelectedDate(newDate)
+    })
 
+    return unsubscribe
+  }, [])
   const fetchQuests = useCallback(async () => {
     setIsQuestsLoading(true)
     try {

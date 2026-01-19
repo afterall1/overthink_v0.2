@@ -5,6 +5,7 @@ import { X, Calendar, ChevronLeft, ChevronRight, Bell, BellOff, Plus } from 'luc
 import type { EventWithCategory, EventStatus } from '@/types/database.types'
 import { getMockEvents, updateMockEventStatus } from '@/lib/mockEvents'
 import { requestNotificationPermission, getNotificationPermission } from '@/lib/notifications'
+import { getCurrentDate } from '@/lib/timeService'
 import EventCard from './EventCard'
 
 interface EventTimelineProps {
@@ -22,8 +23,8 @@ export default function EventTimeline({ isOpen, onClose, onOpenEventModal }: Eve
 
     // ... (rest of logic same)
 
-
-    const [selectedDate, setSelectedDate] = useState(new Date())
+    // Use timeService for Time Travel support
+    const [selectedDate, setSelectedDate] = useState(() => getCurrentDate())
 
     // Load events
     useEffect(() => {
@@ -53,7 +54,7 @@ export default function EventTimeline({ isOpen, onClose, onOpenEventModal }: Eve
     // Tarihe göre filtrele
     const filteredEvents = events.filter((event) => {
         const eventDate = new Date(event.scheduled_at)
-        const today = new Date()
+        const today = getCurrentDate()
         today.setHours(0, 0, 0, 0)
 
         if (viewMode === 'today') {

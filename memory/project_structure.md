@@ -181,6 +181,9 @@ overthink_v0.2/
 │   │       ├── CategoryBreakdown.tsx   # Kategori dağılımı
 │   │       └── index.ts
 │   │
+│   │   └── 📁 dev/           # 🆕 Development-only tools
+│   │       └── TimeControlPanel.tsx  # Time Travel floating panel
+│   │
 │   ├── 📁 types/             # TypeScript definitions
 │   │   ├── database.types.ts     # Supabase tablo tipleri + Quest types + Health Profile
 │   │   └── goalQuestions.types.ts # 🆕 Goal-specific question types (7 goal types)
@@ -217,6 +220,7 @@ overthink_v0.2/
 │   │   ├── questEngine.ts    # XP/Level/Streak calculations
 │   │   ├── streakEngine.ts   # Advanced streak & health logic
 │   │   ├── healthCalculator.ts # 🆕 BMR/TDEE Mifflin-St Jeor formula
+│   │   ├── timeService.ts    # 🆕 Centralized time provider (Time Travel test)
 │   │   │
 │   │   └── 📁 ai/            # AI Integration
 │   │       ├── index.ts
@@ -398,5 +402,5 @@ lib/ai/
 
 ---
 
-**Son Güncelleme:** 2026-01-13 10:15 UTC+3
-**Versiyon:** 2.1.0 (AI Health Quest System, Health module eklendi)
+**Son Güncelleme:** 2026-01-20 00:31 UTC+3
+**Versiyon:** 2.2.0 (Time Travel Test Architecture eklendi)

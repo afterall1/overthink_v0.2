@@ -2,7 +2,8 @@
 // Quest Engine - XP Calculation and Quest Logic
 // =====================================================
 
-import { differenceInDays, startOfDay, isToday, parseISO, format } from 'date-fns'
+import { differenceInDays, startOfDay, parseISO, format } from 'date-fns'
+import { getCurrentDate, isSimulatedToday } from '@/lib/timeService'
 import type {
     DailyQuest,
     QuestCompletion,
@@ -248,7 +249,7 @@ export function calculateQuestStreak(
         }
     }
 
-    const today = startOfDay(new Date())
+    const today = startOfDay(getCurrentDate())
     const lastCompletion = startOfDay(parseISO(questCompletions[0].completed_date))
     const daysSinceLastActivity = differenceInDays(today, lastCompletion)
 
@@ -354,12 +355,12 @@ export function shouldQuestRunToday(quest: DailyQuest): boolean {
     if (!quest.is_recurring) {
         // One-time quest: check if scheduled for today
         if (quest.scheduled_date) {
-            return isToday(parseISO(quest.scheduled_date))
+            return isSimulatedToday(parseISO(quest.scheduled_date))
         }
         return true // No date means it's available
     }
 
-    const today = new Date()
+    const today = getCurrentDate()
     const dayOfWeek = today.getDay() // 0 = Sunday
 
     switch (quest.recurrence_pattern) {
@@ -441,5 +442,5 @@ export function formatQuestTime(time: string | null): string {
 }
 
 export function getTodayDateString(): string {
-    return format(new Date(), 'yyyy-MM-dd')
+    return format(getCurrentDate(), 'yyyy-MM-dd')
 }
