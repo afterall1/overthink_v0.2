@@ -1,0 +1,65 @@
+{
+    "sourceRoot": "LifeNexus",
+    "name": "LifeNexus",
+    "targets": {
+        "LifeNexus": {
+            "type": "app",
+            "platform": "iOS",
+            "deploymentTarget": "17.0",
+            "sources": [
+                "LifeNexus"
+            ],
+            "resources": [
+                "LifeNexus/Resources"
+            ],
+            "info": {
+                "CFBundleName": "LifeNexus",
+                "CFBundleDisplayName": "LifeNexus",
+                "CFBundleIdentifier": "com.lifenexus.app",
+                "CFBundleShortVersionString": "1.0.0",
+                "CFBundleVersion": "1",
+                "UILaunchScreen": {},
+                "UIApplicationSceneManifest": {
+                    "UIApplicationSupportsMultipleScenes": false
+                },
+                "ITSAppUsesNonExemptEncryption": false,
+                "UIUserInterfaceStyle": "Dark",
+                "UIStatusBarStyle": "UIStatusBarStyleLightContent"
+            },
+            "settings": {
+                "PRODUCT_BUNDLE_IDENTIFIER": "com.lifenexus.app",
+                "DEVELOPMENT_TEAM": "",
+                "SWIFT_VERSION": "5.9",
+                "TARGETED_DEVICE_FAMILY": "1"
+            },
+            "dependencies": [
+                {
+                    "package": "supabase-swift",
+                    "product": "Supabase"
+                },
+                {
+                    "package": "firebase-ios-sdk",
+                    "product": "FirebaseAI"
+                },
+                {
+                    "package": "lottie-spm",
+                    "product": "Lottie"
+                }
+            ]
+        }
+    },
+    "packages": {
+        "supabase-swift": {
+            "url": "https://github.com/supabase/supabase-swift",
+            "from": "2.0.0"
+        },
+        "firebase-ios-sdk": {
+            "url": "https://github.com/firebase/firebase-ios-sdk",
+            "from": "11.0.0"
+        },
+        "lottie-spm": {
+            "url": "https://github.com/airbnb/lottie-spm",
+            "from": "4.0.0"
+        }
+    }
+}

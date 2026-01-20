@@ -6,9 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:static": "next build",
+    "cap:sync": "npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "ios:dev": "npm run build:static && npx cap sync && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.1",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
     "@google/genai": "^1.35.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-separator": "^1.1.8",
@@ -29,6 +39,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
