@@ -1634,3 +1634,99 @@ Quest tamamlama deneyimi temel seviyedeydi - sadece arka plan rengi değişikli�
 - `src/actions/quests.ts` (MODIFIED - checkAndRegenerateWeeklyBatches)
 - `src/app/page.tsx` (MODIFIED - celebration state)
 
+---
+
+## ADR-030: Weekly Summary Dashboard & Goal Milestone Celebrations
+
+**Tarih:** 2026-01-20  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** Proje Sahibi, AI Architect
+
+### Bağlam
+
+Kullanıcıların haftalık performanslarını bir bakışta görebilecekleri bir dashboard eksikti. Ayrıca goal milestone tamamlandığında kutlama animasyonu yoktu.
+
+### Karar
+
+**1. Weekly Summary Dashboard:**
+- `getWeeklyStats()` server action ile haftalık istatistikler
+- `WeeklySummaryPanel.tsx` component
+- XP, completion rate, perfect days, daily activity chart
+- Best Day highlight
+
+**2. Goal Milestone Celebration:**
+- `GoalMilestoneCelebration.tsx` component
+- Trophy badge + glow rings
+- 12 animated star particles
+- Progress ring ve XP badge
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Ayrı sayfa** | Daha fazla detay | Context kaybı |
+| **Inline panel ✓** | Hızlı erişim | Ekran alanı kullanımı |
+| **Modal** | İsteğe bağlı | Keşfedilebilirlik düşük |
+
+### Sonuçlar
+
+**Pozitif:**
+- Haftalık performans görünürlüğü
+- Motivasyonel daily chart
+- Glassmorphism Framer Motion ile premium UX
+
+**Negatif:**
+- Ekstra vertical space kullanımı
+- Component complexity
+
+**Dosyalar:**
+- `src/actions/weeklyStats.ts` (🆕 NEW)
+- `src/components/hud/Dashboard/WeeklySummaryPanel.tsx` (🆕 NEW)
+- `src/components/hud/Dashboard/index.ts` (🆕 NEW)
+- `src/components/hud/Goals/GoalMilestoneCelebration.tsx` (🆕 NEW)
+- `src/app/page.tsx` (MODIFIED)
+
+---
+
+## ADR-031: Dashboard Layout Fix (Scrollable Main Container)
+
+**Tarih:** 2026-01-20  
+**Durum:** ✅ Kabul Edildi  
+**Karar Vericiler:** AI Architect
+
+### Bağlam
+
+`WeeklySummaryPanel` eklendikten sonra `DailyQuestsPanel` görünmez oldu. Kök neden: Main container `h-screen overflow-hidden` ile sabit yükseklikte ve scroll edilemez durumdaydı.
+
+### Karar
+
+Main container'ın overflow davranışı değiştirildi:
+
+```diff
+-h-screen overflow-hidden
++min-h-screen overflow-y-auto
+```
+
+### Alternatifler
+
+| Seçenek | Artıları | Eksileri |
+|---------|----------|----------|
+| **Collapsible panels** | Kompakt | UX karmaşıklığı |
+| **Panel sırası değiştirme** | Basit | Important content aşağıda |
+| **Scrollable container ✓** | Native UX | Sticky header gerekebilir |
+| **Tabs** | Organize | Keşfedilebilirlik düşük |
+
+### Sonuçlar
+
+**Pozitif:**
+- Tüm paneller görünür
+- Native scroll UX
+- Mobile-friendly
+
+**Negatif:**
+- Sayfa boyutu dinamik
+- Scroll required for full view
+
+**Dosyalar:**
+- `src/app/page.tsx` (MODIFIED - satır 294)
+

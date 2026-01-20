@@ -17,3 +17,6 @@ export { default as MomentumGauge, MomentumBadge, MomentumChange } from './Momen
 export { default as ConfettiCelebration, useConfetti } from './ConfettiCelebration'
 // GoalDetail Module (World-Class Redesign)
 export { default as GoalDetail } from './GoalDetail'
+// Milestone Celebration
+export { default as GoalMilestoneCelebration } from './GoalMilestoneCelebration'
+export type { GoalMilestoneCelebrationProps } from './GoalMilestoneCelebration'

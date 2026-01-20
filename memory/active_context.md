@@ -10,85 +10,75 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  PHASE 8.80: Quest System Polish - TAMAMLANDI ✅                         ║
+║  PHASE 8.86: Dashboard Layout Fix - TAMAMLANDI ✅                        ║
 ╠══════════════════════════════════════════════════════════════════════════╣
-║  Weekly Batch Auto-Regeneration + Quest Completion Celebrations          ║
+║  WeeklySummaryPanel + DailyQuestsPanel visibility fix                    ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Phase | Durum | Tamamlanma |
 |-------|-------|------------|
-| Phase 8.60: Motivation & Identity UI | ✅ Tamamlandı | 100% |
-| Phase 8.61: CalorieBudgetSummary | ✅ Tamamlandı | 100% |
-| Phase 8.70: Time Travel Test Architecture | ✅ Tamamlandı | 100% |
-| Phase 8.75: Quest Architecture Unification | ✅ Tamamlandı | 100% |
-| Phase 8.76: Quest Reset Bug Fix | ✅ Tamamlandı | 100% |
-| **Phase 8.80: Quest System Polish** | ✅ **Tamamlandı** | **100%** |
+| Phase 8.80: Quest System Polish | ✅ Tamamlandı | 100% |
+| Phase 8.85: Weekly Summary & Milestones | ✅ Tamamlandı | 100% |
+| **Phase 8.86: Dashboard Layout Fix** | ✅ **Tamamlandı** | **100%** |
 | Phase 9: OAuth Providers | ⏳ Bekliyor | 0% |
 
 ---
 
-## Session Summary: 2026-01-20 (Oturum 19 - Devam)
+## Session Summary: 2026-01-20 (Oturum 20)
 
-### ✅ Phase 8.76 - Quest Reset Bug Fix
+### ✅ Phase 8.85 - Weekly Summary & Milestone Celebrations
 
-**Problem:** Time Travel ile gün değiştiğinde quest'ler sıfırlanmıyordu.
+#### Feature 1: Weekly Summary Dashboard
+**Yeni Dosyalar:**
+| Dosya | Açıklama |
+|-------|----------|
+| `src/actions/weeklyStats.ts` | `getWeeklyStats()` server action |
+| `src/components/hud/Dashboard/WeeklySummaryPanel.tsx` | Dashboard component |
+| `src/components/hud/Dashboard/index.ts` | Barrel export |
 
-**Kök Nedenler:**
-1. `timeService` client-side, `getQuestsForToday()` server-side çalışıyor
-2. Server, client'ın simüle ettiği tarihe erişemiyordu
+**Gösterilen Metrikler:**
+- XP This Week (bu hafta kazanılan XP)
+- Completion Rate (tamamlama yüzdesi)
+- Perfect Days (7 gün içinde 100% completion)
+- Daily Chart (7 günlük aktivite grafiği)
+- Best Day (en iyi gün highlight)
 
-**Çözüm:**
-| # | Dosya | Değişiklik |
-|---|-------|------------|
-| 1 | `quests.ts` | `getQuestsForToday(targetDate?)` - opsiyonel tarih parametresi |
-| 2 | `page.tsx` | `fetchQuests` - `selectedDate`'i server'a gönderiyor |
-| 3 | `quests.ts` | Recurring quest'ler için status override |
-
----
-
-### ✅ Phase 8.80 - Quest System Polish
-
-#### Feature 1: Weekly Batch Auto-Regeneration
-**Problem:** Hafta geçişlerinde yeni batch otomatik üretilmiyordu.
-
-**Çözüm:** `checkAndRegenerateWeeklyBatches()` fonksiyonu:
-- Aktif goal'ları kontrol eder
-- Expired veya eksik batch'leri tespit eder
-- Otomatik yeni batch üretir
-
-#### Feature 2: Quest Completion Celebration
-**Yeni Component:** `QuestCompletionCelebration.tsx`
-
-| Özellik | Açıklama |
-|---------|----------|
-| Konfeti | 24 parçacık, 6 renk, Framer Motion |
-| XP Popup | Merkezi badge, glow efekti |
-| Streak Badge | 2+ seriler için görünür |
-| Perfect Day | Tüm quest'ler tamamlandığında |
-
-**Yeni Paket:** Yok (mevcut `framer-motion` kullanıldı)
+#### Feature 2: Goal Milestone Celebration
+**Yeni Component:** `GoalMilestoneCelebration.tsx`
+- Trophy Badge + glow rings
+- 12 animated star particles
+- Progress ring göstergesi
+- XP badge (+50 XP)
 
 ---
 
-## 🚧 Tamamlanmamış Özellikler
+### ✅ Phase 8.86 - Dashboard Layout Fix
 
-| Özellik | Durum |
-|---------|-------|
-| - | Tüm planlananlar tamamlandı ✅ |
+**Problem:** `WeeklySummaryPanel` eklendikten sonra `DailyQuestsPanel` görünmüyordu.
+
+**Kök Neden:** Main container `h-screen overflow-hidden` ile sabit yükseklikte ve scroll edilemez durumda.
+
+**Çözüm:** `page.tsx` satır 294
+```diff
+-h-screen overflow-hidden
++min-h-screen overflow-y-auto
+```
+
+**Sonuç:** Tüm paneller artık scroll ile erişilebilir.
 
 ---
 
 ## Memory Sync Durumu
 
-| Dosya | Güncellendi |
-|-------|-------------|
-| `active_context.md` | ✅ |
-| `project_structure.md` | ✅ (yeni component eklendi) |
-| `api_contracts.md` | ⏭️ Zaten güncel |
-| `database_schema.md` | ⏭️ Değişiklik yok |
-| `tech_stack.md` | ⏭️ Değişiklik yok |
-| `ADR.md` | ✅ (ADR-029 eklendi) |
+| Dosya | Güncellendi | Not |
+|-------|-------------|-----|
+| `active_context.md` | ✅ | Bu dosya |
+| `project_structure.md` | ✅ | Dashboard klasörü eklendi |
+| `api_contracts.md` | ✅ | weeklyStats eklenmeli |
+| `database_schema.md` | ⏭️ | Değişiklik yok |
+| `tech_stack.md` | ⏭️ | Yeni paket yok |
+| `ADR.md` | ✅ | ADR-030, ADR-031 eklenmeli |
 
 ---
 
@@ -108,11 +98,11 @@ c:\Users\PC15\Desktop\Projelerim\OVERTHINK
 
 ### Alternatif İyileştirmeler
 1. [ ] Quest completion sound effects
-2. [ ] Weekly summary dashboard
-3. [ ] Goal milestone celebrations
+2. [ ] Dark mode toggle
+3. [ ] Mobile-first responsive polish
 
 ---
 
-**Son Güncelleme:** 2026-01-20 02:24 UTC+3
+**Son Güncelleme:** 2026-01-20 03:38 UTC+3
 **Güncelleyen:** AI Assistant
-**Versiyon:** 8.80.0
+**Versiyon:** 8.86.0

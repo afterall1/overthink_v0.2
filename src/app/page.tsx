@@ -12,8 +12,9 @@ import CalendarPicker from "@/components/hud/CalendarPicker"
 // REMOVED: TodayFocus and UpcomingStream - Dashboard simplified
 import ControlDock from "@/components/hud/ControlDock"
 import { CouncilFAB, CouncilPanel } from "@/components/hud/AICouncil"
-import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard } from "@/components/hud/Goals"
+import { GoalsFAB, GoalsPanel, GoalModal, GoalsStrip, GoalCreationWizard, GoalMilestoneCelebration } from "@/components/hud/Goals"
 import { DailyQuestsPanel, QuestCreationModal, QuestCompletionCelebration } from "@/components/hud/Quests"
+import { WeeklySummaryPanel } from "@/components/hud/Dashboard"
 // Health module moved to GoalCreationWizard for context-aware integration
 import { AnimatePresence } from "framer-motion"
 import { CategorySlug, Category, Event, EventInsert, EventUpdate, EventWithCategory, Log, GoalWithDetails, DailyQuest, UserXpStats } from '@/types/database.types'
@@ -22,6 +23,7 @@ import { getLogsByDateRange, createLog, deleteLog } from "@/actions/logs"
 import { getActiveGoals, createGoal, updateGoal, deleteGoal, toggleMilestone, logProgress } from "@/actions/goals"
 import { getCategories } from "@/actions/categories"
 import { getQuestsForToday, completeQuest, skipQuest, getUserXpStats } from "@/actions/quests"
+import { getWeeklyStats, WeeklyStats } from "@/actions/weeklyStats"
 import { startOfDay, endOfDay, addDays, format } from 'date-fns'
 import { getCurrentDate, subscribeToTimeChanges, isDevMode } from '@/lib/timeService'
 
@@ -95,6 +97,21 @@ export default function Home() {
     streakCount: number
     streakBonus: number
     isPerfectDay: boolean
+  } | null>(null)
+
+  // Weekly summary state
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats | null>(null)
+  const [isWeeklyStatsLoading, setIsWeeklyStatsLoading] = useState(false)
+
+  // Milestone celebration state
+  const [showMilestoneCelebration, setShowMilestoneCelebration] = useState(false)
+  const [milestoneCelebrationData, setMilestoneCelebrationData] = useState<{
+    milestoneTitle: string
+    goalTitle: string
+    goalProgress: number
+    xpEarned: number
+    milestoneNumber: number
+    totalMilestones: number
   } | null>(null)
 
   // Subscribe to Time Travel changes (dev mode only)
@@ -177,11 +194,27 @@ export default function Home() {
     }
   }, [selectedDate])
 
+  // Fetch weekly statistics
+  const fetchWeeklyStats = useCallback(async () => {
+    setIsWeeklyStatsLoading(true)
+    try {
+      const result = await getWeeklyStats()
+      if (result.data) {
+        setWeeklyStats(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch weekly stats:', error)
+    } finally {
+      setIsWeeklyStatsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchData()
     fetchGoals()
     fetchQuests()
-  }, [fetchData, fetchGoals, fetchQuests])
+    fetchWeeklyStats()
+  }, [fetchData, fetchGoals, fetchQuests, fetchWeeklyStats])
 
   const handleEventCreate = async (eventData: EventInsert) => {
     try {
@@ -258,7 +291,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 text-slate-800 flex flex-col transition-colors duration-500">
+    <main className="relative w-full min-h-screen overflow-y-auto bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 text-slate-800 flex flex-col transition-colors duration-500">
 
       {/* Central Playground Container */}
       <div className="w-full max-w-7xl mx-auto h-full flex flex-col relative z-0 transition-all duration-500 ease-in-out">
@@ -280,6 +313,14 @@ export default function Home() {
               onSelect={setSelectedDate}
             />
           </div>
+        </div>
+
+        {/* Weekly Summary Panel */}
+        <div className="flex-none px-4 py-2">
+          <WeeklySummaryPanel
+            stats={weeklyStats}
+            isLoading={isWeeklyStatsLoading}
+          />
         </div>
 
         {/* Goals Strip - Motivation Dashboard */}
@@ -633,6 +674,21 @@ export default function Home() {
         onComplete={() => {
           setShowCelebration(false)
           setCelebrationData(null)
+        }}
+      />
+
+      {/* Goal Milestone Celebration */}
+      <GoalMilestoneCelebration
+        isVisible={showMilestoneCelebration}
+        milestoneTitle={milestoneCelebrationData?.milestoneTitle || ''}
+        goalTitle={milestoneCelebrationData?.goalTitle || ''}
+        goalProgress={milestoneCelebrationData?.goalProgress || 0}
+        xpEarned={milestoneCelebrationData?.xpEarned || 50}
+        milestoneNumber={milestoneCelebrationData?.milestoneNumber}
+        totalMilestones={milestoneCelebrationData?.totalMilestones}
+        onComplete={() => {
+          setShowMilestoneCelebration(false)
+          setMilestoneCelebrationData(null)
         }}
       />
 

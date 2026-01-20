@@ -773,7 +773,58 @@ interface RegenerationResult {
 
 ---
 
-**Son Güncelleme:** 2026-01-20 01:50 UTC+3
-**Versiyon:** 1.8.0 (getQuestsForToday Time Travel support eklendi)
+## 🆕 Actions: Weekly Stats (`src/actions/weeklyStats.ts`)
 
+Haftalık performans istatistikleri ve dashboard verileri.
+
+### `getWeeklyStats(weekOffset?)`
+Haftalık performans istatistiklerini getirir.
+
+| Parametre | Tip | Zorunlu | Açıklama |
+|-----------|-----|---------|----------|
+| `weekOffset` | number | ❌ | 0=bu hafta, -1=geçen hafta |
+
+**Return:** `Promise<ActionResult<WeeklyStats>>`
+
+```typescript
+interface WeeklyStats {
+    xpThisWeek: number         // Bu hafta kazanılan toplam XP
+    questsCompleted: number    // Tamamlanan quest sayısı
+    totalQuests: number        // Toplam quest sayısı
+    completionRate: number     // Tamamlama yüzdesi (0-100)
+    perfectDaysThisWeek: number // 100% completion günler
+    currentStreak: number      // Mevcut seri
+    longestStreak: number      // En uzun seri
+    bestDay?: {                // En iyi gün
+        dayName: string        // Gün adı (Cumartesi, Pazar, ...)
+        xpEarned: number       // O gün kazanılan XP
+    }
+    dailyBreakdown: {          // 7 günlük detay
+        dayName: string        // Pzt, Sal, Çar, ...
+        dayDate: string        // YYYY-MM-DD
+        xpEarned: number       // Kazanılan XP
+        questsCompleted: number// Tamamlanan quest
+        totalQuests: number    // Toplam quest
+        isPerfectDay: boolean  // 100% mi?
+    }[]
+    weekRange: {
+        start: string          // Hafta başı (YYYY-MM-DD)
+        end: string            // Hafta sonu (YYYY-MM-DD)
+    }
+}
+```
+
+**Kullanım:**
+```typescript
+const { data, error } = await getWeeklyStats()
+if (data) {
+    console.log(data.xpThisWeek)  // 830
+    console.log(data.completionRate)  // 75
+}
+```
+
+---
+
+**Son Güncelleme:** 2026-01-20 03:38 UTC+3
+**Versiyon:** 1.9.0 (getWeeklyStats eklendi)
 

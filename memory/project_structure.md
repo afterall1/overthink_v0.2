@@ -93,6 +93,7 @@ overthink_v0.2/
 │   │   │   │   ├── GoalCreationWizard.tsx
 │   │   │   │   ├── GoalCelebration.tsx
 │   │   │   │   ├── ConfettiCelebration.tsx
+│   │   │   │   ├── GoalMilestoneCelebration.tsx # 🆕 Milestone celebration animation
 │   │   │   │   ├── GoalHealthIndicator.tsx
 │   │   │   │   ├── StreakBadge.tsx
 │   │   │   │   ├── VelocityMeter.tsx
@@ -122,6 +123,10 @@ overthink_v0.2/
 │   │   │   │       ├── ProgressTimeline.tsx # Activity feed
 │   │   │   │       ├── AIInsightCard.tsx    # Dynamic AI insight
 │   │   │   │       └── ProgressLogger.tsx   # Progress input
+│   │   │   │
+│   │   │   ├── 📁 Dashboard/        # 🆕 Dashboard Overview Components
+│   │   │   │   ├── index.ts
+│   │   │   │   └── WeeklySummaryPanel.tsx  # 🆕 Weekly stats dashboard
 │   │   │   │
 │   │   │   ├── 📁 Quests/         # 🆕 Quest System UI
 │   │   │   │   ├── index.ts
